@@ -1,0 +1,111 @@
+.journal {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 60px;
+}
+.left,
+.right {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  min-width: 0;
+}
+.left header {
+  margin-bottom: 10px;
+}
+.right {
+  padding-top: 10px;
+}
+.greeting {
+  background: var(--card);
+  border: 1px solid var(--task-accent-light);
+  padding: 20px;
+  border-left: 3px solid var(--brand-gold);
+  font-size: 13px;
+  color: var(--muted-foreground);
+  line-height: 1.6;
+}
+.greeting strong {
+  color: var(--foreground);
+  font-weight: 500;
+}
+.oneThing {
+  background: var(--card);
+  border: 1px solid var(--border);
+  padding: 30px;
+  box-shadow: 0 15px 35px rgb(0 0 0 / 2%);
+  transition: 0.3s;
+}
+.oneThing:hover {
+  border-color: var(--brand-gold);
+  box-shadow: 0 15px 35px var(--task-accent-light);
+  transform: translateY(-3px);
+}
+.featureButton {
+  display: block;
+  width: 100%;
+  text-align: left;
+}
+.badge {
+  font-size: 10px;
+  background: var(--task-accent-light);
+  color: var(--brand-gold);
+  padding: 4px 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+.featureButton h2 {
+  font-family: var(--font-serif);
+  font-size: 1.6rem;
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 20px 0 10px;
+  max-width: 350px;
+}
+.meta {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  margin-bottom: 25px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+.capacity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted-foreground);
+}
+.capacity progress {
+  appearance: none;
+  width: 40px;
+  height: 3px;
+  border: 0;
+  background: var(--border);
+}
+.capacity progress::-webkit-progress-bar {
+  background: var(--border);
+}
+.capacity progress::-webkit-progress-value {
+  background: var(--brand-gold);
+}
+.capacity progress::-moz-progress-bar {
+  background: var(--brand-gold);
+}
+.timeline {
+  margin-top: 10px;
+}
+@media (max-width: 900px) {
+  .journal {
+    grid-template-columns: 1fr;
+    max-width: 700px;
+    gap: 40px;
+  }
+}

@@ -2,7 +2,7 @@
 
 ## 当前范围
 
-Phase 0 建立开发基础：Next.js、React、TypeScript、pnpm、Tailwind CSS、shadcn/ui 配置、Lucide、ESLint、Prettier 和 CI。当前首页及登录／注册弹窗已按 `docs/reference/` 实现；尚未接入业务后端。
+Phase 0 建立开发基础：Next.js、React、TypeScript、pnpm、Tailwind CSS、shadcn/ui 配置、Lucide、ESLint、Prettier 和 CI。当前首页、登录／注册弹窗及九个工作台页面已按 `docs/reference/` 实现；交互仅使用前端示例状态，尚未接入业务后端。
 
 这是单一 Next.js 工程，当前不需要 monorepo、独立后端、数据库、认证、全局状态库或任务队列。原始 `PRD.md` 和 `TechStack.md` 保持原样。
 

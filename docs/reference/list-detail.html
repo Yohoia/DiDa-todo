@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DiDa-todo | Work List</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600&family=Inter:wght@300;400;500;600&display=swap');
+
+        :root {
+            --bg-color: #FAF7F2; --surface-color: #FFFFFF;   
+            --text-primary: #1C1917; --text-secondary: #78716C;  
+            --text-muted: #A8A29E; --border-color: #E7E5DF;    
+            --accent: #B88E57; --accent-light: rgba(184, 142, 87, 0.1);
+            --font-serif: 'Playfair Display', serif; --font-sans: 'Inter', sans-serif; 
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--font-sans); color: var(--text-primary);
+            background-color: var(--bg-color); min-height: 100vh;
+            display: flex; justify-content: center; padding: 40px 20px 100px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .page-container { width: 100%; max-width: 750px; display: flex; flex-direction: column; gap: 30px; }
+
+        .list-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 20px; }
+        .list-title-badge { display: flex; align-items: center; gap: 12px; }
+        .list-icon { width: 42px; height: 42px; background: var(--text-primary); color: #fff; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        .list-title-badge h1 { font-family: var(--font-serif); font-size: 2rem; font-weight: 400; }
+        .list-count { font-size: 12px; color: var(--text-secondary); }
+
+        /* 排序工具栏 */
+        .filter-toolbar { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-secondary); }
+        .sort-select { border: 1px solid var(--border-color); background: var(--surface-color); padding: 6px 12px; border-radius: 4px; font-size: 12px; color: var(--text-primary); outline: none; cursor: pointer; }
+
+        /* 任务列表 */
+        .task-list { display: flex; flex-direction: column; gap: 10px; }
+        .task-card { background: var(--surface-color); border: 1px solid var(--border-color); padding: 16px 20px; border-radius: 4px; display: flex; align-items: center; gap: 15px; transition: 0.2s; cursor: pointer; }
+        .task-card:hover { border-color: var(--accent); transform: translateX(3px); }
+        
+        .checkbox { width: 18px; height: 18px; border: 1px solid var(--text-secondary); border-radius: 50%; flex-shrink: 0; }
+        .p1-indicator { width: 8px; height: 8px; background: #DC2626; border-radius: 50%; }
+        .p2-indicator { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; }
+
+        .task-main { flex: 1; }
+        .task-title { font-size: 14px; font-weight: 500; }
+        .task-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; display: flex; gap: 15px; }
+
+        /* 悬浮 Dock */
+        .floating-dock { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px); border: 1px solid var(--border-color); padding: 10px 20px; border-radius: 100px; display: flex; align-items: center; gap: 25px; box-shadow: 0 10px 40px rgba(0,0,0,0.06); z-index: 100; }
+        .dock-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text-secondary); cursor: pointer; transition: 0.3s; position: relative; text-decoration: none; }
+        .dock-item:hover, .dock-item.active { color: var(--text-primary); transform: translateY(-3px); }
+        .dock-item.active::after { content: ''; position: absolute; bottom: -8px; width: 4px; height: 4px; background: var(--accent); border-radius: 50%; }
+        .dock-icon { font-size: 20px; }
+        .dock-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; opacity: 0; transition: 0.2s; position: absolute; top: -20px; }
+        .dock-item:hover .dock-label { opacity: 1; transform: translateY(-5px); }
+        .dock-main-btn { background: var(--text-primary); color: #fff; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 300; cursor: pointer; transition: 0.3s; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+    <div class="page-container">
+        <div class="list-header">
+            <div class="list-title-badge">
+                <div class="list-icon">💼</div>
+                <div>
+                    <h1>Work & Projects</h1>
+                    <div class="list-count">4 active tasks · 75% completed this week</div>
+                </div>
+            </div>
+            <button style="border: 1px solid var(--border-color); background: var(--surface-color); padding: 8px 16px; font-size: 12px; cursor: pointer; border-radius: 4px;">＋ Add Task</button>
+        </div>
+
+        <div class="filter-toolbar">
+            <span>Showing all tasks</span>
+            <div>
+                <label style="margin-right: 6px;">Sort by:</label>
+                <select class="sort-select">
+                    <option>Priority (High to Low)</option>
+                    <option>Due Date</option>
+                    <option>Creation Date</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="task-list">
+            <div class="task-card">
+                <div class="checkbox"></div>
+                <div class="p1-indicator" title="P1 High Priority"></div>
+                <div class="task-main">
+                    <div class="task-title">完成 DiDa 登录模块与鉴权接口设计</div>
+                    <div class="task-sub"><span>Due Today, 18:00</span><span>🍅 2 Pomodoros</span></div>
+                </div>
+            </div>
+
+            <div class="task-card">
+                <div class="checkbox"></div>
+                <div class="p2-indicator" title="P2 Medium Priority"></div>
+                <div class="task-main">
+                    <div class="task-title">设计系统组件库 CSS 语义化变量重构</div>
+                    <div class="task-sub"><span>Due Tomorrow</span><span>#DesignSystem</span></div>
+                </div>
+            </div>
+
+            <div class="task-card">
+                <div class="checkbox"></div>
+                <div style="width: 8px;"></div>
+                <div class="task-main">
+                    <div class="task-title">撰写季度产品规划演示 PPT</div>
+                    <div class="task-sub"><span>Due Sep 15</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dock -->
+    <nav class="floating-dock">
+        <a href="today.html" class="dock-item"><span class="dock-label">Today</span><span class="dock-icon">◷</span></a>
+        <a href="inbox.html" class="dock-item"><span class="dock-label">Inbox</span><span class="dock-icon">📥</span></a>
+        <div class="dock-main-btn">＋</div>
+        <a href="list-detail.html" class="dock-item active"><span class="dock-label">Lists</span><span class="dock-icon">💼</span></a>
+        <a href="profile.html" class="dock-item"><span class="dock-label">Profile</span><span class="dock-icon" style="font-size: 16px; border: 1px solid currentColor; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;">A</span></a>
+    </nav>
+</body>
+</html>

@@ -1,0 +1,136 @@
+.row {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  padding: 15px 20px;
+  border-radius: 4px;
+  transition:
+    transform 0.2s,
+    border-color 0.2s;
+}
+.row:hover {
+  border-color: var(--brand-gold);
+  transform: translateX(3px);
+}
+.content {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+.title {
+  font-size: 14px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.checkButton {
+  width: 26px;
+  height: 28px;
+  margin: -5px -4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.checkbox {
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--muted-foreground);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.checkButton:hover .checkbox {
+  border-color: var(--brand-gold);
+}
+.completed .checkbox {
+  background: var(--brand-gold);
+  border-color: var(--brand-gold);
+  color: white;
+}
+.completed .title {
+  text-decoration: line-through;
+  color: var(--task-done);
+}
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 15px;
+  color: var(--task-muted);
+  font-size: 11px;
+  margin-top: 5px;
+}
+.inbox {
+  padding: 18px 20px;
+  box-shadow: 0 4px 20px rgb(0 0 0 / 1%);
+}
+.unorganized {
+  font-size: 11px;
+  color: var(--task-muted);
+  flex-shrink: 0;
+}
+.timeline {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid rgb(0 0 0 / 3%);
+  padding: 15px 0;
+  border-radius: 0;
+  align-items: flex-start;
+}
+.timeline .content,
+.list .content {
+  display: block;
+}
+.time {
+  width: 45px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--brand-gold);
+  font-size: 12px;
+  font-weight: 600;
+}
+.frozen {
+  opacity: 0.7;
+}
+.frozen .title {
+  font-weight: 400;
+  color: var(--muted-foreground);
+}
+.list {
+  padding: 16px 20px;
+}
+.priority {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: 50%;
+}
+.high {
+  background: var(--destructive);
+}
+.medium {
+  background: var(--brand-gold);
+}
+@media (max-width: 600px) {
+  .content {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .row {
+    gap: 12px;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+  .timeline {
+    padding-left: 0;
+    padding-right: 0;
+  }
+}

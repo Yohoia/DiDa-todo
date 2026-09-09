@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import {
   createContext,
   useContext,
@@ -178,6 +180,9 @@ function AuthForm({ view }: { view: AuthView }) {
       <button className={styles.submit} type="submit">
         {isLogin ? "Sign In" : "Create Account"}
       </button>
+      <Link href="/today" className={styles.previewLink}>
+        直接预览工作台 →
+      </Link>
       <p className={styles.notice} role="status" aria-live="polite">
         {notice}
       </p>

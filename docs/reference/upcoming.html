@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DiDa-todo | Upcoming</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap');
+
+        :root {
+            --bg-color: #FAF7F2;
+            --surface-color: #FFFFFF;   
+            --text-primary: #1C1917;    
+            --text-secondary: #78716C;  
+            --text-muted: #A8A29E;      
+            --accent: #B88E57;          
+            --accent-light: rgba(184, 142, 87, 0.1);
+            --border-color: #E7E5DF;    
+            --success-color: #9CA3AF;   
+            --font-serif: 'Playfair Display', serif; 
+            --font-sans: 'Inter', -apple-system, sans-serif; 
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--font-sans);
+            color: var(--text-primary);
+            background-color: var(--bg-color);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            padding: 40px 20px 100px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .page-container {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+        }
+
+        .header { display: flex; justify-content: space-between; align-items: flex-end; }
+        .header h1 { font-family: var(--font-serif); font-size: 2.8rem; font-weight: 400; line-height: 1.1; margin-bottom: 4px;}
+        .header .subtitle { font-size: 13px; color: var(--text-secondary); letter-spacing: 2px; text-transform: uppercase;}
+
+        .filter-pills { display: flex; gap: 10px; }
+        .pill { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; padding: 6px 14px; border: 1px solid var(--border-color); background: var(--surface-color); color: var(--text-secondary); cursor: pointer; border-radius: 20px; transition: 0.2s; }
+        .pill.active, .pill:hover { background: var(--text-primary); color: #fff; border-color: var(--text-primary); }
+
+        .section-label {
+            font-size: 11px; text-transform: uppercase; letter-spacing: 3px;
+            color: var(--accent); margin-bottom: 15px; font-weight: 600;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .section-label::after {
+            content: ''; flex: 1; height: 1px; background: var(--border-color); margin-left: 15px;
+        }
+
+        .upcoming-group { display: flex; flex-direction: column; gap: 15px; }
+        .task-list { display: flex; flex-direction: column; gap: 8px; }
+        
+        .task-row {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            padding: 15px 20px;
+            display: flex; align-items: center; gap: 15px;
+            border-radius: 4px; transition: 0.2s; cursor: pointer;
+        }
+        .task-row:hover { border-color: var(--accent); transform: translateX(4px); }
+        
+        .checkbox {
+            width: 18px; height: 18px; border: 1px solid var(--text-secondary);
+            border-radius: 50%; cursor: pointer; transition: all 0.2s;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .task-row.completed .checkbox { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .task-row.completed .checkbox::after { content: '✓'; font-size: 10px; }
+        .task-row.completed .task-title { color: var(--success-color); text-decoration: line-through; }
+
+        .task-content { flex: 1; display: flex; justify-content: space-between; align-items: center; }
+        .task-title { font-size: 14px; color: var(--text-primary); font-weight: 500; }
+        .tag { border: 1px solid var(--border-color); font-size: 11px; padding: 2px 8px; border-radius: 2px; color: var(--text-secondary); }
+
+        /* 悬浮 Dock */
+        .floating-dock {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px); border: 1px solid var(--border-color);
+            padding: 10px 20px; border-radius: 100px; display: flex; align-items: center; gap: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.06); z-index: 100;
+        }
+        .dock-item {
+            display: flex; flex-direction: column; align-items: center; gap: 4px;
+            color: var(--text-secondary); cursor: pointer; transition: 0.3s; position: relative; text-decoration: none;
+        }
+        .dock-item:hover, .dock-item.active { color: var(--text-primary); transform: translateY(-3px);}
+        .dock-item.active::after { content: ''; position: absolute; bottom: -8px; width: 4px; height: 4px; background: var(--accent); border-radius: 50%; }
+        .dock-icon { font-size: 20px; }
+        .dock-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; opacity: 0; transition: 0.2s; position: absolute; top: -20px;}
+        .dock-item:hover .dock-label { opacity: 1; transform: translateY(-5px); }
+        
+        .dock-main-btn {
+            background: var(--text-primary); color: #fff; width: 40px; height: 40px;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 20px; font-weight: 300; cursor: pointer; transition: 0.3s;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .dock-main-btn:hover { background: var(--accent); transform: scale(1.1) rotate(90deg); }
+    </style>
+</head>
+<body>
+
+    <div class="page-container">
+        <header class="header">
+            <div>
+                <h1>Upcoming</h1>
+                <div class="subtitle">September Horizon</div>
+            </div>
+            <div class="filter-pills">
+                <div class="pill active">All</div>
+                <div class="pill">Work</div>
+                <div class="pill">Study</div>
+                <div class="pill">Life</div>
+            </div>
+        </header>
+
+        <!-- Tomorrow 组 -->
+        <div class="upcoming-group">
+            <div class="section-label">Tomorrow · Sep 10</div>
+            <div class="task-list">
+                <div class="task-row" onclick="this.classList.toggle('completed')">
+                    <div class="checkbox"></div>
+                    <div class="task-content">
+                        <span class="task-title">完成用户注册与邮箱验证前端页面组件</span>
+                        <span class="tag">Development</span>
+                    </div>
+                </div>
+                <div class="task-row" onclick="this.classList.toggle('completed')">
+                    <div class="checkbox"></div>
+                    <div class="task-content">
+                        <span class="task-title">服务器自动化备份脚本测试</span>
+                        <span class="tag">DevOps</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Friday 组 -->
+        <div class="upcoming-group">
+            <div class="section-label">Friday · Sep 12</div>
+            <div class="task-list">
+                <div class="task-row" onclick="this.classList.toggle('completed')">
+                    <div class="checkbox"></div>
+                    <div class="task-content">
+                        <span class="task-title">向学术委员会发送中期论文修改稿</span>
+                        <span class="tag" style="border-style: dashed;">Study</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Next Week 组 -->
+        <div class="upcoming-group">
+            <div class="section-label">Next Week</div>
+            <div class="task-list">
+                <div class="task-row" onclick="this.classList.toggle('completed')">
+                    <div class="checkbox"></div>
+                    <div class="task-content">
+                        <span class="task-title">季度项目资产规划与预算评审会议</span>
+                        <span class="tag">Work</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部 Dock (对应激活 Upcoming) -->
+    <nav class="floating-dock">
+        <a href="today.html" class="dock-item">
+            <span class="dock-label">Today</span>
+            <span class="dock-icon">◷</span>
+        </a>
+        <a href="inbox.html" class="dock-item">
+            <span class="dock-label">Inbox</span>
+            <span class="dock-icon">📥</span>
+        </a>
+        <div class="dock-main-btn">＋</div>
+        <a href="upcoming.html" class="dock-item active">
+            <span class="dock-label">Upcoming</span>
+            <span class="dock-icon">📅</span>
+        </a>
+        <div class="dock-item">
+            <span class="dock-label">Profile</span>
+            <span class="dock-icon" style="font-size: 16px; border: 1px solid currentColor; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;">A</span>
+        </div>
+    </nav>
+</body>
+</html>

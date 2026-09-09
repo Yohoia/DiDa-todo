@@ -33,6 +33,9 @@
   color-scheme: light;
   --radius: 0.25rem;
   --brand-gold: #b88e57;
+  --task-accent-light: rgb(184 142 87 / 10%);
+  --task-muted: #a8a29e;
+  --task-done: #9ca3af;
   --background: #faf7f2;
   --foreground: #1c1917;
   --card: #ffffff;

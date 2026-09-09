@@ -1,6 +1,6 @@
 # DiDa-todo
 
-基于 Next.js App Router 的单体 Web 应用。已完成 [技术栈规划](docs/TechStack.md) 的 Phase 0 基础框架，以及按 `docs/reference/` 复现的首页和登录／注册弹窗。账号与任务后端尚未接入。
+基于 Next.js App Router 的单体 Web 应用。已完成 [技术栈规划](docs/TechStack.md) 的 Phase 0 基础框架，以及按 `docs/reference/` 复现的首页、登录／注册弹窗和全部九个工作台页面。账号与任务后端尚未接入。
 
 ## 本地启动
 
@@ -18,6 +18,8 @@ pnpm dev
 ```
 
 打开终端输出的本地地址，默认是 http://localhost:3000。
+
+可直接访问 `/today` 预览工作台，也可从首页登录／注册弹窗中的「直接预览工作台」进入。
 
 当前不需要环境变量或外部服务。未来新增配置时，在 `.env.example` 中记录变量名，把本地值放入 `.env.local`；不要提交密钥。只有可以公开到浏览器的配置才能使用 `NEXT_PUBLIC_` 前缀。
 
@@ -84,6 +86,29 @@ pnpm dlx shadcn@latest add button
 ```
 
 组件源码进入 `src/components/ui`，CLI 会补充所需依赖。浅色主题为默认，`.dark` 变量已预留；尚未实现主题切换。
+
+## 工作台页面与交互
+
+| 路由           | 对应参考         | 内容                                      |
+| -------------- | ---------------- | ----------------------------------------- |
+| `/today`       | today.html       | 今日双栏手账、One Thing、时间轴、专注入口 |
+| `/inbox`       | inbox.html       | 收件箱、快速添加、Inbox Zero              |
+| `/upcoming`    | upcoming.html    | 按日期分组、Work / Study / Life 筛选      |
+| `/calendar`    | calendar.html    | 日、周、月视图及日期切换                  |
+| `/list-detail` | list-detail.html | Work & Projects 项目清单、排序、添加任务  |
+| `/completed`   | completed.html   | 已完成任务、恢复、删除                    |
+| `/profile`     | profile.html     | 等级、花园、全部工作台页面入口            |
+| `/insight`     | insight.html     | 统计卡片、专注热力图                      |
+| `/settings`    | settings.html    | 偏好表单、设置分类切换                    |
+
+- `(workspace)/layout.tsx` 共享 Dock 与前端状态，页面使用 Next Link 导航。个人主页提供全部辅助页面入口，Today、Upcoming 与 Calendar 之间也有快捷链接。
+- `features/tasks` 管理示例任务、详情抽屉、快速添加及完成／恢复状态；`components/task/task-row.tsx` 是共用任务展示组件。任务的修改会同步到相关视图；工作项目清单默认展示标记为 `inWorkList` 的项目任务，也可切换 All Work、Study、Life，查看被分配或恢复到其他清单的任务。
+- Dock 的加号或 `⌘K / Ctrl+K` 打开快速添加。输入 `/` 可搜索页面并用 Enter 跳转；点击任务正文打开详情，圆形复选框完成任务。
+- 抽屉支持修改标题、描述、日期、优先级、清单、标签、预估和提醒，以及子任务添加／勾选。弹层支持 Esc、焦点约束和关闭后的焦点恢复。
+- 专注计时支持暂停、继续和退出；设置中的番茄钟时长、每周起始日及每日容量会分别影响专注、日历和 Today。音效、自动休息与通知开关仅保留前端偏好，不启动音频、后台计时或系统通知。
+- 日期以设计稿中的 2026-09-09 为演示锚点。任务截止日期与安排的工作时段分开保存：日／周视图展示工作时段，月视图展示截止日期。实际任务数动态计算，修正原稿中数量不一致及星期／日期不匹配的问题。
+- 数据仅在工作台布局的 React 状态中保留，刷新或离开工作台后恢复示例。不使用数据库、远程 API、本地持久化或真实登录。AI 寄语、统计、经验值和花园为展示内容，不是实际 AI 或统计服务。
+- 页面级标题和布局保持 Server Components；交互按功能模块划分 Client Components。公共页面配方位于 `src/styles/workspace.module.css`，各功能的独有样式使用 CSS Modules。
 
 ## 质量与后续开发
 

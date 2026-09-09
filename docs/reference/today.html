@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DiDa-todo | Elegant Journal UI</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap');
+
+        :root {
+            --bg-color: #FAF7F2;        /* 奶油燕麦色 */
+            --surface-color: #FFFFFF;   
+            --text-primary: #1C1917;    
+            --text-secondary: #78716C;  
+            --text-muted: #A8A29E;      
+            --accent: #B88E57;          /* 香槟金 */
+            --accent-light: rgba(184, 142, 87, 0.1);
+            --border-color: #E7E5DF;    
+            --success-color: #9CA3AF;   /* 完成后的任务颜色 */
+            
+            --font-serif: 'Playfair Display', serif; 
+            --font-sans: 'Inter', -apple-system, sans-serif; 
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--font-sans);
+            color: var(--text-primary);
+            background-color: var(--bg-color);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            padding: 40px 20px 100px; 
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* =========================================
+           手账式双栏布局 (Journal Layout)
+           ========================================= */
+        .journal-container {
+            width: 100%;
+            max-width: 1100px;
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 60px;
+        }
+
+        .section-label {
+            font-size: 11px; text-transform: uppercase; letter-spacing: 3px;
+            color: var(--text-secondary); margin-bottom: 20px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .section-label::after {
+            content: ''; flex: 1; height: 1px; background: var(--border-color); margin-left: 15px;
+        }
+
+        /* --- 左侧：上下文与专注 (Context & Focus) --- */
+        .journal-left { display: flex; flex-direction: column; gap: 40px; }
+
+        .header { margin-bottom: 10px; }
+        .header h1 { font-family: var(--font-serif); font-size: 2.8rem; font-weight: 400; line-height: 1.1; margin-bottom: 10px;}
+        .header h1 span { font-style: italic; color: var(--text-secondary); }
+        .header .date { font-size: 13px; color: var(--text-secondary); letter-spacing: 2px; text-transform: uppercase;}
+
+        .ai-greeting {
+            background: var(--surface-color);
+            border: 1px solid var(--accent-light);
+            padding: 20px;
+            border-left: 3px solid var(--accent);
+            font-size: 13px; color: var(--text-secondary); line-height: 1.6;
+        }
+        .ai-greeting strong { color: var(--text-primary); font-weight: 500;}
+
+        .one-thing-card {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            padding: 30px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.02);
+            position: relative;
+            transition: 0.3s;
+            cursor: pointer;
+        }
+        .one-thing-card:hover { border-color: var(--accent); box-shadow: 0 15px 35px var(--accent-light); transform: translateY(-3px);}
+        
+        .ot-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;}
+        .ot-tag { font-size: 10px; background: var(--accent-light); color: var(--accent); padding: 4px 10px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;}
+        .ot-title { font-family: var(--font-serif); font-size: 1.6rem; font-weight: 600; line-height: 1.3; margin-bottom: 10px;}
+        .ot-meta { font-size: 12px; color: var(--text-secondary); margin-bottom: 25px; display: flex; gap: 15px;}
+        
+        .btn-focus {
+            width: 100%; background: var(--text-primary); color: #fff; border: none;
+            padding: 14px; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;
+            cursor: pointer; transition: 0.3s;
+        }
+        .btn-focus:hover { background: var(--accent); }
+
+        /* --- 右侧：行动与时间轴 (Action & Timeline) --- */
+        .journal-right { display: flex; flex-direction: column; gap: 40px; padding-top: 10px;}
+
+        .right-toolbar { display: flex; justify-content: space-between; align-items: center; }
+        .capacity-pill {
+            display: flex; align-items: center; gap: 10px;
+            font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary);
+        }
+        .cap-mini-bar { width: 40px; height: 3px; background: var(--border-color); border-radius: 2px; overflow: hidden;}
+        .cap-mini-fill { width: 75%; height: 100%; background: var(--accent); }
+        
+        .btn-icon { background: none; border: none; font-size: 18px; cursor: pointer; color: var(--text-primary); transition: 0.2s;}
+        .btn-icon:hover { color: var(--accent); }
+
+        .task-list { display: flex; flex-direction: column; gap: 10px; }
+        .task-row {
+            display: flex; align-items: flex-start; gap: 15px; padding: 15px 0;
+            border-bottom: 1px solid rgba(0,0,0,0.03);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .task-row:hover { transform: translateX(5px); }
+        
+        .checkbox {
+            width: 18px; height: 18px; border: 1px solid var(--text-secondary);
+            border-radius: 50%; margin-top: 2px; cursor: pointer; transition: all 0.2s;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .task-row:not(.completed):hover .checkbox { border-color: var(--accent); }
+        
+        .task-row.completed .checkbox { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .task-row.completed .checkbox::after { content: '✓'; font-size: 10px; }
+        .task-row.completed .task-title { color: var(--success-color); text-decoration: line-through; }
+        .task-row.completed .task-meta { opacity: 0.5; }
+
+        .task-content { flex: 1; }
+        .task-title { font-size: 14px; color: var(--text-primary); font-weight: 500; transition: 0.3s;}
+        .task-meta { display: flex; gap: 15px; font-size: 11px; color: var(--text-muted); margin-top: 6px; align-items: center;}
+        .tag { border: 1px solid var(--border-color); padding: 2px 8px; border-radius: 2px; }
+        .time-label { font-family: var(--font-sans); font-size: 12px; color: var(--accent); font-weight: 600; width: 45px; margin-top: 2px;}
+        
+        .task-row.frozen { opacity: 0.7; }
+        .task-row.frozen .task-title { font-weight: 400; color: var(--text-secondary); }
+
+        /* =========================================
+           悬浮 Dock 
+           ========================================= */
+        .floating-dock {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px); border: 1px solid var(--border-color);
+            padding: 10px 20px; border-radius: 100px; display: flex; align-items: center; gap: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.06); z-index: 100;
+        }
+        .dock-item {
+            display: flex; flex-direction: column; align-items: center; gap: 4px;
+            color: var(--text-secondary); cursor: pointer; transition: 0.3s; position: relative;
+        }
+        .dock-item:hover, .dock-item.active { color: var(--text-primary); transform: translateY(-3px);}
+        .dock-item.active::after { content: ''; position: absolute; bottom: -8px; width: 4px; height: 4px; background: var(--accent); border-radius: 50%; }
+        .dock-icon { font-size: 20px; }
+        .dock-label { font-size: 9px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; opacity: 0; transition: 0.2s; position: absolute; top: -20px;}
+        .dock-item:hover .dock-label { opacity: 1; transform: translateY(-5px); }
+        
+        .dock-main-btn {
+            background: var(--text-primary); color: #fff; width: 40px; height: 40px;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 20px; font-weight: 300; cursor: pointer; transition: 0.3s;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .dock-main-btn:hover { background: var(--accent); transform: scale(1.1) rotate(90deg); }
+
+        /* =========================================
+           弹窗层 (Focus Overlay & Command Palette)
+           ========================================= */
+        .focus-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color);
+            z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .focus-overlay.active { opacity: 1; pointer-events: auto; }
+        .focus-timer { font-family: var(--font-serif); font-size: 8rem; font-weight: 400; color: var(--text-primary); margin-bottom: 20px; font-variant-numeric: tabular-nums;}
+        .focus-task { font-size: 1.2rem; color: var(--text-secondary); margin-bottom: 60px; letter-spacing: 1px;}
+        .btn-stop { background: transparent; border: 1px solid var(--border-color); padding: 12px 30px; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; cursor: pointer; transition: 0.3s; border-radius: 30px;}
+        .btn-stop:hover { border-color: var(--text-primary); }
+
+        .cmd-palette {
+            position: fixed; top: 100px; left: 50%; transform: translate(-50%, -20px);
+            width: 100%; max-width: 600px; background: var(--surface-color);
+            border: 1px solid var(--border-color); border-radius: 8px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.08); z-index: 500;
+            opacity: 0; pointer-events: none; transition: 0.3s; display: flex; flex-direction: column;
+        }
+        .cmd-palette.active { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+        .cmd-input { width: 100%; padding: 20px; border: none; border-bottom: 1px solid var(--border-color); font-size: 16px; font-family: var(--font-sans); outline: none; background: transparent;}
+        .cmd-hint { padding: 15px 20px; font-size: 12px; color: var(--text-muted); }
+
+        /* =========================================
+           Task Detail Drawer 抽屉样式
+           ========================================= */
+        .drawer-backdrop {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(28, 25, 23, 0.2); backdrop-filter: blur(2px);
+            -webkit-backdrop-filter: blur(2px); z-index: 200;
+            opacity: 0; pointer-events: none; transition: 0.3s ease;
+        }
+        .drawer-backdrop.active { opacity: 1; pointer-events: auto; }
+
+        .task-drawer {
+            position: fixed; top: 0; right: 0; width: 100%; max-width: 520px; height: 100%;
+            background: var(--surface-color); border-left: 1px solid var(--border-color);
+            box-shadow: -20px 0 50px rgba(0,0,0,0.05); z-index: 210;
+            display: flex; flex-direction: column; transform: translateX(100%);
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            overflow-y: auto; padding: 40px;
+        }
+        .task-drawer.active { transform: translateX(0); }
+
+        .drawer-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .drawer-title-input {
+            font-family: var(--font-serif); font-size: 1.5rem; font-weight: 600;
+            border: none; background: transparent; width: 100%; outline: none;
+            color: var(--text-primary); line-height: 1.3; margin-bottom: 20px;
+        }
+
+        .drawer-section { margin-bottom: 30px; }
+        .drawer-desc {
+            width: 100%; border: 1px solid var(--border-color); padding: 14px;
+            border-radius: 4px; font-size: 13px; font-family: var(--font-sans);
+            background: var(--bg-color); color: var(--text-primary); resize: none;
+            height: 90px; outline: none; transition: 0.2s;
+        }
+        .drawer-desc:focus { border-color: var(--accent); background: #fff; }
+
+        .prop-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 0; border-bottom: 1px solid rgba(0,0,0,0.03);
+            font-size: 13px; cursor: pointer; transition: 0.2s;
+        }
+        .prop-row:hover { padding-left: 5px; color: var(--accent); }
+        .prop-label { color: var(--text-secondary); font-weight: 400; }
+        .prop-value { color: var(--text-primary); font-weight: 500; display: flex; align-items: center; gap: 6px;}
+
+        .subtask-list-drawer { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+        .subtask-item-drawer {
+            display: flex; align-items: center; gap: 12px; font-size: 13px;
+            padding: 8px 0; border-bottom: 1px dashed rgba(0,0,0,0.04); cursor: pointer;
+        }
+        .subtask-item-drawer.completed span { text-decoration: line-through; color: var(--success-color); }
+
+        .focus-box-drawer { background: var(--bg-color); border: 1px solid var(--border-color); padding: 20px; border-radius: 6px; }
+
+        .drawer-footer {
+            margin-top: auto; padding-top: 20px; border-top: 1px solid var(--border-color);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .btn-delete {
+            background: none; border: none; color: #DC2626; font-size: 12px;
+            text-transform: uppercase; letter-spacing: 1px; cursor: pointer; opacity: 0.8; transition: 0.2s;
+        }
+        .btn-delete:hover { opacity: 1; }
+
+        @media (max-width: 900px) {
+            .journal-container { grid-template-columns: 1fr; gap: 40px; }
+            .floating-dock { width: 90%; justify-content: space-between; }
+            .task-drawer { max-width: 100%; padding: 25px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="journal-container">
+        
+        <!-- 左侧：上下文与每日寄语 -->
+        <div class="journal-left">
+            <header class="header">
+                <h1>Good morning,<br><span>Alex</span></h1>
+                <div class="date">Wednesday, September 9</div>
+            </header>
+
+            <div class="ai-greeting">
+                ✨ <strong>AI Insight:</strong> You have 6 tasks today. Energy levels are optimal for deep work right now. Consider tackling your One Thing before 11:00 AM.
+            </div>
+
+            <!-- 核心焦点 (One Thing) -->
+            <div>
+                <div class="section-label">Today's Focus</div>
+                <!-- 点击卡片打开任务详情 -->
+                <div class="one-thing-card" onclick="openTaskDetail()">
+                    <div class="ot-header">
+                        <span class="ot-tag">One Thing</span>
+                        <span style="font-size: 18px; color: var(--accent);">◷</span>
+                    </div>
+                    <h3 class="ot-title">完成 DiDa 登录系统<br>核心业务逻辑与鉴权</h3>
+                    <div class="ot-meta">
+                        <span>Estimate: 2 Pomodoros</span>
+                        <span>Project: Development</span>
+                    </div>
+                    <!-- 阻止冒泡，避免点击按钮时触发详情抽屉 -->
+                    <button class="btn-focus" onclick="event.stopPropagation(); startFocus()">Start Deep Work</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧：执行流与时间轴 -->
+        <div class="journal-right">
+            
+            <div class="right-toolbar">
+                <div class="capacity-pill">
+                    Capacity 6/8
+                    <div class="cap-mini-bar"><div class="cap-mini-fill"></div></div>
+                </div>
+                <!-- 唤起命令行的搜索按钮 -->
+                <button class="btn-icon" onclick="toggleCommand()">🔍</button>
+            </div>
+
+            <!-- 承诺完成的冻结任务 -->
+            <div>
+                <div class="section-label">Committed (Frozen)</div>
+                <div class="task-list">
+                    <div class="task-row frozen" onclick="openTaskDetail()">
+                        <!-- 独立的Checkbox点击事件，阻止事件冒泡触发抽屉打开 -->
+                        <div class="checkbox" onclick="toggleTask(event, this.parentElement)"></div>
+                        <div class="task-content">
+                            <div class="task-title">提交 HCI 交互设计论文终稿 🔒</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 时间轴任务流 -->
+            <div style="margin-top: 10px;">
+                <div class="section-label">Timeline</div>
+                <div class="task-list">
+                    
+                    <div class="task-row" onclick="openTaskDetail()">
+                        <div class="time-label">09:00</div>
+                        <div class="checkbox" onclick="toggleTask(event, this.parentElement)"></div>
+                        <div class="task-content">
+                            <div class="task-title">设计系统 UI 资产整理</div>
+                            <div class="task-meta">
+                                <span class="tag">Design</span><span>◷ 1</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="task-row" onclick="openTaskDetail()">
+                        <div class="time-label">10:30</div>
+                        <div class="checkbox" onclick="toggleTask(event, this.parentElement)"></div>
+                        <div class="task-content">
+                            <div class="task-title">回复投资者与合作伙伴邮件</div>
+                            <div class="task-meta">
+                                <span class="tag">Comms</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="task-row" onclick="openTaskDetail()">
+                        <div class="time-label" style="color: var(--text-muted);">Any</div>
+                        <div class="checkbox" onclick="toggleTask(event, this.parentElement)"></div>
+                        <div class="task-content">
+                            <div class="task-title">采购生活物资 (牛奶、咖啡豆)</div>
+                            <div class="task-meta">
+                                <span class="tag" style="border-style: dashed;">Life</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= 悬浮底部 Dock ================= -->
+    <nav class="floating-dock">
+        <div class="dock-item active">
+            <span class="dock-label">Today</span>
+            <span class="dock-icon">◷</span>
+        </div>
+        <div class="dock-item">
+            <span class="dock-label">Inbox</span>
+            <span class="dock-icon" style="position:relative;">
+                📥
+                <span style="position:absolute; top:-2px; right:-2px; width:6px; height:6px; background:var(--accent); border-radius:50%;"></span>
+            </span>
+        </div>
+        <!-- 全局 Quick Add -->
+        <div class="dock-main-btn" onclick="toggleCommand()">＋</div>
+        
+        <div class="dock-item">
+            <span class="dock-label">Calendar</span>
+            <span class="dock-icon">▦</span>
+        </div>
+        <div class="dock-item">
+            <span class="dock-label">Profile</span>
+            <span class="dock-icon" style="font-size: 16px; border: 1px solid currentColor; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;">A</span>
+        </div>
+    </nav>
+
+    <!-- ================= 专注模式全屏遮罩 ================= -->
+    <div class="focus-overlay" id="focusMode">
+        <div class="focus-task">Focusing on: <strong>完成 DiDa 登录系统</strong></div>
+        <div class="focus-timer">24:59</div>
+        <button class="btn-stop" onclick="stopFocus()">Pause & Exit</button>
+    </div>
+
+    <!-- ================= 全局命令行 (Cmd+K 模拟) ================= -->
+    <div class="cmd-palette" id="cmdPalette">
+        <input type="text" class="cmd-input" placeholder="What needs to be done? (or type '/' for commands)" autofocus>
+        <div class="cmd-hint">Press <strong>Enter</strong> to create task, or <strong>Esc</strong> to close.</div>
+    </div>
+
+    <!-- ================= Task Detail Drawer 抽屉组件 ================= -->
+    <div class="drawer-backdrop" id="drawerBackdrop" onclick="closeTaskDetail()"></div>
+    <div class="task-drawer" id="taskDrawer">
+        
+        <div class="drawer-header">
+            <span class="ot-tag">Task Detail</span>
+            <button class="btn-icon" onclick="closeTaskDetail()" style="font-size: 22px;">×</button>
+        </div>
+
+        <!-- 可编辑任务标题 -->
+        <input type="text" class="drawer-title-input" value="完成 DiDa 登录系统核心业务逻辑与鉴权">
+
+        <!-- 描述与备注 -->
+        <div class="drawer-section">
+            <textarea class="drawer-desc" placeholder="Add a description...">实现 OTP 登录和 Session 管理，确保前端 Nuxt 与后端 Python API 的安全对接。</textarea>
+        </div>
+
+        <!-- 属性配置区 (Property Rows) -->
+        <div class="drawer-section">
+            <div class="prop-row">
+                <span class="prop-label">Date</span>
+                <span class="prop-value" style="color: var(--accent);">Today, Sep 9</span>
+            </div>
+            <div class="prop-row">
+                <span class="prop-label">Priority</span>
+                <span class="prop-value">P1 · High</span>
+            </div>
+            <div class="prop-row">
+                <span class="prop-label">List</span>
+                <span class="prop-value"><span style="width:6px; height:6px; background:var(--accent); border-radius:50%;"></span> Work</span>
+            </div>
+            <div class="prop-row">
+                <span class="prop-label">Tags</span>
+                <span class="prop-value"><span class="tag">#development</span> <span class="tag">#auth</span></span>
+            </div>
+            <div class="prop-row">
+                <span class="prop-label">Estimate</span>
+                <span class="prop-value">🍅 2 Pomodoros</span>
+            </div>
+            <div class="prop-row">
+                <span class="prop-label">Reminder</span>
+                <span class="prop-value">10 min before</span>
+            </div>
+        </div>
+
+        <!-- 子任务模块 -->
+        <div class="drawer-section">
+            <div class="section-label" style="margin-bottom: 10px;">Subtasks</div>
+            <div class="subtask-list-drawer">
+                <div class="subtask-item-drawer completed" onclick="this.classList.toggle('completed')">
+                    <div class="checkbox" style="width:14px; height:14px;"></div>
+                    <span>Login UI Layout</span>
+                </div>
+                <div class="subtask-item-drawer" onclick="this.classList.toggle('completed')">
+                    <div class="checkbox" style="width:14px; height:14px;"></div>
+                    <span>OTP Verification API</span>
+                </div>
+                <div class="subtask-item-drawer" onclick="this.classList.toggle('completed')">
+                    <div class="checkbox" style="width:14px; height:14px;"></div>
+                    <span>Session Middleware</span>
+                </div>
+            </div>
+            <div style="margin-top: 12px; font-size: 12px; color: var(--text-secondary); cursor: pointer; font-weight: 500;">＋ Add Subtask</div>
+        </div>
+
+        <!-- 抽屉内专注联动 -->
+        <div class="drawer-section focus-box-drawer">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary);">Focus Progress</span>
+                <span style="font-size: 11px; font-weight: 600; color: var(--accent);">🍅 1 / 2 completed</span>
+            </div>
+            <button class="btn-focus" onclick="startFocus()">Start Focus Session</button>
+        </div>
+
+        <!-- 底部操作区 -->
+        <div class="drawer-footer">
+            <button class="btn-delete" onclick="alert('Task deleted')">Delete Task</button>
+            <span style="font-size: 11px; color: var(--text-muted);">Created 2 hours ago</span>
+        </div>
+    </div>
+
+    <!-- ================= JavaScript 交互逻辑 ================= -->
+    <script>
+        // 1. 任务打勾交互
+        function toggleTask(event, element) {
+            // 阻止事件冒泡，防止点击复选框时触发外层元素的点击事件（如打开抽屉）
+            event.stopPropagation(); 
+            element.classList.toggle('completed');
+        }
+
+        // 2. 沉浸式专注模式交互
+        const focusOverlay = document.getElementById('focusMode');
+        function startFocus() {
+            // 如果抽屉开着，先关掉抽屉以获得纯粹的专注沉浸感
+            closeTaskDetail(); 
+            focusOverlay.classList.add('active');
+        }
+        function stopFocus() {
+            focusOverlay.classList.remove('active');
+        }
+
+        // 3. 全局命令行 (Command Palette) 交互
+        const cmdPalette = document.getElementById('cmdPalette');
+        const cmdInput = document.querySelector('.cmd-input');
+
+        function toggleCommand() {
+            cmdPalette.classList.toggle('active');
+            if (cmdPalette.classList.contains('active')) {
+                setTimeout(() => cmdInput.focus(), 100);
+            }
+        }
+
+        // 4. 控制 Task Detail 抽屉的打开与关闭
+        const taskDrawer = document.getElementById('taskDrawer');
+        const drawerBackdrop = document.getElementById('drawerBackdrop');
+
+        function openTaskDetail() {
+            taskDrawer.classList.add('active');
+            drawerBackdrop.classList.add('active');
+        }
+
+        function closeTaskDetail() {
+            taskDrawer.classList.remove('active');
+            drawerBackdrop.classList.remove('active');
+        }
+
+        // 监听全局 Esc 键事件
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                // 关闭命令行
+                if (cmdPalette.classList.contains('active')) {
+                    toggleCommand();
+                }
+                // 关闭详情抽屉
+                if (taskDrawer.classList.contains('active')) {
+                    closeTaskDetail();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

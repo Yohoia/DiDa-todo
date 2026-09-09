@@ -1,0 +1,22 @@
+export type TaskList = "Inbox" | "Work" | "Study" | "Life";
+export type Subtask = { id: string; title: string; completed: boolean };
+export type Task = {
+  id: string;
+  title: string;
+  description: string;
+  list: TaskList;
+  date: string;
+  time?: string;
+  schedule?: { date: string; hour: number; duration: number; label?: string };
+  tag?: string;
+  priority: 1 | 2 | 3;
+  estimate: number;
+  reminder: string;
+  completed: boolean;
+  completedAt?: string;
+  frozen?: boolean;
+  featured?: boolean;
+  inWorkList?: boolean;
+  created: number;
+  subtasks: Subtask[];
+};

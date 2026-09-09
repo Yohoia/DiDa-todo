@@ -54,7 +54,7 @@ const DialogContent = React.forwardRef<
         )}
       >
         <X className="h-4 w-4" />
-        <span className="sr-only">关闭登录弹窗</span>
+        <span className="sr-only">关闭弹窗</span>
       </DialogPrimitive.Close>
     </DialogPrimitive.Content>
   </DialogPortal>
