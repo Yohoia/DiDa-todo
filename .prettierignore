@@ -1,0 +1,12 @@
+node_modules/
+.next/
+out/
+dist/
+build/
+coverage/
+pnpm-lock.yaml
+next-env.d.ts
+# Preserve the original product and technology documents.
+docs/PRD.md
+docs/TechStack.md
+docs/reference/

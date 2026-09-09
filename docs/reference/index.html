@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DiDi-todo | 高级效率艺术 (柔和光影版)</title>
+    <style>
+        /* 导入优雅的衬线字体(标题) 和 现代无衬线字体(正文) */
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap');
+
+        /* --------------------------------------
+           全新色彩体系：柔和、明亮、高级杂志风
+           -------------------------------------- */
+        :root {
+            --bg-color: #FAF7F2;        /* 柔和奶油白 / 燕麦色 */
+            --surface-color: #FFFFFF;   /* 卡片背景纯白，产生微微的层次感 */
+            --text-primary: #1C1917;    /* 深炭黑（非纯黑，视觉更柔和） */
+            --text-secondary: #78716C;  /* 温暖的灰褐色 */
+            --accent: #B88E57;          /* 优雅的香槟金 / 焦糖色 */
+            --border-color: #E7E5DF;    /* 极细的暖灰边框 */
+            
+            --font-serif: 'Playfair Display', serif; /* 衬线体 */
+            --font-sans: 'Inter', -apple-system, sans-serif; /* 无衬线体 */
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--font-sans);
+            color: var(--text-primary);
+            background-color: var(--bg-color);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        a { text-decoration: none; color: inherit; }
+        ul { list-style: none; }
+
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 40px;
+        }
+
+        /* ------------------ 导航栏 ------------------ */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 25px 40px;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 100;
+            background: rgba(250, 247, 242, 0.8); /* 浅色半透明 */
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .logo {
+            font-family: var(--font-serif);
+            font-size: 26px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* 极简金色菱形 Logo */
+        .logo-mark {
+            width: 16px; height: 16px;
+            background: transparent;
+            border: 2px solid var(--accent);
+            transform: rotate(45deg);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 40px;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 400;
+            color: var(--text-secondary);
+        }
+
+        .nav-links a:hover { color: var(--accent); transition: color 0.3s; }
+
+        .nav-actions { display: flex; gap: 20px; align-items: center; }
+
+        .btn {
+            padding: 10px 28px;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.4s ease;
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+        .btn-outline:hover { border-color: var(--text-primary); }
+
+        .btn-gold {
+            background: var(--text-primary);
+            color: #ffffff;
+            border: 1px solid var(--text-primary);
+            font-weight: 600;
+        }
+        .btn-gold:hover {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #ffffff;
+        }
+
+        /* ------------------ 主视觉区 Hero ------------------ */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            padding-top: 80px;
+        }
+
+        .hero-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: center;
+            width: 100%;
+        }
+
+        .tagline {
+            color: var(--accent);
+            font-size: 12px;
+            letter-spacing: 6px;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+
+        .hero h1 {
+            font-family: var(--font-serif);
+            font-size: 4.5rem;
+            line-height: 1.1;
+            font-weight: 400;
+            margin-bottom: 30px;
+        }
+        .hero h1 span { font-style: italic; color: var(--text-secondary); }
+
+        .hero p.desc {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            margin-bottom: 50px;
+            max-width: 450px;
+            font-weight: 300;
+        }
+
+        .stats {
+            display: flex;
+            gap: 50px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 30px;
+            margin-top: 50px;
+        }
+        .stat-item h3 { font-family: var(--font-serif); font-size: 2rem; color: var(--accent); font-weight: 400; margin-bottom: 5px; }
+        .stat-item p { font-size: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;}
+
+        /* --- 浅色玻璃态 Mockup --- */
+        .hero-right {
+            position: relative;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        /* 柔和的香槟色背景氛围光 */
+        .glow {
+            position: absolute;
+            width: 300px; height: 300px;
+            background: radial-gradient(circle, rgba(184, 142, 87, 0.12) 0%, transparent 70%);
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .mockup-window {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 480px;
+            background: rgba(255, 255, 255, 0.6); /* 浅色半透明 */
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.8); /* 纯白高光边框 */
+            box-shadow: 0 30px 60px rgba(0,0,0,0.04); /* 非常柔和的微阴影 */
+            display: flex;
+            flex-direction: column;
+            border-radius: 4px; 
+            overflow: hidden;
+        }
+
+        .mockup-header {
+            padding: 20px 25px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05); /* 柔和分割线 */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .m-title { font-family: var(--font-serif); font-size: 1.5rem; }
+        .m-date { font-size: 12px; color: var(--text-secondary); letter-spacing: 1px;}
+
+        .mockup-body { padding: 10px 25px 30px; }
+        
+        .task-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 16px 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+            transition: 0.3s;
+        }
+        .task-item:hover { transform: translateX(5px); }
+        .task-checkbox {
+            width: 18px; height: 18px;
+            border: 1px solid var(--text-secondary);
+            border-radius: 2px;
+            cursor: pointer;
+        }
+        .task-content { flex: 1; }
+        .task-title { font-size: 14px; font-weight: 500; margin-bottom: 4px; color: var(--text-primary);}
+        .task-time { font-size: 11px; color: var(--text-secondary); font-family: monospace;}
+        
+        /* 高级标签 */
+        .task-tag {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 3px 8px;
+            border: 1px solid var(--border-color);
+        }
+        .tag-gold { color: var(--accent); border-color: rgba(184, 142, 87, 0.3); background: rgba(184, 142, 87, 0.05); }
+
+        /* ------------------ 功能区 Features ------------------ */
+        .features { padding: 120px 0; }
+        
+        .section-title {
+            font-family: var(--font-serif);
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+            font-weight: 400;
+            text-align: center;
+        }
+        .section-sub {
+            text-align: center;
+            color: var(--text-secondary);
+            margin-bottom: 70px;
+            font-size: 14px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 30px;
+        }
+
+        .feature-card {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            padding: 40px 30px;
+            text-align: center;
+            transition: all 0.4s ease;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.02); /* 添加极轻微的阴影 */
+        }
+        .feature-card:hover { border-color: var(--accent); transform: translateY(-5px); }
+
+        .f-icon {
+            font-family: var(--font-serif);
+            font-size: 32px;
+            color: var(--accent);
+            margin-bottom: 20px;
+        }
+
+        .feature-card h4 { font-size: 16px; margin-bottom: 10px; font-weight: 600; }
+        .feature-card p { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+
+        /* ------------------ 陪伴成长区 Promo ------------------ */
+        .promo { padding: 100px 0; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);}
+        .promo-grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 80px; align-items: center; }
+        
+        .promo-text h2 { font-family: var(--font-serif); font-size: 3rem; margin-bottom: 25px; line-height: 1.2; font-weight: 400;}
+        .promo-text p { color: var(--text-secondary); margin-bottom: 40px; font-size: 1.1rem; }
+
+        .promo-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        .p-card {
+            border: 1px solid var(--border-color);
+            padding: 30px 20px;
+            text-align: center;
+            background: var(--surface-color);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.02);
+        }
+        .p-card .icon { font-size: 24px; color: var(--text-primary); margin-bottom: 15px; }
+        .p-card h4 { font-size: 14px; margin-bottom: 8px; font-weight: 600; }
+        .p-card p { font-size: 12px; color: var(--text-secondary); }
+
+        /* ------------------ 评价区 Testimonials ------------------ */
+        .testimonials { padding: 120px 0; }
+        .review-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; }
+        
+        .review-card {
+            padding: 40px;
+            background: transparent;
+            border-left: 1px solid var(--border-color);
+            position: relative;
+            transition: 0.3s;
+        }
+        .review-card:hover { border-left-color: var(--accent); background: rgba(0,0,0,0.02); }
+        
+        .quote-mark { font-family: var(--font-serif); font-size: 60px; color: var(--border-color); position: absolute; top: 10px; left: 20px; line-height: 1;}
+        .review-text { font-family: var(--font-serif); font-size: 1.1rem; font-style: italic; color: var(--text-primary); margin-bottom: 30px; position: relative; z-index: 1;}
+        
+        .reviewer h5 { font-size: 14px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; font-weight: 600;}
+        .reviewer span { font-size: 12px; color: var(--text-secondary); }
+
+        /* ------------------ 底部 CTA ------------------ */
+        .bottom-cta {
+            text-align: center;
+            padding: 120px 0;
+            background: var(--surface-color);
+            border-top: 1px solid var(--border-color);
+        }
+        .bottom-cta h2 { font-family: var(--font-serif); font-size: 3.5rem; margin-bottom: 40px; font-weight: 400;}
+
+        /* 极简页脚 */
+        footer {
+            padding: 40px;
+            text-align: center;
+            background: var(--bg-color);
+            font-size: 12px;
+            color: var(--text-secondary);
+            letter-spacing: 1px;
+        }
+
+        /* 响应式 */
+        @media (max-width: 900px) {
+            .hero-grid, .promo-grid { grid-template-columns: 1fr; gap: 60px;}
+            .features-grid, .review-grid { grid-template-columns: 1fr; }
+            .promo-cards { grid-template-columns: 1fr; }
+            .nav-links { display: none; }
+            .hero h1 { font-size: 3.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 顶部导航 -->
+    <header>
+        <div class="logo">
+            <div class="logo-mark"></div>
+            DiDi-todo
+        </div>
+        <nav class="nav-links">
+            <a href="#">Home</a>
+            <a href="#">Features</a>
+            <a href="#">Pricing</a>
+            <a href="#">About</a>
+        </nav>
+        <div class="nav-actions">
+            <a href="#" class="btn btn-outline">Log In</a>
+            <a href="#" class="btn btn-gold">Start Now</a>
+        </div>
+    </header>
+
+    <!-- 主视觉区 Hero -->
+    <section class="hero container">
+        <div class="hero-grid">
+            <div class="hero-text">
+                <div class="tagline">Elegant Productivity</div>
+                <h1>滴滴待办<br>从想法到完成<br><span>掌控每一天。</span></h1>
+                <p class="desc">DiDi-todo 是一款克制、优雅且强大的待办事项应用。剔除繁杂，聚焦核心，将您的时间管理升华为一门艺术。</p>
+                
+                <div style="display: flex; gap: 20px;">
+                    <button class="btn btn-gold" style="padding: 15px 35px;">立即开始探索</button>
+                </div>
+
+                <!-- 数据指标 -->
+                <div class="stats">
+                    <div class="stat-item">
+                        <h3>500k+</h3>
+                        <p>Global Elites</p>
+                    </div>
+                    <div class="stat-item">
+                        <h3>98%</h3>
+                        <p>Satisfaction</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧浅色玻璃态工作台 Mockup -->
+            <div class="hero-right">
+                <div class="glow"></div>
+                <div class="mockup-window">
+                    <div class="mockup-header">
+                        <div>
+                            <div class="m-title">Today</div>
+                            <div class="m-date">FRIDAY, SEP 4</div>
+                        </div>
+                        <div style="color: var(--accent); cursor: pointer; font-size: 20px;">＋</div>
+                    </div>
+                    
+                    <div class="mockup-body">
+                        <!-- Task 1 -->
+                        <div class="task-item">
+                            <div class="task-checkbox"></div>
+                            <div class="task-content">
+                                <div class="task-title">完成顶级产品设计稿</div>
+                                <div class="task-time">09:00 - 11:00</div>
+                            </div>
+                            <div class="task-tag tag-gold">Priority</div>
+                        </div>
+                        <!-- Task 2 -->
+                        <div class="task-item">
+                            <div class="task-checkbox"></div>
+                            <div class="task-content">
+                                <div class="task-title">研究 Web3 交互范式</div>
+                                <div class="task-time">14:00 - 15:00</div>
+                            </div>
+                            <div class="task-tag">Research</div>
+                        </div>
+                        <!-- Task 3 -->
+                        <div class="task-item">
+                            <div class="task-checkbox"></div>
+                            <div class="task-content">
+                                <div class="task-title">冥想与阅读</div>
+                                <div class="task-time">20:00 - 21:00</div>
+                            </div>
+                            <div class="task-tag">Personal</div>
+                        </div>
+                        <!-- Task 4 -->
+                        <div class="task-item" style="border-bottom: none;">
+                            <div class="task-checkbox"></div>
+                            <div class="task-content">
+                                <div class="task-title">复盘今日心流状态</div>
+                                <div class="task-time">21:00 - 21:30</div>
+                            </div>
+                            <div class="task-tag">Review</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 功能区 Features -->
+    <section class="features container">
+        <div class="section-sub">Core Features</div>
+        <h2 class="section-title">Minimalism Meets Power</h2>
+        
+        <div class="features-grid" style="margin-top: 60px;">
+            <div class="feature-card">
+                <div class="f-icon">Ⅰ.</div>
+                <h4>快速记录</h4>
+                <p>化繁为简的捕获机制，让闪现的灵感瞬间落盘，绝不打断心流。</p>
+            </div>
+            <div class="feature-card">
+                <div class="f-icon">Ⅱ.</div>
+                <h4>智能规划</h4>
+                <p>基于意图识别的静默算法，自动为您编排最优的时间价值序列。</p>
+            </div>
+            <div class="feature-card">
+                <div class="f-icon">Ⅲ.</div>
+                <h4>数据洞察</h4>
+                <p>克制而精准的数据统计，以客观的视角见证您的每一次跨越。</p>
+            </div>
+            <div class="feature-card">
+                <div class="f-icon">Ⅳ.</div>
+                <h4>习惯养成</h4>
+                <p>不仅是待办清空，更是通过潜移默化的正反馈，重塑您的生活秩序。</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 陪伴成长区 Promo -->
+    <section class="promo">
+        <div class="container promo-grid">
+            <div class="promo-text">
+                <div class="tagline" style="color: var(--text-secondary);">Beyond Todo</div>
+                <h2>不仅是清单，<br>更是您的效率挚友。</h2>
+                <p>DiDi-todo 摒弃了花哨的焦虑感设计。我们用最纯粹的视觉呈现，帮助您规划时间、追踪进度，在平静中实现那些不可思议的成就。</p>
+                <a href="#" class="btn btn-outline" style="display: inline-block;">探索哲学 ➔</a>
+            </div>
+            <div class="promo-cards">
+                <div class="p-card">
+                    <div class="icon">⚲</div>
+                    <h4>设定目标</h4>
+                    <p>摒弃杂念，直击靶心</p>
+                </div>
+                <div class="p-card">
+                    <div class="icon">◷</div>
+                    <h4>记录成长</h4>
+                    <p>让时间的刻度可见</p>
+                </div>
+                <div class="p-card">
+                    <div class="icon">✧</div>
+                    <h4>持续进化</h4>
+                    <p>在平静中蜕变</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 评价区 Testimonials -->
+    <section class="testimonials container">
+        <div class="section-sub">Testimonials</div>
+        <h2 class="section-title">深受全球极简主义者青睐</h2>
+        
+        <div class="review-grid" style="margin-top: 80px;">
+            <div class="review-card">
+                <div class="quote-mark">“</div>
+                <div class="review-text">没有任何冗余的视觉干扰，DiDi-todo 让我找回了深度的专注力，这是一种奢侈的体验。</div>
+                <div class="reviewer">
+                    <h5>Alexander C.</h5>
+                    <span>Product Architect</span>
+                </div>
+            </div>
+            <div class="review-card">
+                <div class="quote-mark">“</div>
+                <div class="review-text">它不像一个冰冷的工具，更像是一件放在我桌面上的艺术品。极简，但不可或缺。</div>
+                <div class="reviewer">
+                    <h5>Elena R.</h5>
+                    <span>Independent Designer</span>
+                </div>
+            </div>
+            <div class="review-card">
+                <div class="quote-mark">“</div>
+                <div class="review-text">柔和的色调配合优雅的字体，让我即使在应对繁重的排期时，也能感受到一种宁静。</div>
+                <div class="reviewer">
+                    <h5>Marcus W.</h5>
+                    <span>Web3 Developer</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 底部 CTA -->
+    <section class="bottom-cta">
+        <div class="container">
+            <h2>重塑您的时间秩序。</h2>
+            <button class="btn btn-gold" style="padding: 16px 45px; font-size: 14px;">开启尊享体验</button>
+        </div>
+    </section>
+
+    <!-- 极简页脚 -->
+    <footer>
+        © 2026 DIDI-TODO. DESIGNED FOR THE FOCUSED MIND.
+    </footer>
+
+</body>
+</html>

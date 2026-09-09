@@ -1,0 +1,705 @@
+.page {
+  background: var(--background);
+  color: var(--foreground);
+  line-height: 1.6;
+}
+.page a {
+  text-decoration: none;
+  color: inherit;
+}
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 40px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 25px 40px;
+  position: fixed;
+  width: 100%;
+  top: 0;
+  z-index: 100;
+  background: rgba(250, 247, 242, 0.8);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.logo {
+  font-family: var(--font-serif);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logoMark {
+  width: 16px;
+  height: 16px;
+  background: transparent;
+  border: 2px solid var(--brand-gold);
+  transform: rotate(45deg);
+}
+
+.navLinks {
+  display: flex;
+  gap: 40px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-weight: 400;
+  color: var(--muted-foreground);
+}
+
+.navLinks a:hover {
+  color: var(--brand-gold);
+  transition: color 0.3s;
+}
+
+.navActions {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.btn {
+  padding: 10px 28px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: all 0.4s ease;
+}
+
+.btnOutline {
+  background: transparent;
+  color: var(--foreground);
+  border: 1px solid var(--border);
+}
+.btnOutline:hover {
+  border-color: var(--foreground);
+}
+
+.btnGold {
+  background: var(--foreground);
+  color: #ffffff;
+  border: 1px solid var(--foreground);
+  font-weight: 600;
+}
+.btnGold:hover {
+  background: var(--brand-gold);
+  border-color: var(--brand-gold);
+  color: #ffffff;
+}
+
+.hero {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  padding-top: 80px;
+}
+
+.heroGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 60px;
+  align-items: center;
+  width: 100%;
+}
+
+.tagline {
+  color: var(--brand-gold);
+  font-size: 12px;
+  letter-spacing: 6px;
+  margin-bottom: 20px;
+  text-transform: uppercase;
+}
+
+.hero h1 {
+  font-family: var(--font-serif);
+  font-size: 4.5rem;
+  line-height: 1.1;
+  font-weight: 400;
+  margin-bottom: 30px;
+}
+.hero h1 span {
+  font-style: italic;
+  color: var(--muted-foreground);
+}
+
+.hero p.desc {
+  font-size: 1.1rem;
+  color: var(--muted-foreground);
+  margin-bottom: 50px;
+  max-width: 450px;
+  font-weight: 300;
+}
+
+.stats {
+  display: flex;
+  gap: 50px;
+  border-top: 1px solid var(--border);
+  padding-top: 30px;
+  margin-top: 50px;
+}
+.statItem h3 {
+  font-family: var(--font-serif);
+  font-size: 2rem;
+  color: var(--brand-gold);
+  font-weight: 400;
+  margin-bottom: 5px;
+}
+.statItem p {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.heroRight {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.glow {
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(184, 142, 87, 0.12) 0%, transparent 70%);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.mockupWindow {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 480px;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.mockup-.header {
+  padding: 20px 25px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.mTitle {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+}
+.mDate {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  letter-spacing: 1px;
+}
+
+.mockupBody {
+  padding: 10px 25px 30px;
+}
+
+.taskItem {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 16px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  transition: 0.3s;
+}
+.taskItem:hover {
+  transform: translateX(5px);
+}
+.taskCheckbox {
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--muted-foreground);
+  border-radius: 2px;
+  cursor: pointer;
+}
+.taskContent {
+  flex: 1;
+}
+.taskTitle {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 4px;
+  color: var(--foreground);
+}
+.taskTime {
+  font-size: 11px;
+  color: var(--muted-foreground);
+  font-family: monospace;
+}
+
+.taskTag {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+}
+.tagGold {
+  color: var(--brand-gold);
+  border-color: rgba(184, 142, 87, 0.3);
+  background: rgba(184, 142, 87, 0.05);
+}
+
+.features {
+  padding: 120px 0;
+}
+
+.sectionTitle {
+  font-family: var(--font-serif);
+  font-size: 2.5rem;
+  margin-bottom: 15px;
+  font-weight: 400;
+  text-align: center;
+}
+.sectionSub {
+  text-align: center;
+  color: var(--muted-foreground);
+  margin-bottom: 70px;
+  font-size: 14px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.featuresGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 30px;
+}
+
+.featureCard {
+  background: var(--card);
+  border: 1px solid var(--border);
+  padding: 40px 30px;
+  text-align: center;
+  transition: all 0.4s ease;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.02);
+}
+.featureCard:hover {
+  border-color: var(--brand-gold);
+  transform: translateY(-5px);
+}
+
+.fIcon {
+  font-family: var(--font-serif);
+  font-size: 32px;
+  color: var(--brand-gold);
+  margin-bottom: 20px;
+}
+
+.featureCard h3 {
+  font-size: 16px;
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+.featureCard p {
+  font-size: 13px;
+  color: var(--muted-foreground);
+  line-height: 1.6;
+}
+
+.promo {
+  padding: 100px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.promoGrid {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 80px;
+  align-items: center;
+}
+
+.promoText h2 {
+  font-family: var(--font-serif);
+  font-size: 3rem;
+  margin-bottom: 25px;
+  line-height: 1.2;
+  font-weight: 400;
+}
+.promoText p {
+  color: var(--muted-foreground);
+  margin-bottom: 40px;
+  font-size: 1.1rem;
+}
+
+.promoCards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+.pCard {
+  border: 1px solid var(--border);
+  padding: 30px 20px;
+  text-align: center;
+  background: var(--card);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.02);
+}
+.pCard .icon {
+  font-size: 24px;
+  color: var(--foreground);
+  margin-bottom: 15px;
+}
+.pCard h3 {
+  font-size: 14px;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+.pCard p {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+.testimonials {
+  padding: 120px 0;
+}
+.reviewGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 30px;
+}
+
+.reviewCard {
+  padding: 40px;
+  background: transparent;
+  border-left: 1px solid var(--border);
+  position: relative;
+  transition: 0.3s;
+}
+.reviewCard:hover {
+  border-left-color: var(--brand-gold);
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.quoteMark {
+  font-family: var(--font-serif);
+  font-size: 60px;
+  color: var(--border);
+  position: absolute;
+  top: 10px;
+  left: 20px;
+  line-height: 1;
+}
+.reviewText {
+  font-family: var(--font-serif);
+  font-size: 1.1rem;
+  font-style: italic;
+  color: var(--foreground);
+  margin-bottom: 30px;
+  position: relative;
+  z-index: 1;
+}
+
+.reviewer h3 {
+  font-size: 14px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+.reviewer span {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+.bottomCta {
+  text-align: center;
+  padding: 120px 0;
+  background: var(--card);
+  border-top: 1px solid var(--border);
+}
+.bottomCta h2 {
+  font-family: var(--font-serif);
+  font-size: 3.5rem;
+  margin-bottom: 40px;
+  font-weight: 400;
+}
+
+.footer {
+  padding: 40px;
+  text-align: center;
+  background: var(--background);
+  font-size: 12px;
+  color: var(--muted-foreground);
+  letter-spacing: 1px;
+}
+
+@media (max-width: 900px) {
+  .heroGrid,
+  .promoGrid {
+    grid-template-columns: 1fr;
+    gap: 60px;
+  }
+  .featuresGrid,
+  .reviewGrid {
+    grid-template-columns: 1fr;
+  }
+  .promoCards {
+    grid-template-columns: 1fr;
+  }
+  .navLinks {
+    display: none;
+  }
+  .hero h1 {
+    font-size: 3.5rem;
+  }
+}
+
+.page {
+  min-width: 0;
+}
+.page section {
+  scroll-margin-top: 110px;
+}
+.header {
+  gap: 24px;
+}
+.logo {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.navActions {
+  flex-shrink: 0;
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  font-family: var(--font-sans);
+  line-height: 1.6;
+}
+.heroButton {
+  padding: 15px 35px;
+}
+.ctaButton {
+  padding: 16px 45px;
+  font-size: 14px;
+}
+.featuresGrid {
+  margin-top: 60px;
+}
+.reviewGrid {
+  margin-top: 80px;
+}
+.mutedTagline {
+  color: var(--muted-foreground);
+}
+.philosophyLink {
+  gap: 8px;
+}
+.pCard .icon {
+  margin-inline: auto;
+}
+.taskItem:last-child {
+  border-bottom: 0;
+}
+.taskItem {
+  cursor: pointer;
+}
+.taskContent {
+  min-width: 0;
+}
+.taskTitle,
+.taskTime {
+  display: block;
+}
+.taskCheckbox {
+  flex-shrink: 0;
+  accent-color: var(--brand-gold);
+}
+.taskCheckbox:checked + .taskContent .taskTitle {
+  text-decoration: line-through;
+  color: var(--muted-foreground);
+}
+.taskTag {
+  flex-shrink: 0;
+}
+.addTask {
+  color: var(--brand-gold);
+  background: none;
+  border: 0;
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+}
+.skipLink {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 200;
+  padding: 12px 20px;
+  background: var(--card);
+  transform: translateY(-150%);
+}
+.skipLink:focus {
+  transform: translateY(0);
+}
+
+@media (min-width: 901px) and (max-width: 1150px) {
+  .navLinks {
+    gap: 24px;
+  }
+  .heroGrid {
+    gap: 32px;
+  }
+  .hero h1 {
+    font-size: 3.75rem;
+  }
+  .promoGrid {
+    gap: 40px;
+  }
+  .promoCards {
+    gap: 12px;
+  }
+  .pCard {
+    padding: 24px 12px;
+  }
+  .featureCard {
+    padding: 32px 20px;
+  }
+}
+@media (max-width: 900px) {
+  .hero {
+    min-height: auto;
+    padding-top: 160px;
+    padding-bottom: 40px;
+  }
+  .heroRight {
+    justify-content: center;
+  }
+  .mockupWindow {
+    max-width: 560px;
+  }
+  .featuresGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .promoCards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .features,
+  .testimonials {
+    padding-block: 80px;
+  }
+  .promo,
+  .bottomCta {
+    padding-block: 80px;
+  }
+  .hero h1 {
+    font-size: clamp(2.5rem, 7vw, 3.5rem);
+  }
+}
+@media (max-width: 600px) {
+  .container {
+    padding-inline: 24px;
+  }
+  .header {
+    padding: 20px 24px;
+    gap: 12px;
+  }
+  .logo {
+    font-size: 22px;
+    gap: 10px;
+  }
+  .navActions {
+    gap: 8px;
+  }
+  .navActions .btn {
+    padding: 8px 14px;
+    font-size: 11px;
+  }
+  .startButton {
+    display: none;
+  }
+  .hero {
+    padding-top: 135px;
+  }
+  .heroGrid,
+  .promoGrid {
+    gap: 44px;
+  }
+  .hero p.desc {
+    font-size: 1rem;
+    margin-bottom: 32px;
+  }
+  .tagline {
+    letter-spacing: 4px;
+  }
+  .stats {
+    margin-top: 36px;
+    gap: 40px;
+  }
+  .mockupHeader {
+    padding: 20px;
+  }
+  .mockupBody {
+    padding: 10px 20px 24px;
+  }
+  .taskItem {
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .taskTitle {
+    font-size: 13px;
+  }
+  .taskTag {
+    font-size: 9px;
+    padding-inline: 5px;
+  }
+  .featuresGrid,
+  .promoCards {
+    grid-template-columns: 1fr;
+  }
+  .sectionTitle {
+    font-size: 2rem;
+  }
+  .sectionSub {
+    margin-bottom: 30px;
+    font-size: 12px;
+  }
+  .featuresGrid {
+    margin-top: 40px;
+    gap: 20px;
+  }
+  .promoText h2 {
+    font-size: 2.25rem;
+  }
+  .promoText p {
+    font-size: 1rem;
+  }
+  .reviewGrid {
+    margin-top: 44px;
+  }
+  .reviewCard {
+    padding: 32px;
+  }
+  .bottomCta h2 {
+    font-size: 2.25rem;
+  }
+  .footer {
+    padding: 30px 24px;
+    font-size: 10px;
+  }
+}
