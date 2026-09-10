@@ -2,6 +2,7 @@
 import { useI18n } from "@/features/preferences/preferences-provider";
 
 import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { PageHeader, EmptyState } from "@/components/shared/workspace-ui";
 import { TaskRow } from "@/components/task/task-row";
 import { useWorkspace } from "./workspace-provider";
@@ -20,15 +21,17 @@ export function InboxPage() {
       />
       {inbox.length ? (
         <div className="flex flex-col gap-3">
-          {inbox.map((task) => (
-            <TaskRow
-              key={task.id}
-              task={task}
-              variant="inbox"
-              onOpen={() => selectTask(task.id)}
-              onToggle={() => toggleTask(task.id)}
-            />
-          ))}
+          <AnimatePresence mode="popLayout">
+            {inbox.map((task) => (
+              <TaskRow
+                key={task.id}
+                task={task}
+                variant="inbox"
+                onOpen={() => selectTask(task.id)}
+                onToggle={() => toggleTask(task.id)}
+              />
+            ))}
+          </AnimatePresence>
         </div>
       ) : (
         <EmptyState title={t("Inbox Zero")}>
@@ -54,7 +57,14 @@ export function InboxPage() {
           placeholder={t("Dump what's on your mind...")}
           maxLength={200}
         />
-        <button type="submit">{t("Add")}</button>
+        <motion.button
+          type="submit"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          transition={{ duration: 0.15, ease: "easeOut" }}
+        >
+          {t("Add")}
+        </motion.button>
       </form>
     </div>
   );

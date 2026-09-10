@@ -13,6 +13,7 @@ import {
   type ReactNode,
 } from "react";
 
+import { motion } from "framer-motion";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -180,9 +181,15 @@ function AuthForm({ view }: { view: AuthView }) {
           </button>
         </div>
       )}
-      <button className={styles.submit} type="submit">
+      <motion.button
+        className={styles.submit}
+        type="submit"
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        transition={{ duration: 0.15, ease: "easeOut" }}
+      >
         {isLogin ? t("Sign In") : t("Create Account")}
-      </button>
+      </motion.button>
       <Link href="/today" className={styles.previewLink}>
         {t("直接预览工作台 →")}
       </Link>

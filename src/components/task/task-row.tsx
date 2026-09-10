@@ -3,6 +3,7 @@ import { useI18n } from "@/features/preferences/preferences-provider";
 import { isDemoToday, isDemoTomorrow } from "@/lib/date-utils";
 
 import { HiCheck, HiLockClosed } from "react-icons/hi2";
+import { motion } from "framer-motion";
 import type { Task } from "@/types/task";
 import { cn } from "@/lib/utils";
 import taskStyles from "./task-row.module.css";
@@ -17,7 +18,12 @@ type Props = {
 export function TaskRow({ task, onToggle, onOpen, variant = "upcoming" }: Props) {
   const { t, date: formatDate } = useI18n();
   return (
-    <div
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, x: -20 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
       className={cn(
         taskStyles.row,
         taskStyles[variant],
@@ -86,6 +92,6 @@ export function TaskRow({ task, onToggle, onOpen, variant = "upcoming" }: Props)
           </span>
         )}
       </button>
-    </div>
+    </motion.div>
   );
 }

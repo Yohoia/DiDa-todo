@@ -3,6 +3,7 @@ import { useI18n } from "@/features/preferences/preferences-provider";
 
 import { useState } from "react";
 import { HiBriefcase, HiPlus } from "react-icons/hi2";
+import { AnimatePresence, motion } from "framer-motion";
 import { TaskRow } from "@/components/task/task-row";
 import { EmptyState } from "@/components/shared/workspace-ui";
 import { useWorkspace } from "./workspace-provider";
@@ -55,9 +56,15 @@ export function ListPage() {
             </p>
           </div>
         </div>
-        <button className={styles.button} onClick={() => setQuickAdd(list)}>
+        <motion.button
+          className={styles.button}
+          onClick={() => setQuickAdd(list)}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          transition={{ duration: 0.15, ease: "easeOut" }}
+        >
           <HiPlus size={14} /> {t("Add Task")}
-        </button>
+        </motion.button>
       </header>
       <div className={styles.row}>
         <select
@@ -85,15 +92,17 @@ export function ListPage() {
         </label>
       </div>
       <div className="flex flex-col gap-2.5">
-        {active.map((task) => (
-          <TaskRow
-            key={task.id}
-            variant="list"
-            task={task}
-            onOpen={() => selectTask(task.id)}
-            onToggle={() => toggleTask(task.id)}
-          />
-        ))}
+        <AnimatePresence mode="popLayout">
+          {active.map((task) => (
+            <TaskRow
+              key={task.id}
+              variant="list"
+              task={task}
+              onOpen={() => selectTask(task.id)}
+              onToggle={() => toggleTask(task.id)}
+            />
+          ))}
+        </AnimatePresence>
         {!active.length && (
           <EmptyState title={t("All caught up")}>
             {t("Add a task when your next idea arrives.")}

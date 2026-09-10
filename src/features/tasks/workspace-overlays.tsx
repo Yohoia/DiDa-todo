@@ -2,6 +2,7 @@
 import { useI18n } from "@/features/preferences/preferences-provider";
 import { HiX } from "react-icons/hi";
 import { useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useWorkspace } from "./workspace-provider";
 import { TaskDetail } from "./task-detail";
 import { QuickAdd } from "./quick-add";
@@ -21,17 +22,32 @@ export function WorkspaceOverlays() {
       <TaskDetail />
       <QuickAdd />
       <FocusSession />
-      {notice && (
-        <div className={styles.toast} role="status">
-          {t(notice.key, {
-            ...notice.values,
-            ...(notice.values?.list ? { list: label(String(notice.values.list)) } : {}),
-          })}
-          <button aria-label={t("关闭提示")} onClick={() => notify(null)}>
-            <HiX size={16} />
-          </button>
-        </div>
-      )}
+      <AnimatePresence>
+        {notice && (
+          <motion.div
+            className={styles.toast}
+            role="status"
+            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+          >
+            {t(notice.key, {
+              ...notice.values,
+              ...(notice.values?.list ? { list: label(String(notice.values.list)) } : {}),
+            })}
+            <motion.button
+              aria-label={t("关闭提示")}
+              onClick={() => notify(null)}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              transition={{ duration: 0.15 }}
+            >
+              <HiX size={16} />
+            </motion.button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

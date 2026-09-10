@@ -1171,6 +1171,34 @@ export const messages = {
     "zh-CN": "DiDa-todo，从想法到完成，掌控每一天。克制、优雅的待办与时间管理体验。",
     en: "DiDa-todo. From idea to done, own your day with a thoughtful task and time management experience.",
   },
+  "errors.title": {
+    "zh-CN": "哎呀，出错了",
+    en: "Oops, something went wrong",
+  },
+  "errors.description": {
+    "zh-CN": "页面遇到了一点小状况，您的数据是安全的，请稍后重试。",
+    en: "This page hit a small snag. Your data is safe — please try again.",
+  },
+  "errors.workspaceTitle": {
+    "zh-CN": "工作台加载失败",
+    en: "Workspace failed to load",
+  },
+  "errors.notFoundTitle": {
+    "zh-CN": "页面走丢了",
+    en: "Page not found",
+  },
+  "errors.notFoundDescription": {
+    "zh-CN": "您访问的页面不存在或已被移动，回到首页继续您的旅程吧。",
+    en: "The page you're looking for doesn't exist or has moved. Head back home to continue.",
+  },
+  "errors.retry": {
+    "zh-CN": "重试",
+    en: "Try again",
+  },
+  "errors.backHome": {
+    "zh-CN": "返回首页",
+    en: "Back to home",
+  },
 } as const;
 
 export type MessageKey = keyof typeof messages;

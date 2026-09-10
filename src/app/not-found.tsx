@@ -1,21 +1,9 @@
-"use client";
-
 import Image from "next/image";
-import { useEffect } from "react";
-import { useI18n } from "@/features/preferences/preferences-provider";
+import Link from "next/link";
+import { getI18n } from "@/i18n/server";
 
-export default function Error({
-  error,
-  reset,
-}: {
-  error: Error & { digest?: string };
-  reset: () => void;
-}) {
-  const { t } = useI18n();
-  useEffect(() => {
-    console.error("Application error:", error);
-  }, [error]);
-
+export default async function NotFound() {
+  const { t } = await getI18n();
   return (
     <div
       style={{
@@ -29,10 +17,10 @@ export default function Error({
       }}
     >
       <Image
-        src="/app-error-illustration.png"
+        src="/not-found-illustration.png"
         alt=""
-        width={448}
-        height={560}
+        width={560}
+        height={511}
         priority
         className="h-[200px] w-auto"
         style={{ marginBottom: "1.25rem" }}
@@ -46,7 +34,7 @@ export default function Error({
           color: "var(--foreground)",
         }}
       >
-        {t("errors.title")}
+        {t("errors.notFoundTitle")}
       </h1>
       <p
         style={{
@@ -55,10 +43,10 @@ export default function Error({
           maxWidth: "26rem",
         }}
       >
-        {t("errors.description")}
+        {t("errors.notFoundDescription")}
       </p>
-      <button
-        onClick={reset}
+      <Link
+        href="/"
         style={{
           padding: "0.75rem 1.5rem",
           backgroundColor: "var(--brand-gold)",
@@ -67,10 +55,12 @@ export default function Error({
           borderRadius: "0.25rem",
           cursor: "pointer",
           fontSize: "1rem",
+          textDecoration: "none",
+          display: "inline-block",
         }}
       >
-        {t("errors.retry")}
-      </button>
+        {t("errors.backHome")}
+      </Link>
     </div>
   );
 }

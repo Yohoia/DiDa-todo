@@ -100,6 +100,26 @@
   display: inline-block;
 }
 
+/* Dialog close: Radix keeps the portal mounted until CSS animations on
+   [data-state="closed"] finish — framer-motion exit props never run there. */
+.dialog-fx-overlay[data-state="closed"] {
+  animation: dialog-fx-overlay-out 0.2s ease-out forwards;
+}
+.dialog-fx-content[data-state="closed"] {
+  animation: dialog-fx-content-out 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes dialog-fx-overlay-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes dialog-fx-content-out {
+  to {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

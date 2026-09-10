@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { WorkspaceProvider } from "@/features/tasks/workspace-provider";
 import { WorkspaceNav } from "@/components/layout/workspace-nav";
 import { WorkspaceOverlays } from "@/features/tasks/workspace-overlays";
+import { PageTransition } from "@/components/layout/page-transition";
 import styles from "@/styles/workspace.module.css";
 
 export default async function WorkspaceLayout({ children }: { children: ReactNode }) {
@@ -19,7 +20,9 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
           <Brand className={styles.utilityBrand} compact />
           <PreferenceControls />
         </div>
-        <main id="workspace-main">{children}</main>
+        <main id="workspace-main">
+          <PageTransition>{children}</PageTransition>
+        </main>
         <WorkspaceNav />
       </div>
       <WorkspaceOverlays />

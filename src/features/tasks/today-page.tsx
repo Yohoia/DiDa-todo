@@ -4,6 +4,7 @@ import { useI18n } from "@/features/preferences/preferences-provider";
 import Link from "next/link";
 import { HiClock, HiSparkles } from "react-icons/hi2";
 import { HiSearch } from "react-icons/hi";
+import { AnimatePresence, motion } from "framer-motion";
 import { PageHeader, SectionLabel, EmptyState } from "@/components/shared/workspace-ui";
 import { TaskRow } from "@/components/task/task-row";
 import { useWorkspace } from "./workspace-provider";
@@ -65,9 +66,15 @@ export function TodayPage() {
                   <span>{t("Project: Development")}</span>
                 </span>
               </button>
-              <button className={shared.primary} onClick={() => startFocus(featured.id)}>
+              <motion.button
+                className={shared.primary}
+                onClick={() => startFocus(featured.id)}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                transition={{ duration: 0.15, ease: "easeOut" }}
+              >
                 {t("Start Deep Work")}
-              </button>
+              </motion.button>
             </article>
           ) : (
             <EmptyState title={t("A little room to breathe")}>
@@ -86,33 +93,22 @@ export function TodayPage() {
               value={active.length}
             />
           </div>
-          <button
+          <motion.button
             className={shared.iconButton}
             aria-label={t("搜索与快速添加")}
             onClick={() => setQuickAdd("Inbox")}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
           >
             <HiSearch size={19} />
-          </button>
+          </motion.button>
         </div>
         <section>
           <SectionLabel>{t("Committed (Frozen)")}</SectionLabel>
-          {today
-            .filter((task) => task.frozen)
-            .map((task) => (
-              <TaskRow
-                key={task.id}
-                task={task}
-                variant="timeline"
-                onOpen={() => selectTask(task.id)}
-                onToggle={() => toggleTask(task.id)}
-              />
-            ))}
-        </section>
-        <section className={styles.timeline}>
-          <SectionLabel>{t("Timeline")}</SectionLabel>
-          <div className="flex flex-col gap-2.5">
+          <AnimatePresence mode="popLayout">
             {today
-              .filter((task) => !task.frozen && !task.featured)
+              .filter((task) => task.frozen)
               .map((task) => (
                 <TaskRow
                   key={task.id}
@@ -122,6 +118,24 @@ export function TodayPage() {
                   onToggle={() => toggleTask(task.id)}
                 />
               ))}
+          </AnimatePresence>
+        </section>
+        <section className={styles.timeline}>
+          <SectionLabel>{t("Timeline")}</SectionLabel>
+          <div className="flex flex-col gap-2.5">
+            <AnimatePresence mode="popLayout">
+              {today
+                .filter((task) => !task.frozen && !task.featured)
+                .map((task) => (
+                  <TaskRow
+                    key={task.id}
+                    task={task}
+                    variant="timeline"
+                    onOpen={() => selectTask(task.id)}
+                    onToggle={() => toggleTask(task.id)}
+                  />
+                ))}
+            </AnimatePresence>
           </div>
         </section>
         <div className={shared.actions}>

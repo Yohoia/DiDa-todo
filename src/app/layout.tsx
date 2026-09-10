@@ -1,5 +1,6 @@
 import { getPreferences, getI18n } from "@/i18n/server";
 import { PreferencesProvider } from "@/features/preferences/preferences-provider";
+import { MotionProvider } from "@/components/ui/motion-provider";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
@@ -33,9 +34,11 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       data-scroll-behavior="smooth"
     >
       <body>
-        <PreferencesProvider initialLocale={locale} initialTheme={theme}>
-          {children}
-        </PreferencesProvider>
+        <MotionProvider>
+          <PreferencesProvider initialLocale={locale} initialTheme={theme}>
+            {children}
+          </PreferencesProvider>
+        </MotionProvider>
       </body>
     </html>
   );

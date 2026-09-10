@@ -4,6 +4,7 @@ import { useI18n } from "@/features/preferences/preferences-provider";
 import { useState } from "react";
 import Link from "next/link";
 import { HiCalendar } from "react-icons/hi2";
+import { AnimatePresence } from "framer-motion";
 import { PageHeader, SectionLabel, EmptyState } from "@/components/shared/workspace-ui";
 import { TaskRow } from "@/components/task/task-row";
 import { useWorkspace } from "./workspace-provider";
@@ -52,23 +53,25 @@ export function UpcomingPage() {
         <section key={group}>
           <SectionLabel gold>{groupLabel(group)}</SectionLabel>
           <div className="flex flex-col gap-2">
-            {upcoming
-              .filter(
-                (task) =>
-                  (task.date < "2026-09-14"
-                    ? task.date
-                    : task.date < "2026-09-21"
-                      ? "next-week"
-                      : task.date) === group,
-              )
-              .map((task) => (
-                <TaskRow
-                  key={task.id}
-                  task={task}
-                  onOpen={() => selectTask(task.id)}
-                  onToggle={() => toggleTask(task.id)}
-                />
-              ))}
+            <AnimatePresence mode="popLayout">
+              {upcoming
+                .filter(
+                  (task) =>
+                    (task.date < "2026-09-14"
+                      ? task.date
+                      : task.date < "2026-09-21"
+                        ? "next-week"
+                        : task.date) === group,
+                )
+                .map((task) => (
+                  <TaskRow
+                    key={task.id}
+                    task={task}
+                    onOpen={() => selectTask(task.id)}
+                    onToggle={() => toggleTask(task.id)}
+                  />
+                ))}
+            </AnimatePresence>
           </div>
         </section>
       ))}

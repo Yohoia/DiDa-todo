@@ -3,7 +3,6 @@
   background: color-mix(in srgb, var(--background) 75%, transparent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  animation: overlay-in 0.3s ease;
 }
 
 .card.card {
@@ -19,7 +18,6 @@
   background: var(--card);
   color: var(--foreground);
   box-shadow: 0 20px 40px rgb(0 0 0 / 3%);
-  animation: card-in 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .closeButton.closeButton {
@@ -96,7 +94,6 @@
 }
 .view.view {
   margin: 0;
-  animation: overlay-in 0.3s ease;
 }
 .inputGroup {
   margin-bottom: 25px;
@@ -185,24 +182,6 @@
 }
 .notice:not(:empty) {
   margin-top: 16px;
-}
-@keyframes overlay-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-@keyframes card-in {
-  from {
-    opacity: 0;
-    margin-top: 20px;
-  }
-  to {
-    opacity: 1;
-    margin-top: 0;
-  }
 }
 @media (max-width: 480px) {
   .card.card {
