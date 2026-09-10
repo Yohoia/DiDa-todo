@@ -116,6 +116,10 @@ export const messages = {
     "zh-CN": "切换到深色模式",
     en: "Switch to dark mode",
   },
+  "View source on GitHub": {
+    "zh-CN": "在 GitHub 上查看源码",
+    en: "View source on GitHub",
+  },
   "Display preferences": {
     "zh-CN": "语言与主题",
     en: "Display preferences",
