@@ -33,10 +33,10 @@ test("dynamic counts and dates follow locale without changing business values", 
 });
 test("unsupported persisted preferences are rejected", () => {
   for (const value of [undefined, null, "fr", "", "<script>"]) assert.equal(isLocale(value), false);
-  for (const value of [undefined, null, "auto", "", "<script>"])
+  for (const value of [undefined, null, "auto", "system", "", "<script>"])
     assert.equal(isTheme(value), false);
   assert.ok(isLocale("zh-CN") && isLocale("en"));
-  assert.ok(isTheme("dark") && isTheme("light") && isTheme("system"));
+  assert.ok(isTheme("dark") && isTheme("light"));
 });
 
 test("English count messages use singular only for one", () => {

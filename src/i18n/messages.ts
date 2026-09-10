@@ -108,9 +108,13 @@ export const messages = {
     "zh-CN": "深色",
     en: "Dark",
   },
-  System: {
-    "zh-CN": "跟随系统",
-    en: "System",
+  "Switch to light mode": {
+    "zh-CN": "切换到浅色模式",
+    en: "Switch to light mode",
+  },
+  "Switch to dark mode": {
+    "zh-CN": "切换到深色模式",
+    en: "Switch to dark mode",
   },
   "Display preferences": {
     "zh-CN": "语言与主题",

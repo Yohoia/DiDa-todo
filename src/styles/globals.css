@@ -87,37 +87,6 @@
   --on-gold: #191816;
 }
 
-/* Resolve system preference before hydration; no inline script or flash of a light theme. */
-@media (prefers-color-scheme: dark) {
-  :root[data-theme="system"] {
-    color-scheme: dark;
-    --background: #191816;
-    --foreground: #f1ede6;
-    --card: #23221f;
-    --card-foreground: #f1ede6;
-    --popover: #292722;
-    --popover-foreground: #f1ede6;
-    --brand-gold: #d2ac76;
-    --primary: #d2ac76;
-    --primary-foreground: #191816;
-    --secondary: #302d27;
-    --secondary-foreground: #e7d4b6;
-    --muted: #2c2924;
-    --muted-foreground: #b4aea3;
-    --accent: #302d27;
-    --accent-foreground: #e7d4b6;
-    --destructive: #ef8e8e;
-    --border: #413c34;
-    --input: #413c34;
-    --ring: #d2ac76;
-    --task-accent-light: rgb(210 172 118 / 12%);
-    --task-muted: #aaa295;
-    --task-done: #969087;
-    --separator: rgb(255 255 255 / 8%);
-    --on-gold: #191816;
-  }
-}
-
 /* Brand wordmark: follow the same theme paths as the variables above. */
 .brand-wordmark-light {
   display: none;
@@ -129,14 +98,6 @@
 :root[data-theme="dark"] .brand-wordmark-light,
 :root.dark .brand-wordmark-light {
   display: inline-block;
-}
-@media (prefers-color-scheme: dark) {
-  :root[data-theme="system"] .brand-wordmark-dark {
-    display: none;
-  }
-  :root[data-theme="system"] .brand-wordmark-light {
-    display: inline-block;
-  }
 }
 
 @layer base {

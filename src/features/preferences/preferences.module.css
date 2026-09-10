@@ -16,7 +16,7 @@
   border-radius: 4px;
 }
 .language:hover,
-.theme:hover {
+.themeToggle:hover {
   background: var(--muted);
   color: var(--foreground);
 }
@@ -24,12 +24,15 @@
   cursor: wait;
   opacity: 0.5;
 }
-.theme {
-  display: flex;
+.themeToggle {
+  min-width: 36px;
+  min-height: 36px;
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding-left: 8px;
+  justify-content: center;
+  padding: 6px;
   border-radius: 4px;
+  transition: background 0.2s ease;
 }
 .select {
   min-height: 36px;
@@ -41,22 +44,11 @@
   padding: 6px 10px;
   font-size: 13px;
 }
-.theme .select {
-  background: transparent;
-  color: inherit;
-  border: 0;
-  width: 106px;
-  font-size: 12px;
-  padding: 6px;
-}
 .select option {
   background: var(--card);
   color: var(--foreground);
 }
 @media (max-width: 600px) {
-  .theme .select {
-    width: 92px;
-  }
   .controls {
     gap: 0;
   }

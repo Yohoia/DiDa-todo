@@ -1,7 +1,7 @@
 "use client";
 import { useI18n } from "@/features/preferences/preferences-provider";
 
-import { LanguageSelect, ThemeSelect } from "@/features/preferences/preference-controls";
+import { LanguageSelect, ThemeToggle } from "@/features/preferences/preference-controls";
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useWorkspace } from "@/features/tasks/workspace-provider";
@@ -191,7 +191,7 @@ export function SettingsPage() {
           <section className={styles.section}>
             <h2>{t("Appearance")}</h2>
             <SettingRow title={t("Theme")} description={t("A quiet, warm space for focused work.")}>
-              <ThemeSelect />
+              <ThemeToggle />
             </SettingRow>
             <p className={shared.muted}>
               {t("Your display preferences are saved on this device.")}

@@ -1,8 +1,8 @@
 "use client";
 
-import { Languages, Moon, Sun, Monitor } from "lucide-react";
+import { Languages, Moon, Sun } from "lucide-react";
 import { useI18n, usePreferences } from "./preferences-provider";
-import { isLocale, isTheme } from "@/i18n/config";
+import { isLocale } from "@/i18n/config";
 import styles from "./preferences.module.css";
 
 export function LanguageSelect() {
@@ -23,30 +23,28 @@ export function LanguageSelect() {
     </select>
   );
 }
-export function ThemeSelect() {
+export function ThemeToggle() {
   const { theme, setTheme } = usePreferences();
   const { t } = useI18n();
+  const isDark = theme === "dark";
+  const Icon = isDark ? Moon : Sun;
+
   return (
-    <select
-      className={styles.select}
-      aria-label={t("Theme")}
-      value={theme}
-      onChange={(event) => {
-        if (isTheme(event.target.value)) setTheme(event.target.value);
-      }}
+    <button
+      type="button"
+      className={styles.themeToggle}
+      aria-label={isDark ? t("Switch to light mode") : t("Switch to dark mode")}
+      title={isDark ? t("Switch to light mode") : t("Switch to dark mode")}
+      onClick={() => setTheme(isDark ? "light" : "dark")}
     >
-      <option value="light">{t("Light")}</option>
-      <option value="dark">{t("Dark")}</option>
-      <option value="system">{t("System")}</option>
-    </select>
+      <Icon size={17} strokeWidth={1.5} />
+    </button>
   );
 }
 export function PreferenceControls() {
-  const { locale, theme, setLocale, changingLocale } = usePreferences();
-  const { t } = useI18n();
-  const Icon = theme === "system" ? Monitor : theme === "dark" ? Moon : Sun;
+  const { locale, setLocale, changingLocale } = usePreferences();
   return (
-    <div className={styles.controls} role="group" aria-label={t("Display preferences")}>
+    <div className={styles.controls} role="group" aria-label="Display preferences">
       <button
         className={styles.language}
         type="button"
@@ -59,10 +57,7 @@ export function PreferenceControls() {
         <Languages size={17} strokeWidth={1.5} />
         <span>{locale === "zh-CN" ? "中" : "EN"}</span>
       </button>
-      <div className={styles.theme}>
-        <Icon size={17} strokeWidth={1.5} aria-hidden="true" />
-        <ThemeSelect />
-      </div>
+      <ThemeToggle />
     </div>
   );
 }
