@@ -38,14 +38,6 @@
   gap: 12px;
 }
 
-.logoMark {
-  width: 16px;
-  height: 16px;
-  background: transparent;
-  border: 2px solid var(--brand-gold);
-  transform: rotate(45deg);
-}
-
 .navLinks {
   display: flex;
   gap: 40px;

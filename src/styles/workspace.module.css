@@ -299,7 +299,11 @@
   max-width: 1100px;
   margin: -20px auto 24px;
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
+}
+.utilityBrand {
+  color: var(--foreground);
 }
 @media (max-width: 600px) {
   .utilityBar {

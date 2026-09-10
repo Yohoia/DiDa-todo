@@ -118,6 +118,27 @@
   }
 }
 
+/* Brand wordmark: follow the same theme paths as the variables above. */
+.brand-wordmark-light {
+  display: none;
+}
+:root[data-theme="dark"] .brand-wordmark-dark,
+:root.dark .brand-wordmark-dark {
+  display: none;
+}
+:root[data-theme="dark"] .brand-wordmark-light,
+:root.dark .brand-wordmark-light {
+  display: inline-block;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="system"] .brand-wordmark-dark {
+    display: none;
+  }
+  :root[data-theme="system"] .brand-wordmark-light {
+    display: inline-block;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

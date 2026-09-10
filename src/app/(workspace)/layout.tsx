@@ -1,3 +1,4 @@
+import { Brand } from "@/components/shared/brand";
 import { PreferenceControls } from "@/features/preferences/preference-controls";
 import { getI18n } from "@/i18n/server";
 import type { ReactNode } from "react";
@@ -15,6 +16,7 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
           {t("跳转到主要内容")}
         </a>
         <div className={styles.utilityBar}>
+          <Brand className={styles.utilityBrand} compact />
           <PreferenceControls />
         </div>
         <main id="workspace-main">{children}</main>
