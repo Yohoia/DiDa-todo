@@ -16,7 +16,8 @@
     "typecheck": "next typegen && tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "pnpm lint && pnpm typecheck && pnpm format:check"
+    "check": "pnpm lint && pnpm typecheck && pnpm test:i18n && pnpm format:check",
+    "test:i18n": "node scripts/test-i18n.mjs"
   },
   "dependencies": {
     "@fontsource/inter": "5.3.0",

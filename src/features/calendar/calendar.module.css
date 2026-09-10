@@ -20,7 +20,7 @@
 }
 .active {
   background: var(--foreground);
-  color: white;
+  color: var(--background);
   font-weight: 500;
 }
 .viewContent {
@@ -57,7 +57,7 @@
 }
 .cell {
   min-height: 70px;
-  border-bottom: 1px dashed #0000000a;
+  border-bottom: 1px dashed var(--separator);
   position: relative;
 }
 .event {
@@ -119,7 +119,7 @@
 }
 .today {
   background: var(--brand-gold);
-  color: white;
+  color: var(--background);
 }
 .outside {
   opacity: 0.4;

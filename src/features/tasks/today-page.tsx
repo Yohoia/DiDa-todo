@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/features/preferences/preferences-provider";
 
 import Link from "next/link";
 import { Clock3, Search, Sparkles } from "lucide-react";
@@ -10,6 +11,7 @@ import shared from "@/styles/workspace.module.css";
 import styles from "./today.module.css";
 
 export function TodayPage() {
+  const { t } = useI18n();
   const { tasks, preferences, selectTask, toggleTask, startFocus, setQuickAdd } = useWorkspace();
   const today = tasks.filter((task) => task.date === DEMO_TODAY);
   const active = today.filter((task) => !task.completed);
@@ -20,29 +22,28 @@ export function TodayPage() {
         <PageHeader
           title={
             <>
-              Good morning,
+              {t("Good morning,")}
               <br />
               <em>Alex</em>
             </>
           }
-          subtitle="Wednesday, September 9"
+          subtitle={t("Wednesday, September 9")}
         />
         <div className={styles.greeting}>
           <Sparkles size={14} className="mr-1 inline" aria-hidden="true" />{" "}
-          <strong>AI Insight:</strong> You have {active.length} tasks today. Energy levels are
-          optimal for deep work right now. Consider tackling your One Thing before 11:00 AM.
+          <strong>{t("AI Insight:")}</strong> {t("tasks.todayInsight", { count: active.length })}
         </div>
         <section>
-          <SectionLabel>Today&apos;s Focus</SectionLabel>
+          <SectionLabel>{t("Today's Focus")}</SectionLabel>
           {featured ? (
             <article className={styles.oneThing}>
               <button
                 className={styles.featureButton}
                 onClick={() => selectTask(featured.id)}
-                aria-label={`查看任务：${featured.title}`}
+                aria-label={t("tasks.open", { title: featured.title })}
               >
                 <span className={shared.row}>
-                  <span className={styles.badge}>One Thing</span>
+                  <span className={styles.badge}>{t("One Thing")}</span>
                   <Clock3 size={18} className={shared.gold} />
                 </span>
                 <h2>
@@ -57,17 +58,19 @@ export function TodayPage() {
                   )}
                 </h2>
                 <span className={styles.meta}>
-                  <span>Estimate: {featured.estimate} Pomodoros</span>
-                  <span>Project: Development</span>
+                  <span>
+                    {t("Estimate:")} {t("tasks.pomodoros", { count: featured.estimate })}
+                  </span>
+                  <span>{t("Project: Development")}</span>
                 </span>
               </button>
               <button className={shared.primary} onClick={() => startFocus(featured.id)}>
-                Start Deep Work
+                {t("Start Deep Work")}
               </button>
             </article>
           ) : (
-            <EmptyState title="A little room to breathe">
-              Your focus is complete. Enjoy the progress.
+            <EmptyState title={t("A little room to breathe")}>
+              {t("Your focus is complete. Enjoy the progress.")}
             </EmptyState>
           )}
         </section>
@@ -75,23 +78,23 @@ export function TodayPage() {
       <div className={styles.right}>
         <div className={shared.row}>
           <div className={styles.capacity}>
-            Capacity {active.length}/{preferences.dailyCapacity}
+            {t("Capacity")} {active.length}/{preferences.dailyCapacity}
             <progress
-              aria-label="今日任务容量"
+              aria-label={t("今日任务容量")}
               max={preferences.dailyCapacity}
               value={active.length}
             />
           </div>
           <button
             className={shared.iconButton}
-            aria-label="搜索与快速添加"
+            aria-label={t("搜索与快速添加")}
             onClick={() => setQuickAdd("Inbox")}
           >
             <Search size={19} />
           </button>
         </div>
         <section>
-          <SectionLabel>Committed (Frozen)</SectionLabel>
+          <SectionLabel>{t("Committed (Frozen)")}</SectionLabel>
           {today
             .filter((task) => task.frozen)
             .map((task) => (
@@ -105,7 +108,7 @@ export function TodayPage() {
             ))}
         </section>
         <section className={styles.timeline}>
-          <SectionLabel>Timeline</SectionLabel>
+          <SectionLabel>{t("Timeline")}</SectionLabel>
           <div className="flex flex-col gap-2.5">
             {today
               .filter((task) => !task.frozen && !task.featured)
@@ -122,10 +125,10 @@ export function TodayPage() {
         </section>
         <div className={shared.actions}>
           <Link className={shared.textButton} href="/upcoming">
-            Upcoming →
+            {t("Upcoming →")}
           </Link>
           <Link className={shared.textButton} href="/list-detail">
-            Work & Projects →
+            {t("Work & Projects →")}
           </Link>
         </div>
       </div>

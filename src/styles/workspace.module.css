@@ -294,3 +294,15 @@
   background: var(--foreground);
   border-color: var(--foreground);
 }
+
+.utilityBar {
+  max-width: 1100px;
+  margin: -20px auto 24px;
+  display: flex;
+  justify-content: flex-end;
+}
+@media (max-width: 600px) {
+  .utilityBar {
+    margin: -10px auto 24px;
+  }
+}

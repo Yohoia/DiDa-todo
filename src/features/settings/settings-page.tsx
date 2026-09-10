@@ -1,5 +1,7 @@
 "use client";
+import { useI18n } from "@/features/preferences/preferences-provider";
 
+import { LanguageSelect, ThemeSelect } from "@/features/preferences/preference-controls";
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useWorkspace } from "@/features/tasks/workspace-provider";
@@ -57,16 +59,17 @@ function Switch({
   );
 }
 export function SettingsPage() {
+  const { t, label } = useI18n();
   const { preferences, setPreferences, notify } = useWorkspace();
   const [section, setSection] = useState("General");
   function save(patch: Parameters<typeof setPreferences>[0]) {
     setPreferences(patch);
-    notify("已更新本次预览的偏好设置");
+    notify({ key: "已更新本次预览的偏好设置" });
   }
   return (
     <div className={styles.page}>
-      <h1 className="sr-only">Settings</h1>
-      <nav className={styles.sidebar} aria-label="设置分类">
+      <h1 className="sr-only">{t("Settings")}</h1>
+      <nav className={styles.sidebar} aria-label={t("设置分类")}>
         {sections.map((item) => (
           <button
             className={cn(styles.sidebarItem, section === item && styles.active)}
@@ -74,33 +77,39 @@ export function SettingsPage() {
             onClick={() => setSection(item)}
             key={item}
           >
-            {item}
+            {label(item)}
           </button>
         ))}
       </nav>
       <div className={styles.content}>
         {section === "General" && (
           <section className={styles.section}>
-            <h2>General Preferences</h2>
+            <h2>{t("General Preferences")}</h2>
             <SettingRow
-              title="First Day of Week"
-              description="Set the starting day for calendar and weekly views."
+              title={t("Language")}
+              description={t("Select your preferred interface language.")}
+            >
+              <LanguageSelect />
+            </SettingRow>
+            <SettingRow
+              title={t("First Day of Week")}
+              description={t("Set the starting day for calendar and weekly views.")}
             >
               <select
-                aria-label="First Day of Week"
+                aria-label={t("First Day of Week")}
                 value={preferences.firstDay}
                 onChange={(event) => save({ firstDay: event.target.value as "Monday" | "Sunday" })}
               >
-                <option>Monday</option>
-                <option>Sunday</option>
+                <option value="Monday">{t("Monday")}</option>
+                <option value="Sunday">{t("Sunday")}</option>
               </select>
             </SettingRow>
             <SettingRow
-              title="Sound Effects"
-              description="Play gentle chime upon completing a task."
+              title={t("Sound Effects")}
+              description={t("Play gentle chime upon completing a task.")}
             >
               <Switch
-                label="Sound Effects"
+                label={t("Sound Effects")}
                 checked={preferences.sound}
                 onChange={(value) => save({ sound: value })}
               />
@@ -109,13 +118,13 @@ export function SettingsPage() {
         )}
         {["General", "Focus (Pomodoro)"].includes(section) && (
           <section className={styles.section}>
-            <h2>Focus (Pomodoro) Settings</h2>
+            <h2>{t("Focus (Pomodoro) Settings")}</h2>
             <SettingRow
-              title="Pomodoro Duration"
-              description="Standard deep work session length in minutes."
+              title={t("Pomodoro Duration")}
+              description={t("Standard deep work session length in minutes.")}
             >
               <input
-                aria-label="Pomodoro Duration"
+                aria-label={t("Pomodoro Duration")}
                 type="number"
                 min={1}
                 max={120}
@@ -127,11 +136,11 @@ export function SettingsPage() {
               />
             </SettingRow>
             <SettingRow
-              title="Auto-start Breaks"
-              description="Automatically start break timer when focus session finishes."
+              title={t("Auto-start Breaks")}
+              description={t("Automatically start break timer when focus session finishes.")}
             >
               <Switch
-                label="Auto-start Breaks"
+                label={t("Auto-start Breaks")}
                 checked={preferences.autoBreak}
                 onChange={(value) => save({ autoBreak: value })}
               />
@@ -140,13 +149,13 @@ export function SettingsPage() {
         )}
         {section === "Tasks & Rules" && (
           <section className={styles.section}>
-            <h2>Tasks &amp; Rules</h2>
+            <h2>{t("Tasks & Rules")}</h2>
             <SettingRow
-              title="Daily Capacity"
-              description="Choose a comfortable number of tasks for your day."
+              title={t("Daily Capacity")}
+              description={t("Choose a comfortable number of tasks for your day.")}
             >
               <input
-                aria-label="Daily Capacity"
+                aria-label={t("Daily Capacity")}
                 type="number"
                 min={1}
                 max={30}
@@ -158,44 +167,48 @@ export function SettingsPage() {
               />
             </SettingRow>
             <Link href="/today" className={shared.textButton}>
-              View today&apos;s capacity →
+              {t("View today's capacity →")}
             </Link>
           </section>
         )}
         {section === "Notifications" && (
           <section className={styles.section}>
-            <h2>Notifications</h2>
+            <h2>{t("Notifications")}</h2>
             <SettingRow
-              title="Task Reminders"
-              description="Keep track of upcoming tasks and focus sessions."
+              title={t("Task Reminders")}
+              description={t("Keep track of upcoming tasks and focus sessions.")}
             >
               <Switch
-                label="Task Reminders"
+                label={t("Task Reminders")}
                 checked={preferences.reminders}
                 onChange={(value) => save({ reminders: value })}
               />
             </SettingRow>
-            <p className={shared.muted}>提醒偏好仅用于页面预览，通知服务尚未接入。</p>
+            <p className={shared.muted}>{t("提醒偏好仅用于页面预览，通知服务尚未接入。")}</p>
           </section>
         )}
         {section === "Appearance" && (
           <section className={styles.section}>
-            <h2>Appearance</h2>
-            <SettingRow title="Theme" description="A quiet, warm space for focused work.">
-              <span className={shared.tag}>Warm Light</span>
+            <h2>{t("Appearance")}</h2>
+            <SettingRow title={t("Theme")} description={t("A quiet, warm space for focused work.")}>
+              <ThemeSelect />
             </SettingRow>
-            <p className={shared.muted}>当前设计稿为浅色主题。</p>
+            <p className={shared.muted}>
+              {t("Your display preferences are saved on this device.")}
+            </p>
           </section>
         )}
         {section === "Account & Sync" && (
           <section className={styles.section}>
-            <h2>Account &amp; Sync</h2>
-            <SettingRow title="Alex" description="Preview account">
+            <h2>{t("Account & Sync")}</h2>
+            <SettingRow title="Alex" description={t("Preview account")}>
               <Link href="/profile" className={shared.button}>
-                View Profile
+                {t("View Profile")}
               </Link>
             </SettingRow>
-            <p className={shared.muted}>当前使用前端示例数据。账号、同步与云端保存尚未接入。</p>
+            <p className={shared.muted}>
+              {t("当前使用前端示例数据。账号、同步与云端保存尚未接入。")}
+            </p>
           </section>
         )}
       </div>

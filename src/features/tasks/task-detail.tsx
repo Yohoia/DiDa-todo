@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/features/preferences/preferences-provider";
 
 import { useDialogFocus } from "@/hooks/use-dialog-focus";
 
@@ -12,6 +13,7 @@ import shared from "@/styles/workspace.module.css";
 import styles from "./task-detail.module.css";
 
 export function TaskDetail() {
+  const { t } = useI18n();
   const focusReturn = useDialogFocus();
   const { selectedId, selectTask, tasks } = useWorkspace();
   const task = tasks.find((item) => item.id === selectedId);
@@ -28,9 +30,9 @@ export function TaskDetail() {
         overlayClassName={shared.overlay}
         closeButtonClassName={shared.close}
       >
-        <DialogTitle className={styles.badge}>Task Detail</DialogTitle>
+        <DialogTitle className={styles.badge}>{t("Task Detail")}</DialogTitle>
         <DialogDescription className="sr-only">
-          编辑任务信息、子任务，或开始专注。
+          {t("编辑任务信息、子任务，或开始专注。")}
         </DialogDescription>
         {task && <TaskEditor key={task.id} task={task} />}
       </DialogContent>
@@ -38,12 +40,13 @@ export function TaskDetail() {
   );
 }
 function TaskEditor({ task }: { task: Task }) {
+  const { t, label } = useI18n();
   const { updateTask, toggleTask, deleteTask, startFocus, selectTask } = useWorkspace();
   const [subtask, setSubtask] = useState("");
   return (
     <>
       <label className="sr-only" htmlFor="detail-title">
-        任务标题
+        {t("任务标题")}
       </label>
       <input
         id="detail-title"
@@ -55,18 +58,18 @@ function TaskEditor({ task }: { task: Task }) {
         }}
       />
       <label className="sr-only" htmlFor="detail-description">
-        任务描述
+        {t("任务描述")}
       </label>
       <textarea
         id="detail-description"
         className={styles.description}
         value={task.description}
-        placeholder="Add a description..."
+        placeholder={t("Add a description...")}
         onChange={(event) => updateTask(task.id, { description: event.target.value })}
       />
       <div className={styles.properties}>
         <label className={styles.property}>
-          Date{" "}
+          {t("Date")}{" "}
           <input
             type="date"
             value={task.date}
@@ -74,20 +77,20 @@ function TaskEditor({ task }: { task: Task }) {
           />
         </label>
         <label className={styles.property}>
-          Priority{" "}
+          {t("Priority")}{" "}
           <select
             value={task.priority}
             onChange={(event) =>
               updateTask(task.id, { priority: Number(event.target.value) as Task["priority"] })
             }
           >
-            <option value={1}>P1 · High</option>
-            <option value={2}>P2 · Medium</option>
-            <option value={3}>P3 · Low</option>
+            <option value={1}>{t("P1 · High")}</option>
+            <option value={2}>{t("P2 · Medium")}</option>
+            <option value={3}>{t("P3 · Low")}</option>
           </select>
         </label>
         <label className={styles.property}>
-          List{" "}
+          {t("List")}{" "}
           <select
             value={task.list}
             onChange={(event) =>
@@ -98,23 +101,25 @@ function TaskEditor({ task }: { task: Task }) {
             }
           >
             {["Inbox", "Work", "Study", "Life"].map((value) => (
-              <option key={value}>{value}</option>
+              <option key={value} value={value}>
+                {label(value)}
+              </option>
             ))}
           </select>
         </label>
         <label className={styles.property}>
-          Tags{" "}
+          {t("Tags")}{" "}
           <input
             value={task.tag || ""}
-            placeholder="Add a tag"
+            placeholder={t("Add a tag")}
             onChange={(event) => updateTask(task.id, { tag: event.target.value })}
           />
         </label>
         <label className={styles.property}>
-          Estimate{" "}
+          {t("Estimate")}{" "}
           <span>
             <input
-              aria-label="预计番茄钟数量"
+              aria-label={t("预计番茄钟数量")}
               className={styles.number}
               type="number"
               min={1}
@@ -125,23 +130,23 @@ function TaskEditor({ task }: { task: Task }) {
                 if (value >= 1 && value <= 16) updateTask(task.id, { estimate: value });
               }}
             />{" "}
-            Pomodoros
+            {t("Pomodoros")}
           </span>
         </label>
         <label className={styles.property}>
-          Reminder{" "}
+          {t("Reminder")}{" "}
           <select
             value={task.reminder}
             onChange={(event) => updateTask(task.id, { reminder: event.target.value })}
           >
-            <option>None</option>
-            <option>10 min before</option>
-            <option>30 min before</option>
+            <option value="None">{t("None")}</option>
+            <option value="10 min before">{t("10 min before")}</option>
+            <option value="30 min before">{t("30 min before")}</option>
           </select>
         </label>
       </div>
       <section>
-        <SectionLabel>Subtasks</SectionLabel>
+        <SectionLabel>{t("Subtasks")}</SectionLabel>
         {task.subtasks.map((item) => (
           <label className={styles.subtask} key={item.id}>
             <input
@@ -174,39 +179,39 @@ function TaskEditor({ task }: { task: Task }) {
         >
           <input
             className="min-w-0 flex-1"
-            aria-label="新子任务"
-            placeholder="Add a subtask..."
+            aria-label={t("新子任务")}
+            placeholder={t("Add a subtask...")}
             value={subtask}
             onChange={(event) => setSubtask(event.target.value)}
             maxLength={200}
           />
           <button type="submit" className={shared.textButton}>
-            ＋ Add
+            {t("＋ Add")}
           </button>
         </form>
       </section>
       <section className={styles.focusBox}>
         <div className={shared.row}>
-          <span className={shared.muted}>FOCUS PROGRESS</span>
-          <span className={shared.gold}>{task.estimate} Pomodoros</span>
+          <span className={shared.muted}>{t("FOCUS PROGRESS")}</span>
+          <span className={shared.gold}>{t("tasks.pomodoros", { count: task.estimate })}</span>
         </div>
         <button className={shared.primary} onClick={() => startFocus(task.id)}>
-          Start Focus Session
+          {t("Start Focus Session")}
         </button>
       </section>
       <div className={shared.row}>
         <button className={shared.button} onClick={() => toggleTask(task.id)}>
-          {task.completed ? "Restore Task" : "Complete Task"}
+          {task.completed ? t("Restore Task") : t("Complete Task")}
         </button>
         <Link href="/list-detail" onClick={() => selectTask(null)} className={shared.textButton}>
-          View lists →
+          {t("View lists →")}
         </Link>
       </div>
       <footer className={styles.footer}>
         <button className={shared.danger} onClick={() => deleteTask(task.id)}>
-          Delete Task
+          {t("Delete Task")}
         </button>
-        <span className={shared.muted}>Changes saved in this preview</span>
+        <span className={shared.muted}>{t("Changes saved in this preview")}</span>
       </footer>
     </>
   );

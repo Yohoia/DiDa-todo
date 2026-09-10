@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/features/preferences/preferences-provider";
 
 import { Check, LockKeyhole } from "lucide-react";
 import type { Task } from "@/types/task";
@@ -13,6 +14,7 @@ type Props = {
   variant?: "inbox" | "timeline" | "upcoming" | "list";
 };
 export function TaskRow({ task, onToggle, onOpen, variant = "upcoming" }: Props) {
+  const { t, date: formatDate } = useI18n();
   return (
     <div
       className={cn(
@@ -23,13 +25,13 @@ export function TaskRow({ task, onToggle, onOpen, variant = "upcoming" }: Props)
       )}
     >
       {variant === "timeline" && !task.frozen && (
-        <span className={styles.time}>{task.time || "Any"}</span>
+        <span className={styles.time}>{task.time || t("Any")}</span>
       )}
       <button
         type="button"
         role="checkbox"
         aria-checked={task.completed}
-        aria-label={`完成任务：${task.title}`}
+        aria-label={t("tasks.complete", { title: task.title })}
         onClick={onToggle}
         className={styles.checkButton}
       >
@@ -42,21 +44,21 @@ export function TaskRow({ task, onToggle, onOpen, variant = "upcoming" }: Props)
             task.priority === 1 && styles.high,
             task.priority === 2 && styles.medium,
           )}
-          title={`P${task.priority} Priority`}
-          aria-label={`优先级 P${task.priority}`}
+          title={t("tasks.priority", { priority: task.priority })}
+          aria-label={t("tasks.priority", { priority: task.priority })}
         />
       )}
       <button
         type="button"
         className={styles.content}
         onClick={onOpen}
-        aria-label={`查看任务：${task.title}`}
+        aria-label={t("tasks.open", { title: task.title })}
       >
         <span className={styles.title}>
           {task.title}{" "}
-          {task.frozen && <LockKeyhole size={12} className="inline" aria-label="已承诺" />}
+          {task.frozen && <LockKeyhole size={12} className="inline" aria-label={t("已承诺")} />}
         </span>
-        {variant === "inbox" && <span className={styles.unorganized}>Unorganized</span>}
+        {variant === "inbox" && <span className={styles.unorganized}>{t("Unorganized")}</span>}
         {variant === "upcoming" && task.tag && <span className={shared.tag}>{task.tag}</span>}
         {variant === "timeline" && task.tag && (
           <span className={styles.meta}>
@@ -68,11 +70,13 @@ export function TaskRow({ task, onToggle, onOpen, variant = "upcoming" }: Props)
           <span className={styles.meta}>
             <span>
               {task.date
-                ? `Due ${task.date === "2026-09-09" ? "Today" : task.date === "2026-09-10" ? "Tomorrow" : task.date.slice(5).replace("-", "/")}${task.time ? `, ${task.time}` : ""}`
-                : "No due date"}
+                ? t("tasks.due", {
+                    date: `${task.date === "2026-09-09" ? t("Today") : task.date === "2026-09-10" ? t("Tomorrow") : formatDate(task.date, { month: "short", day: "numeric" })}${task.time ? `, ${task.time}` : ""}`,
+                  })
+                : t("No due date")}
             </span>
             {task.priority === 1 ? (
-              <span>◷ {task.estimate} Pomodoros</span>
+              <span>◷ {t("tasks.pomodoros", { count: task.estimate })}</span>
             ) : (
               task.tag && <span>#{task.tag}</span>
             )}

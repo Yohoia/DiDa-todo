@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/features/preferences/preferences-provider";
 
 import { useDialogFocus } from "@/hooks/use-dialog-focus";
 
@@ -9,6 +10,7 @@ import styles from "./focus-session.module.css";
 import shared from "@/styles/workspace.module.css";
 
 export function FocusSession() {
+  const { t } = useI18n();
   const focusReturn = useDialogFocus();
   const { focusId, stopFocus, tasks, preferences } = useWorkspace();
   const task = tasks.find((item) => item.id === focusId);
@@ -26,10 +28,11 @@ export function FocusSession() {
         closeButtonClassName={shared.close}
       >
         <DialogTitle className={styles.title}>
-          Focusing on: <strong>{task?.title}</strong>
+          {t("Focusing on:")}
+          <strong>{task?.title}</strong>
         </DialogTitle>
         <DialogDescription className="sr-only">
-          沉浸式番茄钟，关闭后结束本次计时。
+          {t("沉浸式番茄钟，关闭后结束本次计时。")}
         </DialogDescription>
         {task && <Timer key={task.id} minutes={preferences.duration} onExit={stopFocus} />}
       </DialogContent>
@@ -37,6 +40,7 @@ export function FocusSession() {
   );
 }
 function Timer({ minutes, onExit }: { minutes: number; onExit: () => void }) {
+  const { t } = useI18n();
   const [remaining, setRemaining] = useState(minutes * 60);
   const [running, setRunning] = useState(true);
   const secondsRef = useRef(minutes * 60);
@@ -53,19 +57,19 @@ function Timer({ minutes, onExit }: { minutes: number; onExit: () => void }) {
   }, [running]);
   return (
     <>
-      <div className={styles.timer} role="timer" aria-label="剩余专注时间">
+      <div className={styles.timer} role="timer" aria-label={t("剩余专注时间")}>
         {String(Math.floor(remaining / 60)).padStart(2, "0")}:
         {String(remaining % 60).padStart(2, "0")}
       </div>
-      {remaining === 0 && <p role="status">Session complete. Take a gentle break.</p>}
+      {remaining === 0 && <p role="status">{t("Session complete. Take a gentle break.")}</p>}
       <div className={shared.actions}>
         {remaining > 0 && (
           <button className={styles.stop} onClick={() => setRunning(!running)}>
-            {running ? "Pause" : "Resume"}
+            {running ? t("Pause") : t("Resume")}
           </button>
         )}
         <button className={styles.stop} onClick={onExit}>
-          {remaining === 0 ? "Finish Session" : "Pause & Exit"}
+          {remaining === 0 ? t("Finish Session") : t("Pause & Exit")}
         </button>
       </div>
     </>

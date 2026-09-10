@@ -9,7 +9,7 @@
   flex-shrink: 0;
   border-radius: 50%;
   background: var(--foreground);
-  color: white;
+  color: var(--background);
   display: flex;
   align-items: center;
   justify-content: center;

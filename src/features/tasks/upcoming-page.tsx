@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/features/preferences/preferences-provider";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -10,6 +11,7 @@ import { DEMO_TODAY } from "./demo-data";
 import styles from "@/styles/workspace.module.css";
 
 export function UpcomingPage() {
+  const { t, label, date } = useI18n();
   const { tasks, toggleTask, selectTask } = useWorkspace();
   const [filter, setFilter] = useState("All");
   const upcoming = tasks
@@ -26,15 +28,13 @@ export function UpcomingPage() {
     ),
   );
   function groupLabel(key: string) {
-    if (key === "next-week") return "Next Week";
-    if (key === "2026-09-10") return "Tomorrow · Sep 10";
-    return new Date(`${key}T12:00:00`)
-      .toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })
-      .replace(",", " ·");
+    if (key === "next-week") return t("Next Week");
+    if (key === "2026-09-10") return t("Tomorrow · Sep 10");
+    return date(key, { weekday: "long", month: "short", day: "numeric" });
   }
   return (
     <div className={styles.page}>
-      <PageHeader title="Upcoming" subtitle="September Horizon">
+      <PageHeader title={t("Upcoming")} subtitle={t("September Horizon")}>
         <div className={styles.pills}>
           {["All", "Work", "Study", "Life"].map((item) => (
             <button
@@ -43,7 +43,7 @@ export function UpcomingPage() {
               aria-pressed={filter === item}
               onClick={() => setFilter(item)}
             >
-              {item}
+              {label(item)}
             </button>
           ))}
         </div>
@@ -73,10 +73,10 @@ export function UpcomingPage() {
         </section>
       ))}
       {!groups.length && (
-        <EmptyState title="A clear horizon">No upcoming tasks in this list.</EmptyState>
+        <EmptyState title={t("A clear horizon")}>{t("No upcoming tasks in this list.")}</EmptyState>
       )}
       <Link className={styles.textButton} href="/calendar">
-        <CalendarDays size={15} /> View calendar →
+        <CalendarDays size={15} /> {t("View calendar →")}
       </Link>
     </div>
   );

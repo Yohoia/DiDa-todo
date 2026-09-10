@@ -32,6 +32,8 @@
 :root {
   color-scheme: light;
   --radius: 0.25rem;
+  --separator: rgb(0 0 0 / 5%);
+  --on-gold: #ffffff;
   --brand-gold: #b88e57;
   --task-accent-light: rgb(184 142 87 / 10%);
   --task-muted: #a8a29e;
@@ -56,26 +58,64 @@
   --ring: #b88e57;
 }
 
-.dark {
+:root[data-theme="dark"],
+:root.dark {
   color-scheme: dark;
-  --background: #111827;
-  --foreground: #edf2fa;
-  --card: #182235;
-  --card-foreground: #edf2fa;
-  --popover: #182235;
-  --popover-foreground: #edf2fa;
-  --primary: #8aafff;
-  --primary-foreground: #111827;
-  --secondary: #23324b;
-  --secondary-foreground: #edf2fa;
-  --muted: #1c283d;
-  --muted-foreground: #a8b5ca;
-  --accent: #23324b;
-  --accent-foreground: #edf2fa;
-  --destructive: #ff8790;
-  --border: #33415a;
-  --input: #33415a;
-  --ring: #8aafff;
+  --background: #191816;
+  --foreground: #f1ede6;
+  --card: #23221f;
+  --card-foreground: #f1ede6;
+  --popover: #292722;
+  --popover-foreground: #f1ede6;
+  --brand-gold: #d2ac76;
+  --primary: #d2ac76;
+  --primary-foreground: #191816;
+  --secondary: #302d27;
+  --secondary-foreground: #e7d4b6;
+  --muted: #2c2924;
+  --muted-foreground: #b4aea3;
+  --accent: #302d27;
+  --accent-foreground: #e7d4b6;
+  --destructive: #ef8e8e;
+  --border: #413c34;
+  --input: #413c34;
+  --ring: #d2ac76;
+  --task-accent-light: rgb(210 172 118 / 12%);
+  --task-muted: #aaa295;
+  --task-done: #969087;
+  --separator: rgb(255 255 255 / 8%);
+  --on-gold: #191816;
+}
+
+/* Resolve system preference before hydration; no inline script or flash of a light theme. */
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="system"] {
+    color-scheme: dark;
+    --background: #191816;
+    --foreground: #f1ede6;
+    --card: #23221f;
+    --card-foreground: #f1ede6;
+    --popover: #292722;
+    --popover-foreground: #f1ede6;
+    --brand-gold: #d2ac76;
+    --primary: #d2ac76;
+    --primary-foreground: #191816;
+    --secondary: #302d27;
+    --secondary-foreground: #e7d4b6;
+    --muted: #2c2924;
+    --muted-foreground: #b4aea3;
+    --accent: #302d27;
+    --accent-foreground: #e7d4b6;
+    --destructive: #ef8e8e;
+    --border: #413c34;
+    --input: #413c34;
+    --ring: #d2ac76;
+    --task-accent-light: rgb(210 172 118 / 12%);
+    --task-muted: #aaa295;
+    --task-done: #969087;
+    --separator: rgb(255 255 255 / 8%);
+    --on-gold: #191816;
+  }
 }
 
 @layer base {
@@ -115,5 +155,29 @@
   *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+@layer base {
+  select,
+  textarea {
+    font: inherit;
+    color: inherit;
+  }
+  input,
+  textarea {
+    caret-color: var(--brand-gold);
+  }
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--task-muted);
+    opacity: 1;
+  }
+  select option {
+    background: var(--card);
+    color: var(--foreground);
+  }
+  :lang(zh-CN) {
+    text-wrap: pretty;
   }
 }

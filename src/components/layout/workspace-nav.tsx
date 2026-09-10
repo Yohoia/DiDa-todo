@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/features/preferences/preferences-provider";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -20,6 +21,7 @@ export const workspaceLinks = [
 ];
 
 export function WorkspaceNav() {
+  const { t, label: translateLabel } = useI18n();
   const pathname = usePathname();
   const { setQuickAdd, tasks } = useWorkspace();
   const items = [
@@ -41,7 +43,7 @@ export function WorkspaceNav() {
     },
   ];
   return (
-    <nav className={styles.dock} aria-label="工作台导航">
+    <nav className={styles.dock} aria-label={t("工作台导航")}>
       {items.map(({ href, label, Icon, active }, index) => (
         <span className={styles.slot} key={href}>
           {index === 2 && (
@@ -49,8 +51,8 @@ export function WorkspaceNav() {
               type="button"
               className={styles.add}
               data-quick-add
-              aria-label="快速添加任务"
-              title="快速添加 · ⌘K / Ctrl+K"
+              aria-label={t("快速添加任务")}
+              title={t("快速添加 · ⌘K / Ctrl+K")}
               onClick={() => setQuickAdd("Inbox")}
             >
               <Plus size={22} strokeWidth={1.5} />
@@ -58,11 +60,11 @@ export function WorkspaceNav() {
           )}
           <Link
             href={href}
-            aria-label={label}
+            aria-label={translateLabel(label)}
             aria-current={active ? "page" : undefined}
             className={cn(styles.item, active && styles.active)}
           >
-            <span className={styles.label}>{label}</span>
+            <span className={styles.label}>{translateLabel(label)}</span>
             {Icon ? <Icon size={22} strokeWidth={1.5} /> : <span className={styles.avatar}>A</span>}
             {href === "/inbox" &&
               tasks.some((task) => task.list === "Inbox" && !task.completed) && (

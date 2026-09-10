@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/features/preferences/preferences-provider";
 
 import Link from "next/link";
 
@@ -47,6 +48,7 @@ export function AuthTrigger({
 }
 
 export function AuthDialogProvider({ children }: { children: ReactNode }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<AuthView>("login");
   const triggerRef = useRef<HTMLButtonElement | null>(null);
@@ -71,30 +73,30 @@ export function AuthDialogProvider({ children }: { children: ReactNode }) {
           }}
         >
           <Tabs value={view} onValueChange={(value) => setView(value as AuthView)}>
-            <TabsList className={styles.tabs} aria-label="登录或注册">
+            <TabsList className={styles.tabs} aria-label={t("登录或注册")}>
               <TabsTrigger className={styles.tab} value="login">
-                Log In
+                {t("Log In")}
               </TabsTrigger>
               <TabsTrigger className={styles.tab} value="register">
-                Sign Up
+                {t("Sign Up")}
               </TabsTrigger>
             </TabsList>
             <div className={styles.heading}>
               <DialogTitle className={styles.title}>
                 {view === "login" ? (
                   <>
-                    Welcome <span>Back</span>
+                    {t("Welcome")} <span>{t("Back")}</span>
                   </>
                 ) : (
                   <>
-                    Join <span>DiDa-todo</span>
+                    {t("Join")} <span>DiDa-todo</span>
                   </>
                 )}
               </DialogTitle>
               <DialogDescription className={styles.description}>
                 {view === "login"
-                  ? "请输入您的凭证以进入工作台。"
-                  : "注册账号，开启优雅的效率之旅。"}
+                  ? t("请输入您的凭证以进入工作台。")
+                  : t("注册账号，开启优雅的效率之旅。")}
               </DialogDescription>
             </div>
             <TabsContent value="login" className={styles.view}>
@@ -111,6 +113,7 @@ export function AuthDialogProvider({ children }: { children: ReactNode }) {
 }
 
 function AuthForm({ view }: { view: AuthView }) {
+  const { t, label } = useI18n();
   const [notice, setNotice] = useState("");
   const isLogin = view === "login";
 
@@ -127,20 +130,20 @@ function AuthForm({ view }: { view: AuthView }) {
     <form onSubmit={handleSubmit}>
       {!isLogin && (
         <div className={styles.inputGroup}>
-          <label htmlFor="register-name">Full Name</label>
+          <label htmlFor="register-name">{t("Full Name")}</label>
           <input
             id="register-name"
             name="name"
             type="text"
             autoComplete="name"
-            placeholder="您的姓名"
+            placeholder={t("您的姓名")}
             required
             maxLength={80}
           />
         </div>
       )}
       <div className={styles.inputGroup}>
-        <label htmlFor={`${view}-email`}>Email Address</label>
+        <label htmlFor={`${view}-email`}>{t("Email Address")}</label>
         <input
           id={`${view}-email`}
           name="email"
@@ -151,13 +154,13 @@ function AuthForm({ view }: { view: AuthView }) {
         />
       </div>
       <div className={styles.inputGroup}>
-        <label htmlFor={`${view}-password`}>Password</label>
+        <label htmlFor={`${view}-password`}>{t("Password")}</label>
         <input
           id={`${view}-password`}
           name="password"
           type="password"
           autoComplete={isLogin ? "current-password" : "new-password"}
-          placeholder={isLogin ? "••••••••" : "设置密码 (不少于8位)"}
+          placeholder={isLogin ? "••••••••" : t("设置密码 (不少于8位)")}
           minLength={isLogin ? undefined : 8}
           required
         />
@@ -166,25 +169,25 @@ function AuthForm({ view }: { view: AuthView }) {
         <div className={styles.formActions}>
           <label className={styles.remember}>
             <input type="checkbox" name="remember" />
-            记住我
+            {t("记住我")}
           </label>
           <button
             className={styles.link}
             type="button"
             onClick={() => setNotice("密码找回服务尚未开放，请在账号服务上线后使用。")}
           >
-            忘记密码?
+            {t("忘记密码?")}
           </button>
         </div>
       )}
       <button className={styles.submit} type="submit">
-        {isLogin ? "Sign In" : "Create Account"}
+        {isLogin ? t("Sign In") : t("Create Account")}
       </button>
       <Link href="/today" className={styles.previewLink}>
-        直接预览工作台 →
+        {t("直接预览工作台 →")}
       </Link>
       <p className={styles.notice} role="status" aria-live="polite">
-        {notice}
+        {label(notice)}
       </p>
     </form>
   );

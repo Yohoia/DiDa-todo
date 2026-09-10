@@ -1,6 +1,6 @@
 .overlay.overlay {
   z-index: 1000;
-  background: rgb(250 247 242 / 70%);
+  background: color-mix(in srgb, var(--background) 75%, transparent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   animation: overlay-in 0.3s ease;
@@ -14,7 +14,7 @@
   max-height: calc(100dvh - 32px);
   overflow-y: auto;
   padding: 40px 40px 50px;
-  border: 1px solid rgb(0 0 0 / 4%);
+  border: 1px solid var(--separator);
   border-radius: 0;
   background: var(--card);
   color: var(--foreground);
@@ -122,7 +122,7 @@
   transition: border-color 0.3s;
 }
 .inputGroup input::placeholder {
-  color: #b5afa6;
+  color: var(--task-muted);
   font-weight: 300;
 }
 .inputGroup input:focus {
@@ -163,7 +163,7 @@
   width: 100%;
   padding: 14px 0;
   background: var(--foreground);
-  color: white;
+  color: var(--background);
   border: 1px solid var(--foreground);
   font-size: 12px;
   letter-spacing: 2px;

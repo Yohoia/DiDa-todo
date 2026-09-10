@@ -2,7 +2,7 @@
 
 ## 当前范围
 
-Phase 0 建立开发基础：Next.js、React、TypeScript、pnpm、Tailwind CSS、shadcn/ui 配置、Lucide、ESLint、Prettier 和 CI。当前首页、登录／注册弹窗及九个工作台页面已按 `docs/reference/` 实现；交互仅使用前端示例状态，尚未接入业务后端。
+Phase 0 建立开发基础：Next.js、React、TypeScript、pnpm、Tailwind CSS、shadcn/ui 配置、Lucide、ESLint、Prettier 和 CI。当前首页、登录／注册弹窗及九个工作台页面已按 `docs/reference/` 实现；交互仅使用前端示例状态，尚未接入业务后端。已实现简体中文／英文和浅色／暗色／跟随系统切换，显示偏好用 Cookie 保存。
 
 这是单一 Next.js 工程，当前不需要 monorepo、独立后端、数据库、认证、全局状态库或任务队列。原始 `PRD.md` 和 `TechStack.md` 保持原样。
 
@@ -17,6 +17,8 @@ Phase 0 建立开发基础：Next.js、React、TypeScript、pnpm、Tailwind CSS�
 - `components/task`：任务展示组件；数据读取、业务编排归 `features/tasks`。
 - `components/shared`：跨功能的通用展示组件，不承载数据访问。
 - `hooks`、`types`：只存放已经出现跨功能复用需求的 Hooks 和类型；不要把所有文件都提升到全局。
+- `i18n`：语言与主题标识、类型化词典、Intl 格式化和服务端偏好读取；不依赖功能组件。
+- `features/preferences`：全站显示偏好 Provider 与可复用切换控件。
 - `lib`：通用工具和外部 SDK 配置。避免把业务逻辑集中到 utils 文件。
 - `styles`：全局 CSS、设计变量、Tailwind 配置入口；通用组件使用 Tailwind，参考页面的细节样式使用功能域内的 CSS Modules，避免选择器污染。
 
@@ -29,6 +31,17 @@ Phase 1 实际接入数据时，按需求增加 `services/`、`repositories/`、
 ```
 
 UI 不直接调用 `supabase.from(...)`。接入账号数据时同步配置数据库 RLS；不提前生成空的服务、接口、数据库表或 Provider 抽象。
+
+## 国际化与外观
+
+- 服务端组件调用 `await getI18n()`（`@/i18n/server`），客户端调用 `useI18n()`（`@/features/preferences/preferences-provider`）。保持原有 Server / Client 边界，不为翻译把整个页面改成客户端组件。
+- 界面固定文案使用 `t()`；词条集中在 `src/i18n/messages.ts`，以可读源文案作为键，新增时同时补齐 `zh-CN` 和 `en`。计数词条的英文可使用 `{ one, other }`，由 `Intl.PluralRules` 根据 `count` 选择单复数。完整动态句子使用命名键及占位符，不通过拼接词语生成句子。`label()` 仅用于已有配置枚举的显示名。
+- 业务数据保持稳定：`select` 的 `value`、清单 ID、排序值等不得翻译；只翻译显示标签。用户任务内容保持原文。需要跨语言切换保留的提示存储词条键与参数，在渲染时翻译。
+- 日期与数字使用 `date()` / `number()`；日期时区明确为 `Asia/Shanghai`，纯日期输入按当天中午解释，避免时区转换造成前后一天偏移。
+- Cookie `dida-locale` / `dida-theme` 保存一年；服务端校验未知值并回退到简体中文／跟随系统。语言切换通过 `router.refresh()` 同步服务端文案，不清空工作台客户端状态。
+- 主题由根元素 `data-theme` 和语义 CSS 变量控制，系统模式在 CSS 中处理首屏，在客户端监听系统变化。不要为功能页面另建主题状态或硬编码白色卡片背景。
+- 首页和工作台右上角提供快捷入口；设置的通用／外观页复用相同控件。两种入口使用同一个 Provider，选择后立即生效。
+- 根布局读取 Cookie，页面采用动态服务端渲染。保持现有 URL，当前不按语言拆分路由；后续若需要可分享的多语言页面及 SEO，再考虑语言前缀。
 
 ## 命名和导入
 
@@ -46,7 +59,7 @@ pnpm check
 pnpm build
 ```
 
-格式不符时执行 `pnpm format`；代码检查失败时优先修复原因。CI 单独运行 lint、类型和格式检查，因为生产构建不能替代所有质量检查。
+格式不符时执行 `pnpm format`；代码检查失败时优先修复原因。`pnpm check` 包含 lint、类型、国际化测试和格式检查，因为生产构建不能替代这些质量检查。`pnpm test:i18n` 使用项目现有 TypeScript 和 Node.js 测试运行器，验证词条完整性、占位符一致性、插值、日期和偏好校验。界面改动还需检查两种语言、三种主题、移动端布局及弹窗键盘操作。
 
 建议提交信息使用 `feat:`、`fix:`、`chore:`、`docs:` 等前缀。依赖升级时同步提交 `package.json` 与 `pnpm-lock.yaml`，不要混用 npm / yarn 锁文件。
 

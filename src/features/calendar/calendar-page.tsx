@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/features/preferences/preferences-provider";
 
 import { Fragment, useState } from "react";
 import Link from "next/link";
@@ -23,6 +24,7 @@ function weekStart(date: Date, sunday: boolean) {
 }
 
 export function CalendarPage() {
+  const { t, label, locale } = useI18n();
   const { tasks, selectTask, preferences, setQuickAdd } = useWorkspace();
   const [view, setView] = useState("Week");
   const [anchor, setAnchor] = useState(new Date(2026, 8, 9, 12));
@@ -61,7 +63,7 @@ export function CalendarPage() {
         className={cn(styles.event, task.priority === 1 && styles.highPriority)}
         style={height ? { height } : undefined}
         onClick={() => selectTask(task.id)}
-        aria-label={`查看日历任务：${task.title}`}
+        aria-label={t("calendar.open", { title: task.title })}
       >
         {time && <span className={styles.eventTime}>{time}</span>}
         <strong>{label}</strong>
@@ -71,8 +73,8 @@ export function CalendarPage() {
   return (
     <div className={cn(shared.page, styles.page)}>
       <PageHeader
-        title="Schedule"
-        subtitle={anchor.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+        title={t("Schedule")}
+        subtitle={anchor.toLocaleDateString(locale, { month: "long", year: "numeric" })}
       >
         <div className={styles.switcher}>
           {["Day", "Week", "Month"].map((item) => (
@@ -82,7 +84,7 @@ export function CalendarPage() {
               aria-pressed={item === view}
               onClick={() => setView(item)}
             >
-              {item}
+              {label(item)}
             </button>
           ))}
         </div>
@@ -92,7 +94,15 @@ export function CalendarPage() {
           <div className={styles.month}>
             {weekdays.map((day) => (
               <div className={styles.dayHeader} key={day}>
-                {day}
+                {new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" }).format(
+                  new Date(
+                    Date.UTC(
+                      2026,
+                      8,
+                      6 + ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(day),
+                    ),
+                  ),
+                )}
               </div>
             ))}
             {Array.from({ length: monthCells }, (_, index) => {
@@ -108,7 +118,7 @@ export function CalendarPage() {
                 >
                   <button
                     className={cn(styles.dayNumber, key === "2026-09-09" && styles.today)}
-                    aria-label={`查看 ${key}`}
+                    aria-label={t("calendar.day", { date: key })}
                     onClick={() => {
                       setAnchor(day);
                       setView("Day");
@@ -138,7 +148,7 @@ export function CalendarPage() {
                   )}
                   key={dateKey(day)}
                 >
-                  {day.toLocaleDateString("en-US", { weekday: "short" })}
+                  {day.toLocaleDateString(locale, { weekday: "short" })}
                   <strong>{day.getDate()}</strong>
                 </div>
               ))}
@@ -169,22 +179,30 @@ export function CalendarPage() {
       </div>
       <div className={shared.row}>
         <div className={shared.actions}>
-          <button className={shared.iconButton} aria-label="上一时间段" onClick={() => move(-1)}>
+          <button
+            className={shared.iconButton}
+            aria-label={t("上一时间段")}
+            onClick={() => move(-1)}
+          >
             <ChevronLeft size={18} />
           </button>
           <button className={shared.textButton} onClick={() => setAnchor(new Date(2026, 8, 9, 12))}>
-            Today · Sep 9
+            {t("Today · Sep 9")}
           </button>
-          <button className={shared.iconButton} aria-label="下一时间段" onClick={() => move(1)}>
+          <button
+            className={shared.iconButton}
+            aria-label={t("下一时间段")}
+            onClick={() => move(1)}
+          >
             <ChevronRight size={18} />
           </button>
         </div>
         <div className={shared.actions}>
           <button className={shared.textButton} onClick={() => setQuickAdd("Work")}>
-            ＋ Add Task
+            {t("＋ Add Task")}
           </button>
           <Link className={shared.textButton} href="/upcoming">
-            Upcoming →
+            {t("Upcoming →")}
           </Link>
         </div>
       </div>

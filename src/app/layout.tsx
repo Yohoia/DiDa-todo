@@ -1,3 +1,5 @@
+import { getPreferences, getI18n } from "@/i18n/server";
+import { PreferencesProvider } from "@/features/preferences/preferences-provider";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
@@ -10,18 +12,31 @@ import "@fontsource/playfair-display/400-italic.css";
 import "@fontsource/playfair-display/700.css";
 import "@/styles/globals.css";
 
-export const metadata: Metadata = {
-  title: {
-    default: "DiDa-todo",
-    template: "%s | DiDa-todo",
-  },
-  description: "DiDa-todo，从想法到完成，掌控每一天。克制、优雅的待办与时间管理体验。",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getI18n();
+  return {
+    title: {
+      default: "DiDa-todo",
+      template: "%s | DiDa-todo",
+    },
+    description: t("app.description"),
+  };
+}
 
-export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+  const { locale, theme } = await getPreferences();
   return (
-    <html lang="zh-CN" data-scroll-behavior="smooth">
-      <body>{children}</body>
+    <html
+      lang={locale}
+      data-theme={theme}
+      className={theme === "dark" ? "dark" : undefined}
+      data-scroll-behavior="smooth"
+    >
+      <body>
+        <PreferencesProvider initialLocale={locale} initialTheme={theme}>
+          {children}
+        </PreferencesProvider>
+      </body>
     </html>
   );
 }

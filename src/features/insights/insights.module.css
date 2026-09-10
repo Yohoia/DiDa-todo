@@ -41,7 +41,7 @@
   aspect-ratio: 1;
   background: var(--background);
   border-radius: 2px;
-  border: 1px solid #00000008;
+  border: 1px solid var(--separator);
 }
 .cell[data-level="1"] {
   background: rgb(184 142 87 / 20%);

@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/features/preferences/preferences-provider";
 
 import { PageHeader, SectionLabel, EmptyState } from "@/components/shared/workspace-ui";
 import { useWorkspace } from "./workspace-provider";
@@ -12,6 +13,7 @@ function completionDay(completedAt?: string) {
 }
 
 export function CompletedPage() {
+  const { t, label, locale } = useI18n();
   const { tasks, toggleTask, deleteTask, notify } = useWorkspace();
   const completed = tasks
     .filter((task) => task.completed)
@@ -19,10 +21,15 @@ export function CompletedPage() {
   const dates = [...new Set(completed.map((task) => completionDay(task.completedAt)))];
   return (
     <div className={cn(styles.page, styles.narrow)}>
-      <PageHeader title="Archive" subtitle={`Completed History (${completed.length} Items)`} />
+      <PageHeader
+        title={t("Archive")}
+        subtitle={t("tasks.archiveCount", { count: completed.length })}
+      />
       {dates.map((date) => (
         <section key={date}>
-          <SectionLabel>{date === "2026-09-08" ? "Yesterday · Sep 8" : date}</SectionLabel>
+          <SectionLabel>
+            {date === "2026-09-08" ? t("Yesterday · Sep 8") : label(date)}
+          </SectionLabel>
           <div className="flex flex-col gap-2">
             {completed
               .filter((task) => completionDay(task.completedAt) === date)
@@ -31,9 +38,9 @@ export function CompletedPage() {
                   <div>
                     <p className="text-sm text-[var(--task-done)] line-through">{task.title}</p>
                     <p className="mt-1 text-[11px] text-[var(--task-muted)]">
-                      Completed at{" "}
+                      {t("Completed at")}{" "}
                       {task.completedAt
-                        ? new Date(task.completedAt).toLocaleTimeString("en-GB", {
+                        ? new Date(task.completedAt).toLocaleTimeString(locale, {
                             hour: "2-digit",
                             minute: "2-digit",
                             timeZone: "Asia/Shanghai",
@@ -46,16 +53,19 @@ export function CompletedPage() {
                       className={styles.button}
                       onClick={() => {
                         toggleTask(task.id);
-                        notify(`已恢复到 ${task.list}${task.date ? ` · ${task.date}` : ""}`);
+                        notify({
+                          key: "tasks.restored",
+                          values: { list: task.list, date: task.date ? ` · ${task.date}` : "" },
+                        });
                       }}
                     >
-                      Restore
+                      {t("Restore")}
                     </button>
                     <button
                       className={cn(styles.button, styles.danger)}
                       onClick={() => deleteTask(task.id)}
                     >
-                      Delete
+                      {t("Delete")}
                     </button>
                   </div>
                 </div>
@@ -64,7 +74,7 @@ export function CompletedPage() {
         </section>
       ))}
       {!completed.length && (
-        <EmptyState title="A fresh start">Completed tasks will appear here.</EmptyState>
+        <EmptyState title={t("A fresh start")}>{t("Completed tasks will appear here.")}</EmptyState>
       )}
     </div>
   );

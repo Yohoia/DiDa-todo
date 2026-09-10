@@ -1,4 +1,6 @@
 "use client";
+import type { MessageKey } from "@/i18n/messages";
+import type { MessageValues } from "@/i18n/translate";
 
 import { createContext, useContext, useState, type ReactNode } from "react";
 import type { Task, TaskList } from "@/types/task";
@@ -12,6 +14,8 @@ type Preferences = {
   dailyCapacity: number;
   reminders: boolean;
 };
+type Notice = { key: MessageKey; values?: MessageValues };
+
 type WorkspaceState = {
   tasks: Task[];
   updateTask: (id: string, patch: Partial<Task>) => void;
@@ -27,8 +31,8 @@ type WorkspaceState = {
   stopFocus: () => void;
   preferences: Preferences;
   setPreferences: (patch: Partial<Preferences>) => void;
-  notice: string;
-  notify: (message: string) => void;
+  notice: Notice | null;
+  notify: (message: Notice | null) => void;
 };
 const WorkspaceContext = createContext<WorkspaceState | null>(null);
 
@@ -37,7 +41,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [selectedId, selectTask] = useState<string | null>(null);
   const [quickAdd, setQuickAdd] = useState<TaskList | null>(null);
   const [focusId, setFocusId] = useState<string | null>(null);
-  const [notice, notify] = useState("");
+  const [notice, notify] = useState<Notice | null>(null);
   const [preferences, updatePreferences] = useState<Preferences>({
     firstDay: "Monday",
     sound: true,
@@ -85,7 +89,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         subtasks: [],
       },
     ]);
-    notify(`已添加至 ${list}${date ? ` · ${date}` : ""}`);
+    notify({ key: "tasks.added", values: { list, date: date ? ` · ${date}` : "" } });
   }
   function toggleTask(id: string) {
     setTasks((current) =>
@@ -103,7 +107,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   function deleteTask(id: string) {
     setTasks((current) => current.filter((task) => task.id !== id));
     selectTask(null);
-    notify("任务已从本次预览中删除");
+    notify({ key: "任务已从本次预览中删除" });
   }
   return (
     <WorkspaceContext.Provider

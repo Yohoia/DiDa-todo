@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/features/preferences/preferences-provider";
 
 import { useDialogFocus } from "@/hooks/use-dialog-focus";
 
@@ -12,6 +13,7 @@ import type { TaskList } from "@/types/task";
 import styles from "@/styles/workspace.module.css";
 
 export function QuickAdd() {
+  const { t } = useI18n();
   const focusReturn = useDialogFocus();
   const { quickAdd, setQuickAdd } = useWorkspace();
   const pathname = usePathname();
@@ -39,14 +41,15 @@ export function QuickAdd() {
         overlayClassName={styles.overlay}
         closeButtonClassName={styles.close}
       >
-        <DialogTitle>Quick Add</DialogTitle>
-        <DialogDescription>记录一个想法，或者输入 / 跳转到其他页面。</DialogDescription>
+        <DialogTitle>{t("Quick Add")}</DialogTitle>
+        <DialogDescription>{t("记录一个想法，或者输入 / 跳转到其他页面。")}</DialogDescription>
         {quickAdd && <QuickAddForm key={`${quickAdd}-${pathname}`} initialList={quickAdd} />}
       </DialogContent>
     </Dialog>
   );
 }
 function QuickAddForm({ initialList }: { initialList: TaskList }) {
+  const { t, label } = useI18n();
   const { addTask, setQuickAdd } = useWorkspace();
   const router = useRouter();
   const [title, setTitle] = useState("");
@@ -67,24 +70,29 @@ function QuickAddForm({ initialList }: { initialList: TaskList }) {
   }
   const commands = title.startsWith("/");
   const matchingLinks = workspaceLinks.filter((link) =>
-    `${link.label} ${link.description}`.toLowerCase().includes(title.slice(1).toLowerCase()),
+    `${link.label} ${link.description} ${label(link.label)} ${label(link.description)}`
+      .toLowerCase()
+      .includes(title.slice(1).toLowerCase()),
   );
   return (
     <form onSubmit={submit} className="flex flex-col gap-4">
       <label className="sr-only" htmlFor="quick-task-title">
-        任务标题或页面名称
+        {t("任务标题或页面名称")}
       </label>
       <input
         id="quick-task-title"
         className="w-full border-b border-border py-3 text-base"
-        placeholder="What needs to be done?"
+        placeholder={t("What needs to be done?")}
         maxLength={200}
         value={title}
         onChange={(event) => setTitle(event.target.value)}
         autoFocus
       />
       {commands ? (
-        <nav aria-label="快捷页面导航" className="grid max-h-72 grid-cols-2 gap-2 overflow-y-auto">
+        <nav
+          aria-label={t("快捷页面导航")}
+          className="grid max-h-72 grid-cols-2 gap-2 overflow-y-auto"
+        >
           {matchingLinks.map((link) => (
             <Link
               className={styles.button}
@@ -92,30 +100,32 @@ function QuickAddForm({ initialList }: { initialList: TaskList }) {
               key={link.href}
               onClick={() => setQuickAdd(null)}
             >
-              {link.label}
+              {label(link.label)}
             </Link>
           ))}
-          {!matchingLinks.length && <p className={styles.muted}>No matching pages</p>}
+          {!matchingLinks.length && <p className={styles.muted}>{t("No matching pages")}</p>}
         </nav>
       ) : (
         <>
           <div className={styles.row}>
             <label className={styles.muted}>
-              List{" "}
+              {t("List")}{" "}
               <select
                 value={list}
                 onChange={(event) => setList(event.target.value as TaskList)}
                 className={styles.select}
               >
                 {["Inbox", "Work", "Study", "Life"].map((value) => (
-                  <option key={value}>{value}</option>
+                  <option key={value} value={value}>
+                    {label(value)}
+                  </option>
                 ))}
               </select>
             </label>
             <label className={styles.muted}>
-              Date{" "}
+              {t("Date")}{" "}
               <input
-                aria-label="任务日期"
+                aria-label={t("任务日期")}
                 type="date"
                 value={date}
                 onChange={(event) => setDate(event.target.value)}
@@ -124,11 +134,11 @@ function QuickAddForm({ initialList }: { initialList: TaskList }) {
             </label>
           </div>
           <button type="submit" className={styles.primary} disabled={!title.trim()}>
-            Create Task
+            {t("Create Task")}
           </button>
         </>
       )}
-      <p className={styles.muted}>Enter to create · Esc to close · / to navigate</p>
+      <p className={styles.muted}>{t("Enter to create · Esc to close · / to navigate")}</p>
     </form>
   );
 }

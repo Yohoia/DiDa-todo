@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n } from "@/features/preferences/preferences-provider";
+
 import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
@@ -54,7 +56,7 @@ const DialogContent = React.forwardRef<
         )}
       >
         <X className="h-4 w-4" />
-        <span className="sr-only">关闭弹窗</span>
+        <DialogCloseLabel />
       </DialogPrimitive.Close>
     </DialogPrimitive.Content>
   </DialogPortal>
@@ -110,3 +112,8 @@ export {
   DialogTitle,
   DialogDescription,
 };
+
+function DialogCloseLabel() {
+  const { t } = useI18n();
+  return <span className="sr-only">{t("关闭弹窗")}</span>;
+}

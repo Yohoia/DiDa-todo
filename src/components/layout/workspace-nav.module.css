@@ -3,7 +3,7 @@
   bottom: max(30px, env(safe-area-inset-bottom));
   left: 50%;
   transform: translateX(-50%);
-  background: rgb(255 255 255 / 85%);
+  background: color-mix(in srgb, var(--card) 90%, transparent);
   backdrop-filter: blur(20px);
   border: 1px solid var(--border);
   padding: 10px 16px;
@@ -63,7 +63,7 @@
 }
 .add {
   background: var(--foreground);
-  color: white;
+  color: var(--background);
   width: 40px;
   height: 40px;
   border-radius: 50%;
