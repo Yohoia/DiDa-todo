@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1160" viewBox="0 0 1200 1160" role="img" aria-labelledby="title desc">
+  <title id="title">DiDa-todo product showcase</title>
+  <desc id="desc">The landing page, weekly calendar, and productivity insights views shown together.</desc>
+
+  <defs>
+    <clipPath id="landing-clip">
+      <rect x="60" y="78" width="1080" height="750" rx="5"/>
+    </clipPath>
+    <clipPath id="calendar-clip">
+      <rect x="48" y="720" width="632" height="391" rx="5"/>
+    </clipPath>
+    <clipPath id="insight-clip">
+      <rect x="520" y="748" width="632" height="391" rx="5"/>
+    </clipPath>
+  </defs>
+
+  <rect width="1200" height="1160" rx="8" fill="#1C1917"/>
+
+  <g transform="translate(60 34)" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">
+    <circle cx="6" cy="6" r="6" fill="#B88E57"/>
+    <text x="24" y="13" fill="#FAF7F2" font-size="18">A CALM SYSTEM FOR FOCUSED WORK</text>
+    <text x="1080" y="13" fill="#A8A29E" text-anchor="end" font-size="16">01 / PRODUCT TOUR</text>
+  </g>
+
+  <rect x="52" y="70" width="1096" height="766" rx="7" fill="#2A2724"/>
+  <image href="landing.png" x="60" y="78" width="1080" height="750" clip-path="url(#landing-clip)" preserveAspectRatio="xMidYMid slice"/>
+
+  <rect x="38" y="710" width="652" height="411" rx="7" fill="#B88E57"/>
+  <image href="calendar.png" x="48" y="720" width="632" height="391" clip-path="url(#calendar-clip)" preserveAspectRatio="xMidYMid slice"/>
+
+  <rect x="510" y="738" width="652" height="411" rx="7" fill="#FAF7F2"/>
+  <image href="insight.png" x="520" y="748" width="632" height="391" clip-path="url(#insight-clip)" preserveAspectRatio="xMidYMid slice"/>
+
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="17">
+    <rect x="68" y="680" width="150" height="38" fill="#1C1917"/>
+    <text x="82" y="705" fill="#FAF7F2">WEEK PLANNER</text>
+    <rect x="948" y="1120" width="186" height="38" fill="#1C1917"/>
+    <text x="962" y="1145" fill="#FAF7F2">FOCUS INSIGHTS</text>
+  </g>
+</svg>
