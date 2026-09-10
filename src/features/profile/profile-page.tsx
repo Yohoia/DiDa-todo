@@ -1,30 +1,30 @@
 import { getI18n } from "@/i18n/server";
 import Link from "next/link";
 import {
-  ArrowUpRight,
-  BarChart3,
-  BriefcaseBusiness,
-  CheckCheck,
-  Settings2,
-  CalendarDays,
-  House,
-} from "lucide-react";
+  HiArrowUpRight,
+  HiChartBar,
+  HiBriefcase,
+  HiCheckCircle,
+  HiCog,
+  HiCalendar,
+  HiHome,
+} from "react-icons/hi2";
 import { SectionLabel } from "@/components/shared/workspace-ui";
 import shared from "@/styles/workspace.module.css";
 import styles from "./profile.module.css";
 
 const links = [
-  { href: "/upcoming", title: "Upcoming", subtitle: "规划接下来的每一天", Icon: CalendarDays },
+  { href: "/upcoming", title: "Upcoming", subtitle: "规划接下来的每一天", Icon: HiCalendar },
   {
     href: "/list-detail",
     title: "Work & Projects",
     subtitle: "工作与项目清单",
-    Icon: BriefcaseBusiness,
+    Icon: HiBriefcase,
   },
-  { href: "/completed", title: "Archive", subtitle: "回顾已完成的任务", Icon: CheckCheck },
-  { href: "/insight", title: "Insights", subtitle: "看见专注与成长", Icon: BarChart3 },
-  { href: "/settings", title: "Settings", subtitle: "让节奏适合自己", Icon: Settings2 },
-  { href: "/", title: "DiDa-todo", subtitle: "返回首页", Icon: House },
+  { href: "/completed", title: "Archive", subtitle: "回顾已完成的任务", Icon: HiCheckCircle },
+  { href: "/insight", title: "Insights", subtitle: "看见专注与成长", Icon: HiChartBar },
+  { href: "/settings", title: "Settings", subtitle: "让节奏适合自己", Icon: HiCog },
+  { href: "/", title: "DiDa-todo", subtitle: "返回首页", Icon: HiHome },
 ];
 export async function ProfilePage() {
   const { t, label } = await getI18n();
@@ -76,7 +76,7 @@ export async function ProfilePage() {
               <strong>{label(title)}</strong>
               <small>{label(subtitle)}</small>
             </span>
-            <ArrowUpRight size={15} />
+            <HiArrowUpRight size={15} />
           </Link>
         ))}
       </nav>

@@ -3,7 +3,7 @@ import { useI18n } from "@/features/preferences/preferences-provider";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, Clock3, Inbox, Plus } from "lucide-react";
+import { HiCalendar, HiClock, HiInbox, HiPlus } from "react-icons/hi2";
 import { useWorkspace } from "@/features/tasks/workspace-provider";
 import { cn } from "@/lib/utils";
 import styles from "./workspace-nav.module.css";
@@ -25,12 +25,12 @@ export function WorkspaceNav() {
   const pathname = usePathname();
   const { setQuickAdd, tasks } = useWorkspace();
   const items = [
-    { href: "/today", label: "Today", Icon: Clock3, active: pathname === "/today" },
-    { href: "/inbox", label: "Inbox", Icon: Inbox, active: pathname === "/inbox" },
+    { href: "/today", label: "Today", Icon: HiClock, active: pathname === "/today" },
+    { href: "/inbox", label: "Inbox", Icon: HiInbox, active: pathname === "/inbox" },
     {
       href: "/calendar",
       label: "Calendar",
-      Icon: CalendarDays,
+      Icon: HiCalendar,
       active: ["/calendar", "/upcoming"].includes(pathname),
     },
     {
@@ -55,7 +55,7 @@ export function WorkspaceNav() {
               title={t("快速添加 · ⌘K / Ctrl+K")}
               onClick={() => setQuickAdd("Inbox")}
             >
-              <Plus size={22} strokeWidth={1.5} />
+              <HiPlus size={22} />
             </button>
           )}
           <Link
@@ -65,7 +65,7 @@ export function WorkspaceNav() {
             className={cn(styles.item, active && styles.active)}
           >
             <span className={styles.label}>{translateLabel(label)}</span>
-            {Icon ? <Icon size={22} strokeWidth={1.5} /> : <span className={styles.avatar}>A</span>}
+            {Icon ? <Icon size={22} /> : <span className={styles.avatar}>A</span>}
             {href === "/inbox" &&
               tasks.some((task) => task.list === "Inbox" && !task.completed) && (
                 <span className={styles.dot} />

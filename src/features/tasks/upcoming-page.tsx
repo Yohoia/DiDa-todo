@@ -3,7 +3,7 @@ import { useI18n } from "@/features/preferences/preferences-provider";
 
 import { useState } from "react";
 import Link from "next/link";
-import { CalendarDays } from "lucide-react";
+import { HiCalendar } from "react-icons/hi2";
 import { PageHeader, SectionLabel, EmptyState } from "@/components/shared/workspace-ui";
 import { TaskRow } from "@/components/task/task-row";
 import { useWorkspace } from "./workspace-provider";
@@ -76,7 +76,7 @@ export function UpcomingPage() {
         <EmptyState title={t("A clear horizon")}>{t("No upcoming tasks in this list.")}</EmptyState>
       )}
       <Link className={styles.textButton} href="/calendar">
-        <CalendarDays size={15} /> {t("View calendar →")}
+        <HiCalendar size={15} /> {t("View calendar →")}
       </Link>
     </div>
   );

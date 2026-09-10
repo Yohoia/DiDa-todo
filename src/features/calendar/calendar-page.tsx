@@ -3,7 +3,7 @@ import { useI18n } from "@/features/preferences/preferences-provider";
 
 import { Fragment, useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { HiChevronLeft, HiChevronRight } from "react-icons/hi2";
 import { PageHeader } from "@/components/shared/workspace-ui";
 import { useWorkspace } from "@/features/tasks/workspace-provider";
 import { cn } from "@/lib/utils";
@@ -184,7 +184,7 @@ export function CalendarPage() {
             aria-label={t("上一时间段")}
             onClick={() => move(-1)}
           >
-            <ChevronLeft size={18} />
+            <HiChevronLeft size={18} />
           </button>
           <button className={shared.textButton} onClick={() => setAnchor(new Date(2026, 8, 9, 12))}>
             {t("Today · Sep 9")}
@@ -194,7 +194,7 @@ export function CalendarPage() {
             aria-label={t("下一时间段")}
             onClick={() => move(1)}
           >
-            <ChevronRight size={18} />
+            <HiChevronRight size={18} />
           </button>
         </div>
         <div className={shared.actions}>

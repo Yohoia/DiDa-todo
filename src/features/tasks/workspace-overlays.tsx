@@ -1,6 +1,6 @@
 "use client";
 import { useI18n } from "@/features/preferences/preferences-provider";
-import { X } from "lucide-react";
+import { HiX } from "react-icons/hi";
 import { useEffect } from "react";
 import { useWorkspace } from "./workspace-provider";
 import { TaskDetail } from "./task-detail";
@@ -28,7 +28,7 @@ export function WorkspaceOverlays() {
             ...(notice.values?.list ? { list: label(String(notice.values.list)) } : {}),
           })}
           <button aria-label={t("关闭提示")} onClick={() => notify(null)}>
-            <X size={16} />
+            <HiX size={16} />
           </button>
         </div>
       )}

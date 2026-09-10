@@ -2,7 +2,7 @@
 import { useI18n } from "@/features/preferences/preferences-provider";
 
 import { useState } from "react";
-import { BriefcaseBusiness, Plus } from "lucide-react";
+import { HiBriefcase, HiPlus } from "react-icons/hi2";
 import { TaskRow } from "@/components/task/task-row";
 import { EmptyState } from "@/components/shared/workspace-ui";
 import { useWorkspace } from "./workspace-provider";
@@ -43,7 +43,7 @@ export function ListPage() {
       <header className={cn(styles.row, "border-b border-border pb-5")}>
         <div className="flex items-center gap-3">
           <span className="flex size-[42px] shrink-0 items-center justify-center rounded-lg bg-foreground text-background">
-            <BriefcaseBusiness size={21} strokeWidth={1.5} />
+            <HiBriefcase size={21} />
           </span>
           <div>
             <h1 className="font-serif text-[2rem]">{title}</h1>
@@ -56,7 +56,7 @@ export function ListPage() {
           </div>
         </div>
         <button className={styles.button} onClick={() => setQuickAdd(list)}>
-          <Plus size={14} /> {t("Add Task")}
+          <HiPlus size={14} /> {t("Add Task")}
         </button>
       </header>
       <div className={styles.row}>

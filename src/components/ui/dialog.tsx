@@ -4,7 +4,7 @@ import { useI18n } from "@/features/preferences/preferences-provider";
 
 import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { X } from "lucide-react";
+import { HiX } from "react-icons/hi";
 
 import { cn } from "@/lib/utils";
 
@@ -55,7 +55,7 @@ const DialogContent = React.forwardRef<
           closeButtonClassName,
         )}
       >
-        <X className="h-4 w-4" />
+        <HiX className="h-4 w-4" />
         <DialogCloseLabel />
       </DialogPrimitive.Close>
     </DialogPrimitive.Content>

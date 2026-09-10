@@ -2,7 +2,7 @@
 import { useI18n } from "@/features/preferences/preferences-provider";
 import { isDemoToday, isDemoTomorrow } from "@/lib/date-utils";
 
-import { Check, LockKeyhole } from "lucide-react";
+import { HiCheck, HiLockClosed } from "react-icons/hi2";
 import type { Task } from "@/types/task";
 import { cn } from "@/lib/utils";
 import taskStyles from "./task-row.module.css";
@@ -36,7 +36,7 @@ export function TaskRow({ task, onToggle, onOpen, variant = "upcoming" }: Props)
         onClick={onToggle}
         className={taskStyles.checkButton}
       >
-        <span className={taskStyles.checkbox}>{task.completed && <Check size={12} />}</span>
+        <span className={taskStyles.checkbox}>{task.completed && <HiCheck size={12} />}</span>
       </button>
       {variant === "list" && (
         <span
@@ -57,7 +57,7 @@ export function TaskRow({ task, onToggle, onOpen, variant = "upcoming" }: Props)
       >
         <span className={taskStyles.title}>
           {task.title}{" "}
-          {task.frozen && <LockKeyhole size={12} className="inline" aria-label={t("已承诺")} />}
+          {task.frozen && <HiLockClosed size={12} className="inline" aria-label={t("已承诺")} />}
         </span>
         {variant === "inbox" && <span className={taskStyles.unorganized}>{t("Unorganized")}</span>}
         {variant === "upcoming" && task.tag && (

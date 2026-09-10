@@ -1,7 +1,7 @@
 "use client";
 import { useI18n } from "@/features/preferences/preferences-provider";
 
-import { Plus } from "lucide-react";
+import { HiPlus } from "react-icons/hi2";
 
 import { AuthTrigger } from "@/features/auth/auth-dialog";
 import { cn } from "@/lib/utils";
@@ -21,7 +21,7 @@ export function TaskPreview() {
             <div className={styles.mDate}>{t("FRIDAY, SEP 4")}</div>
           </div>
           <AuthTrigger className={styles.addTask} aria-label={t("登录以添加任务")}>
-            <Plus size={22} strokeWidth={1.5} />
+            <HiPlus size={22} />
           </AuthTrigger>
         </div>
         <div className={styles.mockupBody}>

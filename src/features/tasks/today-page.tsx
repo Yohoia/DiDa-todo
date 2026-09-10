@@ -2,7 +2,8 @@
 import { useI18n } from "@/features/preferences/preferences-provider";
 
 import Link from "next/link";
-import { Clock3, Search, Sparkles } from "lucide-react";
+import { HiClock, HiSparkles } from "react-icons/hi2";
+import { HiSearch } from "react-icons/hi";
 import { PageHeader, SectionLabel, EmptyState } from "@/components/shared/workspace-ui";
 import { TaskRow } from "@/components/task/task-row";
 import { useWorkspace } from "./workspace-provider";
@@ -30,7 +31,7 @@ export function TodayPage() {
           subtitle={t("Wednesday, September 9")}
         />
         <div className={styles.greeting}>
-          <Sparkles size={14} className="mr-1 inline" aria-hidden="true" />{" "}
+          <HiSparkles size={14} className="mr-1 inline" aria-hidden="true" />{" "}
           <strong>{t("AI Insight:")}</strong> {t("tasks.todayInsight", { count: active.length })}
         </div>
         <section>
@@ -44,7 +45,7 @@ export function TodayPage() {
               >
                 <span className={shared.row}>
                   <span className={styles.badge}>{t("One Thing")}</span>
-                  <Clock3 size={18} className={shared.gold} />
+                  <HiClock size={18} className={shared.gold} />
                 </span>
                 <h2>
                   {featured.title === "完成 DiDa 登录系统核心业务逻辑与鉴权" ? (
@@ -90,7 +91,7 @@ export function TodayPage() {
             aria-label={t("搜索与快速添加")}
             onClick={() => setQuickAdd("Inbox")}
           >
-            <Search size={19} />
+            <HiSearch size={19} />
           </button>
         </div>
         <section>

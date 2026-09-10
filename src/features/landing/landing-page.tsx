@@ -1,6 +1,7 @@
 import { PreferenceControls } from "@/features/preferences/preference-controls";
 import { getI18n } from "@/i18n/server";
-import { ArrowRight, Clock3, Sparkles, Target } from "lucide-react";
+import { HiArrowRight, HiClock, HiSparkles } from "react-icons/hi2";
+import { TbTarget } from "react-icons/tb";
 
 import { Brand } from "@/components/shared/brand";
 import { AuthDialogProvider, AuthTrigger } from "@/features/auth/auth-dialog";
@@ -111,17 +112,17 @@ export async function LandingPage() {
                   className={cn(styles.btn, styles.btnOutline, styles.philosophyLink)}
                 >
                   {t("探索哲学")}
-                  <ArrowRight size={16} />
+                  <HiArrowRight size={16} />
                 </a>
               </div>
               <div className={styles.promoCards}>
                 {[
-                  { Icon: Target, title: "设定目标", text: "摒弃杂念，直击靶心" },
-                  { Icon: Clock3, title: "记录成长", text: "让时间的刻度可见" },
-                  { Icon: Sparkles, title: "持续进化", text: "在平静中蜕变" },
+                  { Icon: TbTarget, title: "设定目标", text: "摒弃杂念，直击靶心" },
+                  { Icon: HiClock, title: "记录成长", text: "让时间的刻度可见" },
+                  { Icon: HiSparkles, title: "持续进化", text: "在平静中蜕变" },
                 ].map(({ Icon, title, text }) => (
                   <article className={styles.pCard} key={title}>
-                    <Icon className={styles.icon} size={24} strokeWidth={1.25} aria-hidden="true" />
+                    <Icon className={styles.icon} size={24} aria-hidden="true" />
                     <h3>{label(title)}</h3>
                     <p>{label(text)}</p>
                   </article>
