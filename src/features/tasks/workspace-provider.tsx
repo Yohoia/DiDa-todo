@@ -107,7 +107,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   function deleteTask(id: string) {
     setTasks((current) => current.filter((task) => task.id !== id));
     selectTask(null);
-    notify({ key: "任务已从本次预览中删除" });
+    notify({ key: "tasks.deleted" });
   }
   return (
     <WorkspaceContext.Provider

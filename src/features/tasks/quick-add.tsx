@@ -15,19 +15,20 @@ import styles from "@/styles/workspace.module.css";
 export function QuickAdd() {
   const { t } = useI18n();
   const focusReturn = useDialogFocus();
-  const { quickAdd, setQuickAdd } = useWorkspace();
+  const { quickAdd, setQuickAdd, selectedId, focusId } = useWorkspace();
   const pathname = usePathname();
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-        if (document.querySelector('[role="dialog"]') && !quickAdd) return;
+        // Don't trigger if task detail drawer or focus mode is active
+        if (selectedId || focusId) return;
         event.preventDefault();
         setQuickAdd(quickAdd ? null : "Inbox");
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [quickAdd, setQuickAdd]);
+  }, [quickAdd, setQuickAdd, selectedId, focusId]);
   return (
     <Dialog
       open={quickAdd !== null}

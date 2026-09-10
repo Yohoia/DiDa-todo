@@ -1143,6 +1143,10 @@ export const messages = {
     "zh-CN": "{count} 个番茄钟",
     en: { one: "{count} Pomodoro", other: "{count} Pomodoros" },
   },
+  "tasks.deleted": {
+    "zh-CN": "任务已从本次预览中删除",
+    en: "Task deleted from this preview",
+  },
   "calendar.open": {
     "zh-CN": "查看日历任务：{title}",
     en: "View calendar task: {title}",
