@@ -1,0 +1,173 @@
+/* ===== Trigger (today page, image 1: 🔍 Search ⌘K) ===== */
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 6px 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--muted-foreground) 6%, transparent);
+  color: var(--muted-foreground);
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+.trigger:hover {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--muted-foreground) 10%, transparent);
+}
+.triggerText {
+  line-height: 1;
+}
+
+.kbd {
+  font-family: inherit;
+  font-size: 10px;
+  line-height: 1;
+  color: var(--muted-foreground);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 5px;
+  background: var(--card);
+}
+
+/* ===== Panel (images 2/3: DocSearch dialog) ===== */
+.panel {
+  width: min(560px, calc(100vw - 32px));
+  padding: 16px;
+  gap: 0;
+  border-radius: 12px;
+  text-align: left;
+}
+
+.command {
+  display: flex;
+  flex-direction: column;
+}
+
+.inputBox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 11px 14px;
+  color: var(--muted-foreground);
+  transition: border-color 0.15s ease;
+}
+.inputBox:focus-within {
+  border-color: var(--brand-gold);
+}
+
+.input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: none;
+  font-size: 15px;
+  color: var(--foreground);
+}
+.input::placeholder {
+  color: var(--muted-foreground);
+  opacity: 0.8;
+}
+
+.list {
+  margin-top: 10px;
+  min-height: 168px;
+  max-height: min(46vh, 340px);
+  overflow-y: auto;
+  position: relative;
+}
+
+.empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+
+.group:first-of-type {
+  margin-top: 0;
+}
+.group {
+  margin-top: 6px;
+}
+.group :global([cmdk-group-heading]) {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted-foreground);
+  padding: 8px 10px 5px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--foreground);
+  cursor: pointer;
+}
+.item[data-selected="true"],
+.item:hover {
+  background: color-mix(in srgb, var(--brand-gold) 10%, transparent);
+}
+.itemTitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.itemTitleDone {
+  composes: itemTitle;
+  color: var(--muted-foreground);
+  text-decoration: line-through;
+}
+.itemHint {
+  flex: none;
+  font-size: 11px;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== Footer (image 2: ↵ select · ↑↓ navigate · esc close) ===== */
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid var(--separator);
+  margin-top: 10px;
+  padding: 10px 2px 0;
+}
+.hints {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+.brand {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--muted-foreground);
+}
+
+.closeHidden {
+  display: none;
+}

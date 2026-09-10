@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useWorkspace } from "./workspace-provider";
 import { TaskDetail } from "./task-detail";
 import { QuickAdd } from "./quick-add";
+import { CommandPalette } from "@/components/ui/command-palette";
 import { FocusSession } from "@/features/focus/focus-session";
 import styles from "@/styles/workspace.module.css";
 
@@ -21,6 +22,7 @@ export function WorkspaceOverlays() {
     <>
       <TaskDetail />
       <QuickAdd />
+      <CommandPalette />
       <FocusSession />
       <AnimatePresence>
         {notice && (

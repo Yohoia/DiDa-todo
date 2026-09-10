@@ -53,6 +53,8 @@
   transition: 0.2s;
   position: absolute;
   top: -22px;
+  /* The tooltip floats above the icon; never wrap it inside the 36px item. */
+  white-space: nowrap;
   background: var(--background);
   border-radius: 4px;
   padding: 2px 4px;

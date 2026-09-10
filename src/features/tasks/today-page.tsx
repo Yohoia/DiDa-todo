@@ -3,10 +3,11 @@ import { useI18n } from "@/features/preferences/preferences-provider";
 
 import Link from "next/link";
 import { HiClock, HiSparkles } from "react-icons/hi2";
-import { HiSearch } from "react-icons/hi";
 import { AnimatePresence, motion } from "framer-motion";
 import { PageHeader, SectionLabel, EmptyState } from "@/components/shared/workspace-ui";
 import { TaskRow } from "@/components/task/task-row";
+import { SubtaskPopover } from "@/components/task/subtask-popover";
+import { SearchTrigger } from "@/components/ui/command-palette";
 import { useWorkspace } from "./workspace-provider";
 import { DEMO_TODAY } from "./demo-data";
 import shared from "@/styles/workspace.module.css";
@@ -14,7 +15,7 @@ import styles from "./today.module.css";
 
 export function TodayPage() {
   const { t } = useI18n();
-  const { tasks, preferences, selectTask, toggleTask, startFocus, setQuickAdd } = useWorkspace();
+  const { tasks, preferences, selectTask, toggleTask, toggleSubtask, startFocus } = useWorkspace();
   const today = tasks.filter((task) => task.date === DEMO_TODAY);
   const active = today.filter((task) => !task.completed);
   const featured = today.find((task) => task.featured && !task.completed);
@@ -59,13 +60,17 @@ export function TodayPage() {
                     featured.title
                   )}
                 </h2>
-                <span className={styles.meta}>
-                  <span>
-                    {t("Estimate:")} {t("tasks.pomodoros", { count: featured.estimate })}
-                  </span>
-                  <span>{t("Project: Development")}</span>
-                </span>
               </button>
+              <div className={styles.meta}>
+                <span>
+                  {t("Estimate:")} {t("tasks.pomodoros", { count: featured.estimate })}
+                </span>
+                <SubtaskPopover
+                  subtasks={featured.subtasks}
+                  onToggle={(subtaskId) => toggleSubtask(featured.id, subtaskId)}
+                />
+                <span>{t("Project: Development")}</span>
+              </div>
               <motion.button
                 className={shared.primary}
                 onClick={() => startFocus(featured.id)}
@@ -93,16 +98,7 @@ export function TodayPage() {
               value={active.length}
             />
           </div>
-          <motion.button
-            className={shared.iconButton}
-            aria-label={t("搜索与快速添加")}
-            onClick={() => setQuickAdd("Inbox")}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
-            transition={{ duration: 0.15, ease: "easeOut" }}
-          >
-            <HiSearch size={19} />
-          </motion.button>
+          <SearchTrigger />
         </div>
         <section>
           <SectionLabel>{t("Committed (Frozen)")}</SectionLabel>
@@ -116,6 +112,7 @@ export function TodayPage() {
                   variant="timeline"
                   onOpen={() => selectTask(task.id)}
                   onToggle={() => toggleTask(task.id)}
+                  onToggleSubtask={(subtaskId) => toggleSubtask(task.id, subtaskId)}
                 />
               ))}
           </AnimatePresence>
@@ -133,6 +130,7 @@ export function TodayPage() {
                     variant="timeline"
                     onOpen={() => selectTask(task.id)}
                     onToggle={() => toggleTask(task.id)}
+                    onToggleSubtask={(subtaskId) => toggleSubtask(task.id, subtaskId)}
                   />
                 ))}
             </AnimatePresence>

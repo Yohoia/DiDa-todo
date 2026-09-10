@@ -3,7 +3,7 @@ import { useI18n } from "@/features/preferences/preferences-provider";
 
 import { useDialogFocus } from "@/hooks/use-dialog-focus";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -15,20 +15,8 @@ import styles from "@/styles/workspace.module.css";
 export function QuickAdd() {
   const { t } = useI18n();
   const focusReturn = useDialogFocus();
-  const { quickAdd, setQuickAdd, selectedId, focusId } = useWorkspace();
+  const { quickAdd, setQuickAdd } = useWorkspace();
   const pathname = usePathname();
-  useEffect(() => {
-    function onKey(event: KeyboardEvent) {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-        // Don't trigger if task detail drawer or focus mode is active
-        if (selectedId || focusId) return;
-        event.preventDefault();
-        setQuickAdd(quickAdd ? null : "Inbox");
-      }
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [quickAdd, setQuickAdd, selectedId, focusId]);
   return (
     <Dialog
       open={quickAdd !== null}

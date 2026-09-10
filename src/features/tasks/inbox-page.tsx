@@ -10,7 +10,7 @@ import styles from "@/styles/workspace.module.css";
 
 export function InboxPage() {
   const { t } = useI18n();
-  const { tasks, addTask, toggleTask, selectTask } = useWorkspace();
+  const { tasks, addTask, toggleTask, toggleSubtask, selectTask } = useWorkspace();
   const [title, setTitle] = useState("");
   const inbox = tasks.filter((task) => task.list === "Inbox" && !task.completed);
   return (
@@ -29,6 +29,7 @@ export function InboxPage() {
                 variant="inbox"
                 onOpen={() => selectTask(task.id)}
                 onToggle={() => toggleTask(task.id)}
+                onToggleSubtask={(subtaskId) => toggleSubtask(task.id, subtaskId)}
               />
             ))}
           </AnimatePresence>

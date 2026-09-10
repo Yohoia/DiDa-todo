@@ -141,12 +141,23 @@
   font-size: 12px;
 }
 .tag {
-  border: 1px solid var(--border);
   font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 2px;
   color: var(--muted-foreground);
   white-space: nowrap;
+  padding: 2px 6px;
+  margin-inline: -6px;
+  border-radius: 6px;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease;
+}
+.tag:hover {
+  color: #000;
+  background: color-mix(in srgb, var(--muted-foreground) 12%, transparent);
+}
+:global(.dark) .tag:hover,
+:global([data-theme="dark"]) .tag:hover {
+  color: var(--foreground);
 }
 .select {
   border: 1px solid var(--border);

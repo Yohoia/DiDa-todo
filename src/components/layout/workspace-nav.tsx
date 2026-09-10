@@ -25,17 +25,17 @@ export function WorkspaceNav() {
   const pathname = usePathname();
   const { setQuickAdd, tasks } = useWorkspace();
   const items = [
-    { href: "/today", label: "Today", Icon: HiClock, active: pathname === "/today" },
+    { href: "/today", label: "今日待办", Icon: HiClock, active: pathname === "/today" },
     { href: "/inbox", label: "Inbox", Icon: HiInbox, active: pathname === "/inbox" },
     {
       href: "/calendar",
-      label: "Calendar",
+      label: "日程安排",
       Icon: HiCalendar,
       active: ["/calendar", "/upcoming"].includes(pathname),
     },
     {
       href: "/profile",
-      label: "Profile",
+      label: "个人中心",
       Icon: null,
       active: ["/profile", "/settings", "/insight", "/completed", "/list-detail"].includes(
         pathname,

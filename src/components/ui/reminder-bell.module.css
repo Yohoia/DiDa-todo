@@ -1,0 +1,48 @@
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 6px;
+  margin-inline: -6px;
+  border: none;
+  background: color-mix(in srgb, var(--muted-foreground) 12%, transparent);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease;
+}
+.trigger:hover {
+  color: #000;
+}
+:global([data-theme="dark"]) .trigger:hover,
+:global(.dark) .trigger:hover {
+  color: var(--foreground);
+}
+.active {
+  color: var(--brand-gold);
+  background: color-mix(in srgb, var(--brand-gold) 14%, transparent);
+}
+
+.icon {
+  display: inline-flex;
+  flex: none;
+  transform-origin: top center;
+}
+
+/* Labels share one grid cell: widest reserves the width, current fades in centered. */
+.textStack {
+  display: grid;
+  justify-items: center;
+}
+.text {
+  grid-area: 1 / 1;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.textOn {
+  opacity: 1;
+}

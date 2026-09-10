@@ -1,0 +1,61 @@
+.root {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background: color-mix(in srgb, var(--muted-foreground) 10%, transparent);
+  border-radius: 8px;
+}
+
+.segment {
+  position: relative;
+  border: none;
+  background: none;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1.2;
+}
+.segment:focus-visible {
+  outline: 2px solid var(--brand-gold);
+  outline-offset: 1px;
+}
+
+.thumb {
+  position: absolute;
+  inset: 0;
+  background: var(--brand-gold);
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 12%);
+}
+
+.content {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: none;
+  transition:
+    width 0.2s ease,
+    opacity 0.2s ease;
+}
+.dotHidden {
+  width: 0;
+  opacity: 0;
+}
+
+.text {
+  color: var(--muted-foreground);
+  white-space: nowrap;
+  transition: color 0.2s ease;
+}
+.textActive {
+  color: var(--on-gold);
+  font-weight: 600;
+}

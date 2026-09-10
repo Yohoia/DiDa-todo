@@ -13,7 +13,7 @@ import styles from "@/styles/workspace.module.css";
 
 export function UpcomingPage() {
   const { t, label, date } = useI18n();
-  const { tasks, toggleTask, selectTask } = useWorkspace();
+  const { tasks, toggleTask, toggleSubtask, selectTask } = useWorkspace();
   const [filter, setFilter] = useState("All");
   const upcoming = tasks
     .filter(
@@ -69,6 +69,7 @@ export function UpcomingPage() {
                     task={task}
                     onOpen={() => selectTask(task.id)}
                     onToggle={() => toggleTask(task.id)}
+                    onToggleSubtask={(subtaskId) => toggleSubtask(task.id, subtaskId)}
                   />
                 ))}
             </AnimatePresence>

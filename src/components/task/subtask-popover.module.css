@@ -1,0 +1,142 @@
+.root {
+  position: relative;
+  display: inline-flex;
+}
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 24px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  color: var(--task-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease;
+}
+.trigger:hover,
+.trigger:focus-visible,
+.root[data-state="open"] .trigger {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--muted-foreground) 12%, transparent);
+}
+.trigger:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--brand-gold) 70%, transparent);
+  outline-offset: 2px;
+}
+.panel {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  z-index: 220;
+  width: min(280px, calc(100vw - 32px));
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: 0 18px 50px rgb(0 0 0 / 16%);
+  translate: -50% 0;
+  animation: appear 0.14s ease-out;
+}
+.root:hover .panel,
+.root:focus-within .panel,
+.root[data-state="open"] .panel {
+  display: block;
+}
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 8px 9px;
+  border-bottom: 1px solid var(--separator);
+  font-size: 12px;
+  font-weight: 600;
+}
+.progress {
+  overflow: hidden;
+  color: var(--task-muted);
+  font-size: 10px;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.list {
+  display: grid;
+  gap: 2px;
+  max-height: min(260px, calc(100vh - 120px));
+  overflow-y: auto;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 8px;
+  border-radius: 7px;
+  text-align: left;
+}
+.item:hover,
+.item:focus-visible {
+  background: color-mix(in srgb, var(--muted-foreground) 10%, transparent);
+}
+.item:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--brand-gold) 65%, transparent);
+  outline-offset: -2px;
+}
+.checkbox {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--task-muted);
+  border-radius: 50%;
+}
+.checked {
+  border-color: var(--brand-gold);
+  background: var(--brand-gold);
+  color: var(--on-gold);
+}
+.title {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.completed {
+  color: var(--task-done);
+  text-decoration: line-through;
+}
+.arrow {
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  width: 9px;
+  height: 9px;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: var(--popover);
+  translate: -50% 0;
+  rotate: 45deg;
+}
+@keyframes appear {
+  from {
+    opacity: 0;
+    translate: -50% 3px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .panel {
+    animation: none;
+  }
+}

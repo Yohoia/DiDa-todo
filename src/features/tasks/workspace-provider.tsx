@@ -21,11 +21,14 @@ type WorkspaceState = {
   updateTask: (id: string, patch: Partial<Task>) => void;
   addTask: (title: string, list?: TaskList, date?: string) => void;
   toggleTask: (id: string) => void;
+  toggleSubtask: (taskId: string, subtaskId: string) => void;
   deleteTask: (id: string) => void;
   selectedId: string | null;
   selectTask: (id: string | null) => void;
   quickAdd: TaskList | null;
   setQuickAdd: (list: TaskList | null) => void;
+  searchOpen: boolean;
+  setSearchOpen: (open: boolean) => void;
   focusId: string | null;
   startFocus: (id: string) => void;
   stopFocus: () => void;
@@ -40,6 +43,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [tasks, setTasks] = useState(initialTasks);
   const [selectedId, selectTask] = useState<string | null>(null);
   const [quickAdd, setQuickAdd] = useState<TaskList | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [focusId, setFocusId] = useState<string | null>(null);
   const [notice, notify] = useState<Notice | null>(null);
   const [preferences, updatePreferences] = useState<Preferences>({
@@ -79,6 +83,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         title: title.trim(),
         description: "",
         list,
+        tags: [],
         date,
         priority: 3,
         estimate: 1,
@@ -104,6 +109,20 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       ),
     );
   }
+  function toggleSubtask(taskId: string, subtaskId: string) {
+    setTasks((current) =>
+      current.map((task) =>
+        task.id === taskId
+          ? {
+              ...task,
+              subtasks: task.subtasks.map((subtask) =>
+                subtask.id === subtaskId ? { ...subtask, completed: !subtask.completed } : subtask,
+              ),
+            }
+          : task,
+      ),
+    );
+  }
   function deleteTask(id: string) {
     setTasks((current) => current.filter((task) => task.id !== id));
     selectTask(null);
@@ -116,11 +135,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         updateTask,
         addTask,
         toggleTask,
+        toggleSubtask,
         deleteTask,
         selectedId,
         selectTask,
         quickAdd,
         setQuickAdd,
+        searchOpen,
+        setSearchOpen,
         focusId,
         startFocus: (id) => {
           selectTask(null);

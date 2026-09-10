@@ -20,7 +20,7 @@ export type Task = {
 
   // Organization
   list: TaskList;
-  tag?: string;
+  tags: string[];
 
   // Scheduling (note: both `date` and `schedule` exist for different views)
   date: string; // Due date (used in month view, deadline-based views)

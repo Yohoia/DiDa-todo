@@ -20,6 +20,18 @@ export const messages = {
     "zh-CN": "日程",
     en: "Schedule",
   },
+  今日待办: {
+    "zh-CN": "今日待办",
+    en: "Today",
+  },
+  日程安排: {
+    "zh-CN": "日程安排",
+    en: "Schedule",
+  },
+  个人中心: {
+    "zh-CN": "个人中心",
+    en: "Account",
+  },
   Profile: {
     "zh-CN": "个人主页",
     en: "Profile",
@@ -464,6 +476,14 @@ export const messages = {
     "zh-CN": "提前 10 分钟",
     en: "10 min before",
   },
+  "20 min before": {
+    "zh-CN": "提前 20 分钟",
+    en: "20 min before",
+  },
+  "提前 {min} 分钟": {
+    "zh-CN": "提前 {min} 分钟",
+    en: "{min} min before",
+  },
   "30 min before": {
     "zh-CN": "提前 30 分钟",
     en: "30 min before",
@@ -480,33 +500,13 @@ export const messages = {
     "zh-CN": "＋ 添加",
     en: "＋ Add",
   },
-  "FOCUS PROGRESS": {
-    "zh-CN": "专注进度",
-    en: "FOCUS PROGRESS",
-  },
   "Start Focus Session": {
     "zh-CN": "开始专注",
     en: "Start Focus Session",
   },
-  "View lists →": {
-    "zh-CN": "查看清单 →",
-    en: "View lists →",
-  },
   "Delete Task": {
     "zh-CN": "删除任务",
     en: "Delete Task",
-  },
-  "Complete Task": {
-    "zh-CN": "完成任务",
-    en: "Complete Task",
-  },
-  "Restore Task": {
-    "zh-CN": "恢复任务",
-    en: "Restore Task",
-  },
-  "Changes saved in this preview": {
-    "zh-CN": "更改已保存在本次预览中",
-    en: "Changes saved in this preview",
   },
   "Quick Add": {
     "zh-CN": "快速添加",
@@ -1048,6 +1048,89 @@ export const messages = {
     "zh-CN": "搜索与快速添加",
     en: "Search and quick add",
   },
+  搜索: {
+    "zh-CN": "搜索",
+    en: "Search",
+  },
+  "搜索任务…": {
+    "zh-CN": "搜索任务…",
+    en: "Search tasks…",
+  },
+  搜索全部任务: {
+    "zh-CN": "搜索全部任务",
+    en: "Search all tasks",
+  },
+  暂无搜索记录: {
+    "zh-CN": "暂无搜索记录",
+    en: "No recent searches",
+  },
+  没有匹配的任务: {
+    "zh-CN": "没有匹配的任务",
+    en: "No matching tasks",
+  },
+  选择: {
+    "zh-CN": "选择",
+    en: "to select",
+  },
+  导航: {
+    "zh-CN": "导航",
+    en: "to navigate",
+  },
+  关闭: {
+    "zh-CN": "关闭",
+    en: "to close",
+  },
+  减少: {
+    "zh-CN": "减少",
+    en: "Decrease",
+  },
+  增加: {
+    "zh-CN": "增加",
+    en: "Increase",
+  },
+  删除子任务: {
+    "zh-CN": "删除子任务",
+    en: "Delete subtask",
+  },
+  拖拽排序: {
+    "zh-CN": "拖拽排序",
+    en: "Drag to reorder",
+  },
+  完成子任务: {
+    "zh-CN": "完成子任务",
+    en: "Complete subtask",
+  },
+  折叠子任务: {
+    "zh-CN": "折叠子任务",
+    en: "Collapse subtasks",
+  },
+  展开子任务: {
+    "zh-CN": "展开子任务",
+    en: "Expand subtasks",
+  },
+  添加子任务: {
+    "zh-CN": "添加子任务",
+    en: "Add a subtask",
+  },
+  无子任务: {
+    "zh-CN": "无子任务",
+    en: "No subtasks",
+  },
+  "tasks.subtaskProgress": {
+    "zh-CN": "已完成 {completed}/{count} 个子任务",
+    en: {
+      one: "{completed} of {count} subtask complete",
+      other: "{completed} of {count} subtasks complete",
+    },
+  },
+  "tasks.completeSubtask": {
+    "zh-CN": "完成子任务：{title}",
+    en: "Complete subtask: {title}",
+  },
+  "tasks.reopenSubtask": {
+    "zh-CN": "将子任务标记为未完成：{title}",
+    en: "Mark subtask incomplete: {title}",
+  },
   关闭提示: {
     "zh-CN": "关闭提示",
     en: "Dismiss message",
@@ -1146,6 +1229,42 @@ export const messages = {
   "tasks.pomodoros": {
     "zh-CN": "{count} 个番茄钟",
     en: { one: "{count} Pomodoro", other: "{count} Pomodoros" },
+  },
+  "tasks.removeTag": {
+    "zh-CN": "移除标签 {tag}",
+    en: "Remove tag {tag}",
+  },
+  选择日期: {
+    "zh-CN": "选择日期",
+    en: "Pick a date",
+  },
+  选择日期与时间: {
+    "zh-CN": "选择日期与时间",
+    en: "Pick date and time",
+  },
+  年: {
+    "zh-CN": "年",
+    en: "Year",
+  },
+  月: {
+    "zh-CN": "月",
+    en: "Month",
+  },
+  日: {
+    "zh-CN": "日",
+    en: "Day",
+  },
+  确定: {
+    "zh-CN": "确定",
+    en: "Done",
+  },
+  时: {
+    "zh-CN": "时",
+    en: "Hour",
+  },
+  分: {
+    "zh-CN": "分",
+    en: "Min",
   },
   "tasks.deleted": {
     "zh-CN": "任务已从本次预览中删除",

@@ -1,0 +1,161 @@
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 6px;
+  margin-inline: -6px;
+  border: none;
+  background: color-mix(in srgb, var(--muted-foreground) 12%, transparent);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease;
+}
+.trigger:hover {
+  color: #000;
+}
+:global([data-theme="dark"]) .trigger:hover,
+:global(.dark) .trigger:hover {
+  color: var(--foreground);
+}
+
+.panel {
+  width: 292px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: 0 24px 60px rgb(0 0 0 / 14%);
+  z-index: 220;
+}
+
+/* Manual date entry: xxxx / xx / xx */
+.dateRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.dateInput {
+  width: 38px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--separator);
+  text-align: center;
+  font-family: var(--font-serif);
+  font-size: 16px;
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+  padding: 2px 0 4px;
+  transition: border-color 0.15s ease;
+}
+.dateInput:focus {
+  outline: none;
+  border-bottom-color: var(--brand-gold);
+}
+.dateInput::placeholder {
+  color: var(--muted-foreground);
+  opacity: 0.55;
+}
+.year {
+  width: 58px;
+}
+.slash {
+  font-size: 14px;
+  color: var(--muted-foreground);
+}
+
+.wheelCaptions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  column-gap: 40px;
+  margin-top: 12px;
+}
+.wheelCaption {
+  width: 64px;
+  text-align: center;
+  font-size: 10px;
+  color: var(--muted-foreground);
+}
+.colonGhost {
+  visibility: hidden;
+}
+.wheelGrid {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  margin-top: 4px;
+}
+.wheelRow {
+  align-items: center;
+  column-gap: 40px;
+}
+/* react-mobile-picker draws its own gray hairline overlay; the gold band below replaces it. */
+.wheelRow > :last-child {
+  display: none;
+}
+.wheelItem {
+  display: block;
+  width: 100%;
+  text-align: center;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+}
+.wheelItemSelected {
+  color: var(--foreground);
+  font-weight: 600;
+}
+.colon {
+  font-size: 16px;
+  color: var(--muted-foreground);
+}
+.wheelHighlight {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 36px;
+  transform: translateY(-50%);
+  border-top: 1px solid color-mix(in srgb, var(--brand-gold) 40%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--brand-gold) 40%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--brand-gold) 8%, transparent);
+  pointer-events: none;
+}
+
+.footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 14px;
+  gap: 12px;
+}
+.primary {
+  padding: 7px 18px;
+  background: var(--brand-gold);
+  color: var(--on-gold);
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.primary:hover {
+  filter: brightness(1.05);
+}
+.ghost {
+  padding: 7px 10px;
+  background: none;
+  border: none;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  cursor: pointer;
+}
+.ghost:hover {
+  color: var(--foreground);
+}
