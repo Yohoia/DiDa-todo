@@ -152,10 +152,6 @@ export const messages = {
     "zh-CN": "创建账号",
     en: "Create Account",
   },
-  "Start Now": {
-    "zh-CN": "立即开始",
-    en: "Start Now",
-  },
   Welcome: {
     "zh-CN": "欢迎",
     en: "Welcome",

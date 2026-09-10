@@ -29,12 +29,6 @@ export async function LandingPage() {
           <div className={styles.navActions}>
             <PreferenceControls />
             <AuthTrigger className={cn(styles.btn, styles.btnOutline)}>{t("Log In")}</AuthTrigger>
-            <AuthTrigger
-              view="register"
-              className={cn(styles.btn, styles.btnGold, styles.startButton)}
-            >
-              {t("Start Now")}
-            </AuthTrigger>
           </div>
         </header>
 
