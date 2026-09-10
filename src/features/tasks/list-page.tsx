@@ -13,7 +13,7 @@ import styles from "@/styles/workspace.module.css";
 
 export function ListPage() {
   const { t } = useI18n();
-  const { tasks, selectTask, toggleTask, toggleSubtask, setQuickAdd } = useWorkspace();
+  const { tasks, selectTask, toggleTask, toggleSubtask, setQuickAdd, updateTask } = useWorkspace();
   const [sort, setSort] = useState("priority");
   const [collection, setCollection] = useState("project");
   const list: TaskList =
@@ -101,6 +101,7 @@ export function ListPage() {
               onOpen={() => selectTask(task.id)}
               onToggle={() => toggleTask(task.id)}
               onToggleSubtask={(subtaskId) => toggleSubtask(task.id, subtaskId)}
+              onToggleFeatured={() => updateTask(task.id, { featured: !task.featured })}
             />
           ))}
         </AnimatePresence>

@@ -20,35 +20,20 @@ export function SubtaskPopover({ subtasks, onToggle, className }: SubtaskPopover
   const panelId = useId();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
-  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pinned = useRef(false);
 
   const completed = subtasks.filter((subtask) => subtask.completed).length;
   const progressLabel = t("tasks.subtaskProgress", { completed, count: subtasks.length });
 
-  const cancelClose = () => {
-    if (closeTimer.current) clearTimeout(closeTimer.current);
-    closeTimer.current = null;
-  };
-  const scheduleClose = () => {
-    if (pinned.current) return;
-    cancelClose();
-    closeTimer.current = setTimeout(() => setOpen(false), 180);
-  };
-
   useEffect(() => {
-    const closePinnedPanel = (event: PointerEvent) => {
-      if (!pinned.current || rootRef.current?.contains(event.target as Node)) return;
-      pinned.current = false;
-      cancelClose();
+    const closePanel = (event: PointerEvent) => {
+      if (!open || rootRef.current?.contains(event.target as Node)) return;
       setOpen(false);
     };
-    document.addEventListener("pointerdown", closePinnedPanel);
+    document.addEventListener("pointerdown", closePanel);
     return () => {
-      document.removeEventListener("pointerdown", closePinnedPanel);
-      cancelClose();
+      document.removeEventListener("pointerdown", closePanel);
     };
-  }, []);
+  }, [open]);
 
   if (subtasks.length === 0) return null;
 
@@ -57,27 +42,10 @@ export function SubtaskPopover({ subtasks, onToggle, className }: SubtaskPopover
       ref={rootRef}
       className={styles.root}
       data-state={open ? "open" : "closed"}
-      onPointerEnter={(event) => {
-        if (event.pointerType !== "mouse") return;
-        cancelClose();
-        setOpen(true);
-      }}
-      onPointerLeave={() => {
-        if (pinned.current || rootRef.current?.contains(document.activeElement)) return;
-        scheduleClose();
-      }}
-      onFocusCapture={() => {
-        cancelClose();
-        setOpen(true);
-      }}
-      onBlurCapture={(event) => {
-        if (!pinned.current && !event.currentTarget.contains(event.relatedTarget)) scheduleClose();
-      }}
       onKeyDownCapture={(event) => {
-        if (event.key !== "Escape") return;
-        pinned.current = false;
-        cancelClose();
-        setOpen(false);
+        if (event.key === "Escape") {
+          setOpen(false);
+        }
       }}
     >
       <button
@@ -89,9 +57,7 @@ export function SubtaskPopover({ subtasks, onToggle, className }: SubtaskPopover
         aria-expanded={open}
         onClick={(event) => {
           event.stopPropagation();
-          cancelClose();
-          pinned.current = !pinned.current;
-          setOpen(pinned.current);
+          setOpen(!open);
         }}
       >
         <HiListBullet size={14} aria-hidden="true" />

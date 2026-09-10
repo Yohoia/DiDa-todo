@@ -612,6 +612,18 @@ export const messages = {
     "zh-CN": "最重要的一件事",
     en: "One Thing",
   },
+  "Set as today's focus": {
+    "zh-CN": "设为今日专注",
+    en: "Set as today's focus",
+  },
+  "设为今日专注": {
+    "zh-CN": "设为今日专注",
+    en: "Set as today's focus",
+  },
+  "取消今日专注": {
+    "zh-CN": "取消今日专注",
+    en: "Remove from today's focus",
+  },
   "Estimate:": {
     "zh-CN": "预计：",
     en: "Estimate:",

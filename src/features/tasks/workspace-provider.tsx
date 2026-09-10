@@ -57,21 +57,41 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   function updateTask(id: string, patch: Partial<Task>) {
     setTasks((current) =>
-      current.map((task) =>
-        task.id === id
-          ? {
-              ...task,
-              ...patch,
-              schedule: task.schedule
-                ? {
-                    ...task.schedule,
-                    ...(patch.title ? { label: patch.title } : {}),
-                    ...(patch.date !== undefined ? { date: patch.date } : {}),
-                  }
-                : undefined,
-            }
-          : task,
-      ),
+      current.map((task) => {
+        // If setting this task as featured, unfeatured all others
+        if (task.id === id && patch.featured === true) {
+          return {
+            ...task,
+            ...patch,
+            schedule: task.schedule
+              ? {
+                  ...task.schedule,
+                  ...(patch.title ? { label: patch.title } : {}),
+                  ...(patch.date !== undefined ? { date: patch.date } : {}),
+                }
+              : undefined,
+          };
+        }
+        // Unfeature other tasks when a new one is featured
+        if (task.id !== id && patch.featured === true && task.featured) {
+          return { ...task, featured: false };
+        }
+        // Normal update for the target task
+        if (task.id === id) {
+          return {
+            ...task,
+            ...patch,
+            schedule: task.schedule
+              ? {
+                  ...task.schedule,
+                  ...(patch.title ? { label: patch.title } : {}),
+                  ...(patch.date !== undefined ? { date: patch.date } : {}),
+                }
+              : undefined,
+          };
+        }
+        return task;
+      }),
     );
   }
   function addTask(title: string, list: TaskList = "Inbox", date = "") {

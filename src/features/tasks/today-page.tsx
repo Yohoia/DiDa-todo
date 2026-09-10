@@ -15,7 +15,7 @@ import styles from "./today.module.css";
 
 export function TodayPage() {
   const { t } = useI18n();
-  const { tasks, preferences, selectTask, toggleTask, toggleSubtask, startFocus } = useWorkspace();
+  const { tasks, preferences, selectTask, toggleTask, toggleSubtask, startFocus, updateTask } = useWorkspace();
   const today = tasks.filter((task) => task.date === DEMO_TODAY);
   const active = today.filter((task) => !task.completed);
   const featured = today.find((task) => task.featured && !task.completed);
@@ -62,14 +62,23 @@ export function TodayPage() {
                 </h2>
               </button>
               <div className={styles.meta}>
-                <span>
-                  {t("Estimate:")} {t("tasks.pomodoros", { count: featured.estimate })}
-                </span>
-                <SubtaskPopover
-                  subtasks={featured.subtasks}
-                  onToggle={(subtaskId) => toggleSubtask(featured.id, subtaskId)}
-                />
-                <span>{t("Project: Development")}</span>
+                {featured.tags.map((tag) => (
+                  <span key={tag} className={shared.tag}>
+                    #{tag}
+                  </span>
+                ))}
+                {featured.priority === 1 && (
+                  <span className="inline-flex items-center gap-1">
+                    <HiClock size={13} aria-hidden="true" />
+                    {featured.estimate}
+                  </span>
+                )}
+                {featured.subtasks.length > 0 && (
+                  <SubtaskPopover
+                    subtasks={featured.subtasks}
+                    onToggle={(subtaskId) => toggleSubtask(featured.id, subtaskId)}
+                  />
+                )}
               </div>
               <motion.button
                 className={shared.primary}
@@ -113,6 +122,7 @@ export function TodayPage() {
                   onOpen={() => selectTask(task.id)}
                   onToggle={() => toggleTask(task.id)}
                   onToggleSubtask={(subtaskId) => toggleSubtask(task.id, subtaskId)}
+                  onToggleFeatured={() => updateTask(task.id, { featured: !task.featured })}
                 />
               ))}
           </AnimatePresence>
@@ -131,6 +141,7 @@ export function TodayPage() {
                     onOpen={() => selectTask(task.id)}
                     onToggle={() => toggleTask(task.id)}
                     onToggleSubtask={(subtaskId) => toggleSubtask(task.id, subtaskId)}
+                    onToggleFeatured={() => updateTask(task.id, { featured: !task.featured })}
                   />
                 ))}
             </AnimatePresence>
