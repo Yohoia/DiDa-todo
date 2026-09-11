@@ -313,11 +313,18 @@
   align-items: center;
   justify-content: space-between;
 }
+.utilityRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 .utilityBrand {
   color: var(--foreground);
 }
 @media (max-width: 600px) {
   .utilityBar {
     margin: -10px auto 24px;
+    flex-wrap: wrap;
+    row-gap: 10px;
   }
 }

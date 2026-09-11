@@ -37,34 +37,49 @@ const DialogContent = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
     overlayClassName?: string;
     closeButtonClassName?: string;
+    /** "drawer" slides in horizontally from the right edge; "center" rises in place. */
+    variant?: "center" | "drawer";
   }
->(({ className, children, overlayClassName, closeButtonClassName, ...props }, ref) => (
-  <DialogPortal>
-    <DialogOverlay className={overlayClassName} />
-    <DialogPrimitive.Content asChild ref={ref} {...props}>
-      <motion.div
-        initial={{ opacity: 0, y: 20, scale: 0.95 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-        className={cn(
-          "dialog-fx-content fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg sm:rounded-lg",
-          className,
-        )}
-      >
-        {children}
-        <DialogPrimitive.Close
-          className={cn(
-            "absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground",
-            closeButtonClassName,
-          )}
-        >
-          <HiX className="h-4 w-4" />
-          <DialogCloseLabel />
-        </DialogPrimitive.Close>
-      </motion.div>
-    </DialogPrimitive.Content>
-  </DialogPortal>
-));
+>(
+  (
+    { className, children, overlayClassName, closeButtonClassName, variant = "center", ...props },
+    ref,
+  ) => {
+    const isDrawer = variant === "drawer";
+    return (
+      <DialogPortal>
+        <DialogOverlay className={cn(overlayClassName, isDrawer && "dialog-fx-overlay--drawer")} />
+        <DialogPrimitive.Content asChild ref={ref} {...props}>
+          <motion.div
+            initial={isDrawer ? { x: "100%" } : { opacity: 0, y: 20, scale: 0.95 }}
+            animate={isDrawer ? { x: 0 } : { opacity: 1, y: 0, scale: 1 }}
+            transition={
+              isDrawer
+                ? { duration: 0.45, ease: [0.32, 0.72, 0, 1] }
+                : { duration: 0.3, ease: [0.16, 1, 0.3, 1] }
+            }
+            className={cn(
+              "dialog-fx-content fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg sm:rounded-lg",
+              isDrawer && "dialog-fx-content--drawer",
+              className,
+            )}
+          >
+            {children}
+            <DialogPrimitive.Close
+              className={cn(
+                "absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground",
+                closeButtonClassName,
+              )}
+            >
+              <HiX className="h-4 w-4" />
+              <DialogCloseLabel />
+            </DialogPrimitive.Close>
+          </motion.div>
+        </DialogPrimitive.Content>
+      </DialogPortal>
+    );
+  },
+);
 DialogContent.displayName = DialogPrimitive.Content.displayName;
 
 const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (

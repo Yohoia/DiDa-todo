@@ -3,10 +3,11 @@
   display: flex;
   align-items: center;
   gap: 15px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  padding: 15px 20px;
-  border-radius: 4px;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--separator);
+  padding: 15px 0;
+  border-radius: 0;
   transition:
     transform 0.2s,
     border-color 0.2s;
@@ -23,10 +24,7 @@
   width: 100%;
   min-width: 0;
   text-align: left;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
+  display: block;
 }
 .title {
   font-size: 14px;
@@ -72,30 +70,10 @@
   font-size: 11px;
   margin-top: 5px;
 }
-.inbox {
-  padding: 18px 20px;
-  box-shadow: 0 4px 20px rgb(0 0 0 / 1%);
-}
-.unorganized {
-  font-size: 11px;
-  color: var(--task-muted);
-  flex-shrink: 0;
-}
-.timeline {
-  background: transparent;
-  border: 0;
-  border-bottom: 1px solid var(--separator);
-  padding: 15px 0;
-  border-radius: 0;
-  align-items: center;
-}
-.timeline .contentButton,
-.list .contentButton {
-  display: block;
-}
 .time {
-  width: 45px;
+  width: 56px;
   flex-shrink: 0;
+  white-space: nowrap;
   color: var(--brand-gold);
   font-size: 12px;
   font-weight: 600;
@@ -106,21 +84,6 @@
 .frozen .title {
   font-weight: 400;
   color: var(--muted-foreground);
-}
-.list {
-  padding: 16px 20px;
-}
-.priority {
-  width: 8px;
-  height: 8px;
-  flex-shrink: 0;
-  border-radius: 50%;
-}
-.high {
-  background: var(--destructive);
-}
-.medium {
-  background: var(--brand-gold);
 }
 .oneThingTrigger {
   position: absolute;
@@ -177,18 +140,7 @@
   color: var(--brand-gold);
 }
 @media (max-width: 600px) {
-  .contentButton {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 5px;
-  }
   .row {
     gap: 12px;
-    padding-left: 14px;
-    padding-right: 14px;
-  }
-  .timeline {
-    padding-left: 0;
-    padding-right: 0;
   }
 }

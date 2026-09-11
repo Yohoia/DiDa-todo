@@ -26,7 +26,6 @@ export function InboxPage() {
               <TaskRow
                 key={task.id}
                 task={task}
-                variant="inbox"
                 onOpen={() => selectTask(task.id)}
                 onToggle={() => toggleTask(task.id)}
                 onToggleSubtask={(subtaskId) => toggleSubtask(task.id, subtaskId)}

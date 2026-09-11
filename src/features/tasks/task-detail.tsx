@@ -31,6 +31,7 @@ export function TaskDetail() {
     >
       <DialogContent
         {...focusReturn}
+        variant="drawer"
         className={styles.drawer}
         overlayClassName={shared.overlay}
         closeButtonClassName={shared.close}

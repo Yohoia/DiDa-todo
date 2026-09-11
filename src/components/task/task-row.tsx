@@ -1,6 +1,6 @@
 "use client";
 import { useI18n } from "@/features/preferences/preferences-provider";
-import { isDemoToday, isDemoTomorrow } from "@/lib/date-utils";
+import { isDemoToday } from "@/lib/date-utils";
 
 import { HiCheck, HiClock, HiLockClosed, HiChevronRight } from "react-icons/hi2";
 import { motion } from "framer-motion";
@@ -16,13 +16,17 @@ type Props = {
   onToggleSubtask: (subtaskId: string) => void;
   onOpen: () => void;
   onToggleFeatured?: () => void;
-  variant?: "inbox" | "timeline" | "upcoming" | "list";
 };
-export function TaskRow({ task, onToggle, onToggleSubtask, onOpen, onToggleFeatured, variant = "upcoming" }: Props) {
+export function TaskRow({ task, onToggle, onToggleSubtask, onOpen, onToggleFeatured }: Props) {
   const { t, date: formatDate } = useI18n();
   const hasSubtasks = task.subtasks.length > 0;
-  const hasTimelineMeta = task.tags.length > 0 || task.id === "design" || hasSubtasks;
+  const hasMeta = task.tags.length > 0 || hasSubtasks;
   const isToday = task.date && isDemoToday(task.date);
+  const when = !task.date
+    ? t("Any")
+    : isToday
+      ? task.time || t("Any")
+      : formatDate(task.date, { month: "numeric", day: "numeric" });
   return (
     <motion.div
       layout
@@ -32,14 +36,11 @@ export function TaskRow({ task, onToggle, onToggleSubtask, onOpen, onToggleFeatu
       transition={{ duration: 0.2, ease: "easeOut" }}
       className={cn(
         taskStyles.row,
-        taskStyles[variant],
         task.completed && taskStyles.completed,
         task.frozen && taskStyles.frozen,
       )}
     >
-      {variant === "timeline" && !task.frozen && (
-        <span className={taskStyles.time}>{task.time || t("Any")}</span>
-      )}
+      {!task.frozen && <span className={taskStyles.time}>{when}</span>}
       <button
         type="button"
         role="checkbox"
@@ -50,17 +51,6 @@ export function TaskRow({ task, onToggle, onToggleSubtask, onOpen, onToggleFeatu
       >
         <span className={taskStyles.checkbox}>{task.completed && <HiCheck size={12} />}</span>
       </button>
-      {variant === "list" && (
-        <span
-          className={cn(
-            taskStyles.priority,
-            task.priority === 1 && taskStyles.high,
-            task.priority === 2 && taskStyles.medium,
-          )}
-          title={t("tasks.priority", { priority: task.priority })}
-          aria-label={t("tasks.priority", { priority: task.priority })}
-        />
-      )}
       <div className={taskStyles.content}>
         <button
           type="button"
@@ -72,17 +62,8 @@ export function TaskRow({ task, onToggle, onToggleSubtask, onOpen, onToggleFeatu
             {task.title}{" "}
             {task.frozen && <HiLockClosed size={12} className="inline" aria-label={t("已承诺")} />}
           </span>
-          {variant === "inbox" && (
-            <span className={taskStyles.unorganized}>{t("Unorganized")}</span>
-          )}
-          {variant === "upcoming" &&
-            task.tags.map((tag) => (
-              <span key={tag} className={workspaceStyles.tag}>
-                #{tag}
-              </span>
-            ))}
         </button>
-        {variant === "timeline" && hasTimelineMeta && (
+        {hasMeta && (
           <div className={taskStyles.meta}>
             {task.priority === 1 ? (
               <span className="inline-flex items-center gap-1">
@@ -97,31 +78,6 @@ export function TaskRow({ task, onToggle, onToggleSubtask, onOpen, onToggleFeatu
               ))
             )}
             {hasSubtasks && <SubtaskPopover subtasks={task.subtasks} onToggle={onToggleSubtask} />}
-          </div>
-        )}
-        {variant === "list" && (
-          <div className={taskStyles.meta}>
-            <span>
-              {task.date
-                ? t("tasks.due", {
-                    date: `${isDemoToday(task.date) ? t("Today") : isDemoTomorrow(task.date) ? t("Tomorrow") : formatDate(task.date, { month: "short", day: "numeric" })}${task.time ? `, ${task.time}` : ""}`,
-                  })
-                : t("No due date")}
-            </span>
-            {task.priority === 1 ? (
-              <span className="inline-flex items-center gap-1">
-                <HiClock size={13} aria-hidden="true" />
-                {t("tasks.pomodoros", { count: task.estimate })}
-              </span>
-            ) : (
-              task.tags.map((tag) => <span key={tag}>#{tag}</span>)
-            )}
-            {hasSubtasks && <SubtaskPopover subtasks={task.subtasks} onToggle={onToggleSubtask} />}
-          </div>
-        )}
-        {(variant === "inbox" || variant === "upcoming") && hasSubtasks && (
-          <div className={taskStyles.meta}>
-            <SubtaskPopover subtasks={task.subtasks} onToggle={onToggleSubtask} />
           </div>
         )}
       </div>

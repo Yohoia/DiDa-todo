@@ -96,7 +96,6 @@ export function ListPage() {
           {active.map((task) => (
             <TaskRow
               key={task.id}
-              variant="list"
               task={task}
               onOpen={() => selectTask(task.id)}
               onToggle={() => toggleTask(task.id)}

@@ -648,9 +648,9 @@ export const messages = {
     "zh-CN": "任务容量",
     en: "Capacity",
   },
-  "Committed (Frozen)": {
-    "zh-CN": "已承诺（锁定）",
-    en: "Committed (Frozen)",
+  "Today's Must-Dos": {
+    "zh-CN": "今日必做",
+    en: "Today's Must-Dos",
   },
   Timeline: {
     "zh-CN": "时间轴",

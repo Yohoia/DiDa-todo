@@ -120,6 +120,21 @@
   }
 }
 
+/* Right-side drawer variant: exits with the same horizontal slide as its
+   entry, a touch slower than the centered dialogs. Rules must stay after the
+   generic ones above — equal specificity, later wins. */
+.dialog-fx-content--drawer[data-state="closed"] {
+  animation: dialog-fx-drawer-out 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.dialog-fx-overlay--drawer[data-state="closed"] {
+  animation: dialog-fx-overlay-out 0.4s ease-out forwards;
+}
+@keyframes dialog-fx-drawer-out {
+  to {
+    transform: translateX(100%);
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
