@@ -616,11 +616,11 @@ export const messages = {
     "zh-CN": "设为今日专注",
     en: "Set as today's focus",
   },
-  "设为今日专注": {
+  设为今日专注: {
     "zh-CN": "设为今日专注",
     en: "Set as today's focus",
   },
-  "取消今日专注": {
+  取消今日专注: {
     "zh-CN": "取消今日专注",
     en: "Remove from today's focus",
   },
@@ -655,6 +655,26 @@ export const messages = {
   Timeline: {
     "zh-CN": "时间轴",
     en: "Timeline",
+  },
+  暂无编排: {
+    "zh-CN": "暂无编排",
+    en: "Nothing scheduled",
+  },
+  向下滚动: {
+    "zh-CN": "向下滚动",
+    en: "Scroll for more",
+  },
+  上一页: {
+    "zh-CN": "上一页",
+    en: "Previous page",
+  },
+  下一页: {
+    "zh-CN": "下一页",
+    en: "Next page",
+  },
+  今天的时间轴还空着: {
+    "zh-CN": "今天的时间轴还空着",
+    en: "The timeline is open for today",
   },
   "Work & Projects →": {
     "zh-CN": "工作与项目 →",
@@ -751,6 +771,10 @@ export const messages = {
   已承诺: {
     "zh-CN": "已承诺",
     en: "Committed",
+  },
+  解除今日必做: {
+    "zh-CN": "解除今日必做",
+    en: "Remove from today's must-dos",
   },
   关闭弹窗: {
     "zh-CN": "关闭弹窗",
@@ -1277,6 +1301,82 @@ export const messages = {
   分: {
     "zh-CN": "分",
     en: "Min",
+  },
+  Time: {
+    "zh-CN": "时间",
+    en: "Time",
+  },
+  任务时间: {
+    "zh-CN": "任务时间",
+    en: "Task time",
+  },
+  "calendar.filter": {
+    "zh-CN": "按清单筛选",
+    en: "Filter by list",
+  },
+  "calendar.board": {
+    "zh-CN": "待办日程视图",
+    en: "Task schedule view",
+  },
+  "calendar.anytime": {
+    "zh-CN": "全天",
+    en: "Anytime",
+  },
+  "calendar.collapse": {
+    "zh-CN": "收起",
+    en: "Collapse",
+  },
+  "calendar.dragHint": {
+    "zh-CN": "拖动任务可调整日期与时间",
+    en: "Drag tasks to change their date and time",
+  },
+  "calendar.showCompleted": {
+    "zh-CN": "显示已完成",
+    en: "Show completed",
+  },
+  "calendar.addOn": {
+    "zh-CN": "在 {date} 添加任务",
+    en: "Add a task on {date}",
+  },
+  "calendar.addAt": {
+    "zh-CN": "在 {date} {time} 添加任务",
+    en: "Add a task at {time} on {date}",
+  },
+  "calendar.more": {
+    "zh-CN": "还有 {count} 项",
+    en: { one: "{count} more", other: "{count} more" },
+  },
+  "calendar.taskCount": {
+    "zh-CN": "{count} 项待办",
+    en: { one: "{count} task", other: "{count} tasks" },
+  },
+  "calendar.completedCount": {
+    "zh-CN": "已完成 {count} 项",
+    en: { one: "{count} completed", other: "{count} completed" },
+  },
+  "calendar.emptyDay": {
+    "zh-CN": "这一天还没有安排",
+    en: "Nothing planned yet",
+  },
+  "calendar.emptyDayHint": {
+    "zh-CN": "点击添加一项待办",
+    en: "Click to add a task",
+  },
+  "calendar.unscheduled": {
+    "zh-CN": "待安排",
+    en: "Unscheduled",
+  },
+  "calendar.planFromInbox": {
+    "zh-CN": "从待办中排期",
+    en: "Plan from tasks",
+  },
+  "calendar.scheduleOn": {
+    "zh-CN": "将 {title} 安排到 {date}",
+    en: "Schedule {title} on {date}",
+  },
+  "calendar.backlogEmpty": {
+    "zh-CN": "所有待办都已安排日期",
+    en: "Every task has a date",
   },
   "tasks.deleted": {
     "zh-CN": "任务已从本次预览中删除",

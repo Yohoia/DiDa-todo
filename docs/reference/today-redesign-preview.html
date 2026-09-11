@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DiDa Today - Redesign Concept</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap');
+
+        :root {
+            --bg-color: #FAF7F2;
+            --surface-color: #FFFFFF;
+            --text-primary: #1C1917;
+            --text-secondary: #78716C;
+            --text-muted: #A8A29E;
+            --accent: #B88E57;
+            --accent-light: rgba(184, 142, 87, 0.1);
+            --accent-dark: #8B6A3F;
+            --border-color: #E7E5DF;
+            --success-color: #9CA3AF;
+            --energy-high: #10B981;
+            --energy-medium: #F59E0B;
+            --energy-low: #EF4444;
+
+            --font-serif: 'Playfair Display', serif;
+            --font-sans: 'Inter', -apple-system, sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--font-sans);
+            color: var(--text-primary);
+            background-color: var(--bg-color);
+            min-height: 100vh;
+            padding: 60px 40px 120px;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* ============= 主容器：三栏布局 ============= */
+        .main-grid {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 340px 1fr 280px;
+            gap: 50px;
+            align-items: start;
+        }
+
+        /* ============= 左栏：今日概览 ============= */
+        .left-panel {
+            /* 移除 sticky 定位，让它和中间内容一起滚动 */
+        }
+
+        .greeting {
+            margin-bottom: 20px;
+        }
+
+        .greeting h1 {
+            font-family: var(--font-serif);
+            font-size: 2.4rem;
+            font-weight: 600;
+            line-height: 1.2;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .greeting .date-line {
+            font-size: 13px;
+            color: var(--text-secondary);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        /* 一天进度条 */
+        .day-progress {
+            margin-top: 25px;
+            padding: 20px;
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .progress-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--text-secondary);
+        }
+
+        .progress-count {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: var(--border-color);
+            border-radius: 3px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-dark), var(--accent));
+            border-radius: 3px;
+            width: 33%;
+            transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* 能量指示器 */
+        .energy-indicator {
+            margin-top: 20px;
+            padding: 20px;
+            background: var(--accent-light);
+            border-left: 3px solid var(--accent);
+            border-radius: 4px;
+        }
+
+        .energy-indicator .label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--accent-dark);
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .energy-indicator .message {
+            font-size: 13px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        /* 快捷统计 */
+        .stats-grid {
+            margin-top: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .stat-card {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            padding: 18px;
+            border-radius: 6px;
+            text-align: center;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            font-family: var(--font-serif);
+        }
+
+        .stat-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--text-secondary);
+            margin-top: 6px;
+        }
+
+        /* ============= 中栏：One Thing + Timeline ============= */
+        .center-panel {
+            min-height: 600px;
+        }
+
+        /* One Thing 超大卡片 */
+        .one-thing-hero {
+            background: linear-gradient(135deg, var(--surface-color) 0%, #FFFEF9 100%);
+            border: 2px solid var(--accent);
+            border-radius: 12px;
+            padding: 45px;
+            margin-bottom: 40px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(184, 142, 87, 0.15);
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* 修复横向滚动条问题：移除超出容器的伪元素 */
+        .one-thing-hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: 0;
+            width: 250px;
+            height: 250px;
+            background: radial-gradient(circle, var(--accent-light) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .one-thing-hero:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 30px 70px rgba(184, 142, 87, 0.25);
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--accent);
+            color: white;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 700;
+            margin-bottom: 25px;
+        }
+
+        .hero-title {
+            font-family: var(--font-serif);
+            font-size: 2.2rem;
+            font-weight: 700;
+            line-height: 1.3;
+            color: var(--text-primary);
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero-meta {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .hero-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .hero-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn-primary {
+            flex: 1;
+            background: var(--text-primary);
+            color: white;
+            border: none;
+            padding: 16px 24px;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(184, 142, 87, 0.3);
+        }
+
+        .btn-secondary {
+            padding: 16px 24px;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--text-primary);
+            color: var(--text-primary);
+        }
+
+        /* Timeline Section */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .view-toggle {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 4px;
+            position: relative;
+            --dot-offset: 30%;
+        }
+
+        .view-toggle::before {
+            content: '';
+            position: absolute;
+            left: -20px;
+            top: var(--dot-offset);
+            transform: translateY(-50%);
+            width: 8px;
+            height: 8px;
+            background: var(--accent);
+            border-radius: 50%;
+            transition: top 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .toggle-btn {
+            padding: 8px 14px;
+            background: transparent;
+            border: none;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s;
+            font-weight: 500;
+            text-align: center;
+        }
+
+        .toggle-btn.active {
+            background: var(--text-primary);
+            color: white;
+        }
+
+        .toggle-btn:hover:not(.active) {
+            background: var(--accent-light);
+            color: var(--accent-dark);
+        }
+
+        /* 任务列表 */
+        .task-timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .task-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 20px;
+            padding: 20px 0;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .task-item::before {
+            content: '';
+            position: absolute;
+            left: -20px;
+            top: 0;
+            height: 100%;
+            width: 3px;
+            background: var(--accent);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .task-item:hover::before {
+            opacity: 1;
+        }
+
+        .task-item:hover {
+            padding-left: 15px;
+        }
+
+        .task-time {
+            font-family: var(--font-sans);
+            font-size: 13px;
+            color: var(--accent);
+            font-weight: 700;
+            min-width: 55px;
+            padding-top: 2px;
+            letter-spacing: 0.5px;
+        }
+
+        .task-time.anytime {
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .task-checkbox {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--text-secondary);
+            border-radius: 50%;
+            margin-top: 1px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .task-item:hover .task-checkbox {
+            border-color: var(--accent);
+            transform: scale(1.1);
+        }
+
+        .task-item.completed .task-checkbox {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        .task-item.completed .task-checkbox::after {
+            content: '✓';
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .task-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .task-title {
+            font-size: 15px;
+            color: var(--text-primary);
+            font-weight: 500;
+            margin-bottom: 8px;
+            line-height: 1.4;
+            transition: color 0.2s;
+        }
+
+        .task-item.completed .task-title {
+            color: var(--success-color);
+            text-decoration: line-through;
+        }
+
+        .task-tags {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .task-tag {
+            font-size: 11px;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+            padding: 3px 10px;
+            border-radius: 3px;
+            transition: all 0.2s;
+        }
+
+        .task-item:hover .task-tag {
+            border-color: var(--accent-light);
+            background: var(--accent-light);
+            color: var(--accent-dark);
+        }
+
+        .task-estimate {
+            font-size: 11px;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 600;
+        }
+
+        /* ============= 右栏：侧边信息 ============= */
+        .right-panel {
+            /* 移除 sticky 定位 */
+        }
+
+        .weather-card {
+            background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .weather-icon {
+            font-size: 3rem;
+            margin-bottom: 10px;
+        }
+
+        .weather-temp {
+            font-size: 2.5rem;
+            font-weight: 700;
+            font-family: var(--font-serif);
+            margin-bottom: 5px;
+        }
+
+        .weather-desc {
+            font-size: 12px;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* 提醒卡片 */
+        .reminder-card {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .reminder-header {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--text-secondary);
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .reminder-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px dashed rgba(0,0,0,0.05);
+            font-size: 13px;
+        }
+
+        .reminder-item:last-child {
+            border: none;
+        }
+
+        .reminder-time {
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        .reminder-text {
+            color: var(--text-secondary);
+            flex: 1;
+        }
+
+        /* 快捷操作 */
+        .quick-actions {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .quick-actions-header {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--text-secondary);
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .action-btn {
+            width: 100%;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            font-size: 12px;
+            color: var(--text-primary);
+            text-align: left;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .action-btn:hover {
+            background: var(--accent-light);
+            border-color: var(--accent);
+            transform: translateX(3px);
+        }
+
+        /* ============= 底部 Dock ============= */
+        .floating-dock {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
+            padding: 12px 24px;
+            border-radius: 100px;
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.08);
+            z-index: 100;
+        }
+
+        .dock-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .dock-item:hover,
+        .dock-item.active {
+            color: var(--text-primary);
+            transform: translateY(-5px);
+        }
+
+        .dock-item.active::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            width: 5px;
+            height: 5px;
+            background: var(--accent);
+            border-radius: 50%;
+        }
+
+        .dock-icon {
+            font-size: 22px;
+        }
+
+        .dock-add-btn {
+            background: var(--text-primary);
+            color: white;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+        }
+
+        .dock-add-btn:hover {
+            background: var(--accent);
+            transform: scale(1.15) rotate(90deg);
+        }
+
+        @media (max-width: 1200px) {
+            .main-grid {
+                grid-template-columns: 300px 1fr;
+                gap: 40px;
+            }
+            .right-panel {
+                display: none;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+                gap: 30px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-grid">
+
+        <!-- ========== 左栏：概览与统计 ========== -->
+        <aside class="left-panel">
+            <div class="greeting">
+                <h1>Good morning,<br>Alex</h1>
+                <div class="date-line">Wednesday, Sep 10</div>
+            </div>
+
+            <div class="day-progress">
+                <div class="progress-header">
+                    <span class="progress-label">Today's Progress</span>
+                    <span class="progress-count">2 / 6 done</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill"></div>
+                </div>
+            </div>
+
+            <div class="energy-indicator">
+                <div class="label">⚡ Energy Peak</div>
+                <div class="message">You're in your optimal focus window. Deep work recommended.</div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number">6</div>
+                    <div class="stat-label">Tasks</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">4</div>
+                    <div class="stat-label">Pomodoros</div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ========== 中栏：One Thing + Timeline ========== -->
+        <main class="center-panel">
+
+            <!-- One Thing 英雄卡片 -->
+            <div class="one-thing-hero" onclick="alert('Open task detail')">
+                <div class="hero-badge">
+                    <span>⭐</span>
+                    <span>One Thing</span>
+                </div>
+                <h2 class="hero-title">完成 DiDa 登录系统<br>核心业务逻辑与鉴权</h2>
+                <div class="hero-meta">
+                    <span class="hero-meta-item">
+                        <span>🏷️</span>
+                        <span>#development</span>
+                    </span>
+                    <span class="hero-meta-item">
+                        <span>🍅</span>
+                        <span>2 Pomodoros</span>
+                    </span>
+                    <span class="hero-meta-item">
+                        <span>📋</span>
+                        <span>3 subtasks</span>
+                    </span>
+                </div>
+                <div class="hero-actions">
+                    <button class="btn-primary" onclick="event.stopPropagation(); alert('Start focus mode')">Start Deep Work</button>
+                    <button class="btn-secondary" onclick="event.stopPropagation(); alert('View details')">Details</button>
+                </div>
+            </div>
+
+            <!-- Timeline 任务流 -->
+            <div class="section-header">
+                <h3 class="section-title">Timeline</h3>
+                <div class="view-toggle">
+                    <button class="toggle-btn active">All</button>
+                    <button class="toggle-btn">Pending</button>
+                </div>
+            </div>
+
+            <div class="task-timeline">
+
+                <div class="task-item completed" onclick="alert('Task detail')">
+                    <div class="task-time">09:00</div>
+                    <div class="task-checkbox" onclick="event.stopPropagation()"></div>
+                    <div class="task-content">
+                        <div class="task-title">设计系统 UI 资产整理</div>
+                        <div class="task-tags">
+                            <span class="task-tag">#design</span>
+                            <span class="task-estimate">🍅 1</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="task-item" onclick="alert('Task detail')">
+                    <div class="task-time">10:30</div>
+                    <div class="task-checkbox" onclick="event.stopPropagation()"></div>
+                    <div class="task-content">
+                        <div class="task-title">回复投资者与合作伙伴邮件</div>
+                        <div class="task-tags">
+                            <span class="task-tag">#comms</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="task-item" onclick="alert('Task detail')">
+                    <div class="task-time">14:00</div>
+                    <div class="task-checkbox" onclick="event.stopPropagation()"></div>
+                    <div class="task-content">
+                        <div class="task-title">Review pull requests from team</div>
+                        <div class="task-tags">
+                            <span class="task-tag">#code-review</span>
+                            <span class="task-estimate">🍅 1</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="task-item" onclick="alert('Task detail')">
+                    <div class="task-time anytime">Anytime</div>
+                    <div class="task-checkbox" onclick="event.stopPropagation()"></div>
+                    <div class="task-content">
+                        <div class="task-title">采购生活物资（牛奶、咖啡豆）</div>
+                        <div class="task-tags">
+                            <span class="task-tag" style="border-style: dashed;">#life</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+
+        <!-- ========== 右栏：天气 & 提醒 ========== -->
+        <aside class="right-panel">
+
+            <div class="weather-card">
+                <div class="weather-icon">☀️</div>
+                <div class="weather-temp">24°</div>
+                <div class="weather-desc">Sunny & Clear</div>
+            </div>
+
+            <div class="reminder-card">
+                <div class="reminder-header">Upcoming</div>
+                <div class="reminder-item">
+                    <span class="reminder-time">11:00</span>
+                    <span class="reminder-text">Team standup</span>
+                </div>
+                <div class="reminder-item">
+                    <span class="reminder-time">15:30</span>
+                    <span class="reminder-text">Coffee with Mark</span>
+                </div>
+            </div>
+
+            <div class="quick-actions">
+                <div class="quick-actions-header">Quick Actions</div>
+                <button class="action-btn" onclick="alert('Review week')">
+                    <span>📊</span>
+                    <span>Review Week</span>
+                </button>
+                <button class="action-btn" onclick="alert('Browse templates')">
+                    <span>📝</span>
+                    <span>Templates</span>
+                </button>
+                <button class="action-btn" onclick="alert('Open settings')">
+                    <span>⚙️</span>
+                    <span>Settings</span>
+                </button>
+            </div>
+
+        </aside>
+    </div>
+
+    <!-- ========== 底部 Dock ========== -->
+    <nav class="floating-dock">
+        <div class="dock-item active">
+            <span class="dock-icon">◷</span>
+        </div>
+        <div class="dock-item">
+            <span class="dock-icon">📥</span>
+        </div>
+        <div class="dock-add-btn">＋</div>
+        <div class="dock-item">
+            <span class="dock-icon">📅</span>
+        </div>
+        <div class="dock-item">
+            <span class="dock-icon">👤</span>
+        </div>
+    </nav>
+
+    <script>
+        // 切换视图并移动原点位置
+        const toggleBtns = document.querySelectorAll('.toggle-btn');
+        const viewToggle = document.querySelector('.view-toggle');
+
+        toggleBtns.forEach((btn, index) => {
+            btn.addEventListener('click', function() {
+                // 移除所有 active 状态
+                toggleBtns.forEach(b => b.classList.remove('active'));
+                // 添加当前按钮的 active 状态
+                this.classList.add('active');
+
+                // 根据按钮索引调整原点位置（上下移动）
+                if (index === 0) {
+                    // All 按钮 - 原点靠上
+                    viewToggle.style.setProperty('--dot-offset', '30%');
+                } else {
+                    // Pending 按钮 - 原点靠下
+                    viewToggle.style.setProperty('--dot-offset', '70%');
+                }
+            });
+        });
+
+        // 初始化原点位置
+        viewToggle.style.setProperty('--dot-offset', '30%');
+    </script>
+
+</body>
+</html>

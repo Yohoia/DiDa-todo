@@ -15,18 +15,19 @@ type Preferences = {
   reminders: boolean;
 };
 type Notice = { key: MessageKey; values?: MessageValues };
+export type QuickAddPreset = { list: TaskList; date?: string; time?: string };
 
 type WorkspaceState = {
   tasks: Task[];
   updateTask: (id: string, patch: Partial<Task>) => void;
-  addTask: (title: string, list?: TaskList, date?: string) => void;
+  addTask: (title: string, list?: TaskList, date?: string, time?: string) => string | undefined;
   toggleTask: (id: string) => void;
   toggleSubtask: (taskId: string, subtaskId: string) => void;
   deleteTask: (id: string) => void;
   selectedId: string | null;
   selectTask: (id: string | null) => void;
-  quickAdd: TaskList | null;
-  setQuickAdd: (list: TaskList | null) => void;
+  quickAdd: QuickAddPreset | null;
+  setQuickAdd: (preset: TaskList | QuickAddPreset | null) => void;
   searchOpen: boolean;
   setSearchOpen: (open: boolean) => void;
   focusId: string | null;
@@ -42,7 +43,7 @@ const WorkspaceContext = createContext<WorkspaceState | null>(null);
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [tasks, setTasks] = useState(initialTasks);
   const [selectedId, selectTask] = useState<string | null>(null);
-  const [quickAdd, setQuickAdd] = useState<TaskList | null>(null);
+  const [quickAdd, updateQuickAdd] = useState<QuickAddPreset | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [focusId, setFocusId] = useState<string | null>(null);
   const [notice, notify] = useState<Notice | null>(null);
@@ -58,53 +59,67 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   function updateTask(id: string, patch: Partial<Task>) {
     setTasks((current) =>
       current.map((task) => {
-        // If setting this task as featured, unfeatured all others
-        if (task.id === id && patch.featured === true) {
-          return {
-            ...task,
-            ...patch,
-            schedule: task.schedule
-              ? {
-                  ...task.schedule,
-                  ...(patch.title ? { label: patch.title } : {}),
-                  ...(patch.date !== undefined ? { date: patch.date } : {}),
-                }
-              : undefined,
-          };
-        }
-        // Unfeature other tasks when a new one is featured
         if (task.id !== id && patch.featured === true && task.featured) {
           return { ...task, featured: false };
         }
-        // Normal update for the target task
-        if (task.id === id) {
+        if (task.id !== id) return task;
+
+        const nextDate = patch.date !== undefined ? patch.date : task.date;
+        const timeChanged = Object.hasOwn(patch, "time");
+        const nextTime = timeChanged ? patch.time : task.time;
+        let schedule = task.schedule;
+
+        if (timeChanged) {
+          if (nextTime && nextDate) {
+            const [hour, minute] = nextTime.split(":").map(Number);
+            schedule = {
+              date: nextDate,
+              hour,
+              minute,
+              duration: task.schedule?.duration ?? Math.max(25, task.estimate * 25),
+              label: patch.title ?? task.title,
+            };
+          } else {
+            schedule = undefined;
+          }
+        } else if (schedule) {
+          schedule = nextDate
+            ? {
+                ...schedule,
+                ...(patch.title ? { label: patch.title } : {}),
+                ...(patch.date !== undefined ? { date: patch.date } : {}),
+              }
+            : undefined;
+        }
+
+        // If setting this task as featured, unfeatured all others
+        if (patch.featured === true) {
           return {
             ...task,
             ...patch,
-            schedule: task.schedule
-              ? {
-                  ...task.schedule,
-                  ...(patch.title ? { label: patch.title } : {}),
-                  ...(patch.date !== undefined ? { date: patch.date } : {}),
-                }
-              : undefined,
+            schedule,
           };
         }
-        return task;
+        return { ...task, ...patch, schedule };
       }),
     );
   }
-  function addTask(title: string, list: TaskList = "Inbox", date = "") {
+  function addTask(title: string, list: TaskList = "Inbox", date = "", time?: string) {
     if (!title.trim()) return;
+    const id = crypto.randomUUID();
+    const [hour, minute] = (time ?? "").split(":").map(Number);
     setTasks((current) => [
       ...current,
       {
-        id: crypto.randomUUID(),
+        id,
         title: title.trim(),
         description: "",
         list,
         tags: [],
         date,
+        time,
+        schedule:
+          date && time ? { date, hour, minute, duration: 25, label: title.trim() } : undefined,
         priority: 3,
         estimate: 1,
         reminder: "None",
@@ -115,6 +130,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       },
     ]);
     notify({ key: "tasks.added", values: { list, date: date ? ` · ${date}` : "" } });
+    return id;
   }
   function toggleTask(id: string) {
     setTasks((current) =>
@@ -160,7 +176,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         selectedId,
         selectTask,
         quickAdd,
-        setQuickAdd,
+        setQuickAdd: (preset) =>
+          updateQuickAdd(typeof preset === "string" ? { list: preset } : preset),
         searchOpen,
         setSearchOpen,
         focusId,

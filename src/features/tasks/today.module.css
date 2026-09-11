@@ -1,30 +1,76 @@
 .journal {
+  --today-task-row-height: 80px;
+  --today-three-rows-height: calc(var(--today-task-row-height) * 3);
+
   width: 100%;
   max-width: 1100px;
   margin: 0 auto;
   display: grid;
   grid-template-columns: 1.15fr 1fr;
-  gap: 60px;
+  gap: 40px 60px;
+  align-items: start;
 }
-.left,
-.right {
-  display: flex;
-  flex-direction: column;
-  gap: 40px;
+/* 四宫格：行2 = 今日专注 ↔ 随时区，行3 = 今日必做 ↔ 时间轴 */
+.journal > header {
+  grid-column: 1 / -1;
+  grid-row: 1;
+}
+.journal > header h1 {
+  margin: 0;
+}
+.focusSection {
+  grid-column: 1;
+  grid-row: 2;
+  margin-top: -16px;
   min-width: 0;
 }
-.left header h1 {
-  margin-bottom: 16px;
+.anySection {
+  grid-column: 2;
+  grid-row: 2;
+  margin-top: -16px;
+  min-width: 0;
+  position: relative;
 }
-.right {
-  padding-top: 10px;
+.mustDoSection {
+  grid-column: 1;
+  grid-row: 3;
+  min-width: 0;
+  margin-top: -20px;
+}
+.timeline {
+  grid-column: 2;
+  grid-row: 3;
+  min-width: 0;
+  margin-top: -20px;
+  display: flex;
+  flex-direction: column;
 }
 .oneThing {
+  position: relative;
   background: var(--card);
   border: 1px solid var(--border);
-  padding: 28px 24px;
+  padding: 20px 22px;
   box-shadow: 0 15px 35px rgb(0 0 0 / 2%);
-  transition: 0.3s;
+  height: var(--today-three-rows-height);
+  display: grid;
+  grid-template-rows: 28px minmax(0, 1fr) 24px 42px;
+  gap: 8px;
+  transition:
+    border-color 0.3s,
+    box-shadow 0.3s,
+    transform 0.3s;
+}
+/* 内嵌描边：致敬「THE MASTERPIECE」的双框质感，随卡片留出呼吸边距 */
+.oneThing::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border: 1px solid color-mix(in srgb, var(--brand-gold) 32%, transparent);
+  pointer-events: none;
+  transition: border-color 0.3s;
+}
+.oneThing:hover::before {
+  border-color: color-mix(in srgb, var(--brand-gold) 55%, transparent);
 }
 .oneThing:hover {
   border-color: var(--brand-gold);
@@ -32,46 +78,90 @@
   transform: translateY(-3px);
 }
 .featureButton {
-  display: block;
+  display: flex;
+  align-items: center;
   width: 100%;
+  min-width: 0;
   text-align: left;
+  min-height: 0;
+}
+.focusHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 }
 .badge {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
   font-size: 10px;
   background: var(--task-accent-light);
   color: var(--brand-gold);
-  padding: 4px 10px;
+  padding: 0 10px;
   text-transform: uppercase;
   letter-spacing: 1px;
   font-weight: 600;
 }
+.clearFocus {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  color: var(--brand-gold);
+  border-radius: 4px;
+  transition:
+    color 0.2s,
+    background-color 0.2s;
+}
+.clearFocus:hover,
+.clearFocus:focus-visible {
+  color: var(--foreground);
+  background: var(--task-accent-light);
+}
 .featureButton h2 {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   font-family: var(--font-serif);
-  font-size: 1.6rem;
+  font-size: 1.4rem;
   font-weight: 600;
-  line-height: 1.3;
-  margin: 20px 0 10px;
+  line-height: 1.25;
+  margin: 0;
 }
 .meta {
   font-size: 11px;
   color: var(--task-muted);
-  margin-bottom: 25px;
-  margin-top: 5px;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 20px;
+  gap: 14px;
+  height: 24px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.meta > * {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  line-height: 1;
+}
+.focusStart {
+  min-height: 42px;
+  padding: 10px 14px;
 }
 .capacity {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 10px;
+  margin-left: 20px;
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 1px;
   color: var(--muted-foreground);
-  /* 列内统一 40px 间距的基础上收紧自身上下间隙 */
-  margin-block: -20px;
 }
 .capacity strong {
   font-weight: 500;
@@ -97,13 +187,254 @@
   border-color: var(--destructive);
   background: var(--destructive);
 }
-.timeline {
-  margin-top: 10px;
+.anyDivider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 0 4px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--task-muted);
+}
+.anyDivider::before,
+.anyDivider::after {
+  content: "";
+  width: 56px;
+  border-top: 1px dashed rgb(168 162 158 / 55%);
+}
+.anyDivider::before {
+  margin-right: 12px;
+}
+.anyDivider::after {
+  margin-left: 12px;
+}
+/* 时间轴视窗：默认容纳三条（行高 80px），超出滚动、隐藏滚动条 */
+.timedScroll {
+  max-height: var(--today-three-rows-height);
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+  margin-bottom: 20px;
+}
+.timedScroll::-webkit-scrollbar {
+  display: none;
+}
+/* 真实时间轴：定时任务区左侧的贯穿轴线 + 每行一颗节点 */
+.timedGroup {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+.timedGroup::before {
+  content: "";
+  position: absolute;
+  left: 72px;
+  top: 7px;
+  bottom: 7px;
+  width: 1px;
+  background: color-mix(in srgb, var(--brand-gold) 35%, transparent);
+}
+/* 轴的起点/终点端帽：随内容滚动，终点帽滚到底时现身 */
+.railCap {
+  position: absolute;
+  left: 66px;
+  width: 13px;
+  height: 2px;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--brand-gold) 55%, transparent);
+}
+.railCapTop {
+  top: 6px;
+}
+.railCapBottom {
+  bottom: 6px;
+}
+.scrollHint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  /* 与左列分页控件同高同距，保持两列控件同一水平线（抵消滚动区下边距后与分页同为 12px） */
+  min-height: 28px;
+  margin-top: -4px;
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--task-muted);
+  user-select: none;
+}
+.scrollHintArrow {
+  display: inline-flex;
+  color: var(--brand-gold);
+}
+/* 分页视窗：固定容纳一页三条，控件钉在底部不随翻页移动 */
+.pageViewport {
+  position: relative;
+  height: var(--today-three-rows-height);
+  /* 裁掉翻页滑入滑出的横向位移，避免撑出页面横向滚动条 */
+  overflow: hidden;
+}
+.anySection .pageViewport {
+  padding-right: 30px;
+}
+.pageDots {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.pageDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  border: 0;
+  padding: 0;
+  background: var(--border);
+  cursor: pointer;
+  transition:
+    height 0.3s cubic-bezier(0.32, 0.72, 0, 1),
+    background-color 0.3s;
+}
+.pageDotOn {
+  height: 16px;
+  background: var(--brand-gold);
+}
+.pageNav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 12px;
+}
+.pageArrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition:
+    color 0.2s,
+    background-color 0.2s;
+}
+.pageArrow:hover:not(:disabled) {
+  color: var(--brand-gold);
+  background: var(--task-accent-light);
+}
+.pageArrow:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+.pageIndicator {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 1px;
+  color: var(--muted-foreground);
+}
+.timedItem {
+  position: relative;
+}
+/* 轴上的行由竖线衔接，不再需要横向分隔线 */
+.timedItem > div {
+  border-bottom: 0;
+}
+.timedItem::after {
+  content: "";
+  position: absolute;
+  left: 72px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--brand-gold);
+  border: 2px solid var(--background);
+  transform: translate(-50%, -50%);
+  transition: transform 0.2s ease;
+  z-index: 1;
+}
+.timedItem:hover::after {
+  transform: translate(-50%, -50%) scale(1.35);
+}
+.timelineEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 26px 0 22px;
+  color: var(--muted-foreground);
+}
+.timelineEmpty .emptyMark {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed rgb(168 162 158 / 55%);
+  border-radius: 50%;
+  color: var(--task-muted);
+  background: var(--task-accent-light);
+  margin-bottom: 2px;
+}
+.timelineEmpty p {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 2px;
+}
+.timelineEmpty .emptyHint {
+  font-size: 11px;
+  color: var(--task-muted);
+  letter-spacing: 1px;
 }
 @media (max-width: 900px) {
   .journal {
     grid-template-columns: 1fr;
     max-width: 700px;
     gap: 40px;
+  }
+  /* 单列时按 问候 → 专注 → 必做 → 随时 → 时间轴 排列 */
+  .journal > header {
+    grid-column: 1;
+    grid-row: 1;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .focusSection {
+    grid-column: 1;
+    grid-row: 2;
+    margin-top: 0;
+  }
+  .mustDoSection {
+    grid-column: 1;
+    grid-row: 3;
+  }
+  .anySection {
+    grid-column: 1;
+    grid-row: 4;
+    margin-top: 0;
+  }
+  .timeline {
+    grid-column: 1;
+    grid-row: 5;
+  }
+}
+@media (max-width: 600px) {
+  /* 窄屏行内间距从 15 收到 12，轴线与节点同步左移 */
+  .timedGroup::before,
+  .timedItem::after {
+    left: 70px;
   }
 }

@@ -53,6 +53,23 @@
   background: var(--border);
   margin-left: 15px;
 }
+.sectionLabelCenter {
+  justify-content: center;
+}
+.sectionLabelCenter::before,
+.sectionLabelCenter::after {
+  content: "";
+  flex: none;
+  width: 56px;
+  height: 1px;
+  background: var(--border);
+}
+.sectionLabelCenter::before {
+  margin-right: 15px;
+}
+.sectionLabelCenter::after {
+  margin-left: 15px;
+}
 .gold {
   color: var(--brand-gold);
 }
@@ -231,6 +248,33 @@
   font-size: 12px;
   font-weight: 600;
   min-height: 32px;
+}
+/* 接近字数上限时出现的剩余计数 */
+.charCount {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--task-muted);
+  flex: none;
+}
+/* 未输入时提示「/」聚焦快捷键，聚焦后隐藏 */
+.kbdHint {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--secondary);
+  color: var(--muted-foreground);
+  font-size: 11px;
+  font-family: var(--font-sans);
+  line-height: 1;
+  flex: none;
+}
+.quickInput:focus-within .kbdHint {
+  display: none;
 }
 .overlay {
   z-index: 200;

@@ -25,7 +25,7 @@ export type Task = {
   // Scheduling (note: both `date` and `schedule` exist for different views)
   date: string; // Due date (used in month view, deadline-based views)
   time?: string; // Due time
-  schedule?: { date: string; hour: number; duration: number; label?: string }; // Calendar time block
+  schedule?: { date: string; hour: number; minute?: number; duration: number; label?: string }; // Calendar time block
 
   // Task properties
   priority: 1 | 2 | 3;

@@ -8,6 +8,7 @@ import {
   HiCog,
   HiCalendar,
   HiHome,
+  HiUser,
 } from "react-icons/hi2";
 import { SectionLabel } from "@/components/shared/workspace-ui";
 import shared from "@/styles/workspace.module.css";
@@ -31,7 +32,9 @@ export async function ProfilePage() {
   return (
     <div className={shared.page}>
       <header className={styles.header}>
-        <div className={styles.avatar}>A</div>
+        <div className={styles.avatar}>
+          <HiUser size={40} />
+        </div>
         <div>
           <h1>Alex</h1>
           <div className={styles.meta}>

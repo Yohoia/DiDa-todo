@@ -8,21 +8,36 @@ export function PageHeader({
   children,
 }: {
   title: ReactNode;
-  subtitle: string;
+  subtitle?: string;
   children?: ReactNode;
 }) {
   return (
     <header className={styles.header}>
       <div>
         <h1>{title}</h1>
-        <p className={styles.subtitle}>{subtitle}</p>
+        {subtitle && <p className={styles.subtitle}>{subtitle}</p>}
       </div>
       {children}
     </header>
   );
 }
-export function SectionLabel({ children, gold = false }: { children: ReactNode; gold?: boolean }) {
-  return <h2 className={cn(styles.sectionLabel, gold && styles.gold)}>{children}</h2>;
+export function SectionLabel({
+  children,
+  gold = false,
+  center = false,
+}: {
+  children: ReactNode;
+  gold?: boolean;
+  /** 居中变体：文字两侧各一段短横线，替代默认的右侧长线 */
+  center?: boolean;
+}) {
+  return (
+    <h2
+      className={cn(styles.sectionLabel, gold && styles.gold, center && styles.sectionLabelCenter)}
+    >
+      {children}
+    </h2>
+  );
 }
 export function EmptyState({ title, children }: { title: string; children: ReactNode }) {
   return (

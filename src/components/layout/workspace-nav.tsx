@@ -3,7 +3,7 @@ import { useI18n } from "@/features/preferences/preferences-provider";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { HiCalendar, HiClock, HiInbox, HiPlus } from "react-icons/hi2";
+import { HiCalendar, HiClock, HiInbox, HiPlus, HiUser } from "react-icons/hi2";
 import { useWorkspace } from "@/features/tasks/workspace-provider";
 import { cn } from "@/lib/utils";
 import styles from "./workspace-nav.module.css";
@@ -36,7 +36,7 @@ export function WorkspaceNav() {
     {
       href: "/profile",
       label: "个人中心",
-      Icon: null,
+      Icon: HiUser,
       active: ["/profile", "/settings", "/insight", "/completed", "/list-detail"].includes(
         pathname,
       ),
@@ -65,7 +65,7 @@ export function WorkspaceNav() {
             className={cn(styles.item, active && styles.active)}
           >
             <span className={styles.label}>{translateLabel(label)}</span>
-            {Icon ? <Icon size={22} /> : <span className={styles.avatar}>A</span>}
+            <Icon size={22} />
             {href === "/inbox" &&
               tasks.some((task) => task.list === "Inbox" && !task.completed) && (
                 <span className={styles.dot} />

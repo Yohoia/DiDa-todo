@@ -13,8 +13,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-serif);
-  font-size: 2rem;
 }
 .header h1 {
   font-family: var(--font-serif);

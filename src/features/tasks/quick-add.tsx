@@ -32,18 +32,34 @@ export function QuickAdd() {
       >
         <DialogTitle>{t("Quick Add")}</DialogTitle>
         <DialogDescription>{t("记录一个想法，或者输入 / 跳转到其他页面。")}</DialogDescription>
-        {quickAdd && <QuickAddForm key={`${quickAdd}-${pathname}`} initialList={quickAdd} />}
+        {quickAdd && (
+          <QuickAddForm
+            key={`${quickAdd.list}-${quickAdd.date ?? ""}-${quickAdd.time ?? ""}-${pathname}`}
+            initialList={quickAdd.list}
+            initialDate={quickAdd.date}
+            initialTime={quickAdd.time}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );
 }
-function QuickAddForm({ initialList }: { initialList: TaskList }) {
+function QuickAddForm({
+  initialList,
+  initialDate = "",
+  initialTime,
+}: {
+  initialList: TaskList;
+  initialDate?: string;
+  initialTime?: string;
+}) {
   const { t, label } = useI18n();
   const { addTask, setQuickAdd } = useWorkspace();
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [list, setList] = useState(initialList);
-  const [date, setDate] = useState("");
+  const [date, setDate] = useState(initialDate);
+  const [time, setTime] = useState(initialTime ?? "");
   function submit(event: FormEvent) {
     event.preventDefault();
     if (!title.trim()) return;
@@ -54,7 +70,7 @@ function QuickAddForm({ initialList }: { initialList: TaskList }) {
       }
       return;
     }
-    addTask(title, list, date);
+    addTask(title, list, date, time || undefined);
     setQuickAdd(null);
   }
   const commands = title.startsWith("/");
@@ -117,7 +133,21 @@ function QuickAddForm({ initialList }: { initialList: TaskList }) {
                 aria-label={t("任务日期")}
                 type="date"
                 value={date}
-                onChange={(event) => setDate(event.target.value)}
+                onChange={(event) => {
+                  setDate(event.target.value);
+                  if (!event.target.value) setTime("");
+                }}
+                className={styles.select}
+              />
+            </label>
+            <label className={styles.muted}>
+              {t("Time")}{" "}
+              <input
+                aria-label={t("任务时间")}
+                type="time"
+                value={time}
+                disabled={!date}
+                onChange={(event) => setTime(event.target.value)}
                 className={styles.select}
               />
             </label>
