@@ -63,7 +63,8 @@ export function WorkspaceNav() {
   const { t, label: translateLabel } = useI18n();
   const pathname = usePathname();
   const { tasks, voiceCapture } = useWorkspace();
-  const { startVoice, confirmVoice, cancelVoice, addConfirmed, editConfirmed } = useVoiceCapture();
+  const { startVoice, confirmVoice, cancelVoice, addConfirmed, editConfirmed, audioLevel } =
+    useVoiceCapture();
   const navRef = useRef<HTMLElement>(null);
   const rowRef = useRef<HTMLDivElement>(null);
   const capsuleMode = voiceCapture !== null;
@@ -172,6 +173,7 @@ export function WorkspaceNav() {
       </motion.div>
       <VoiceCaptureBar
         state={voiceCapture}
+        audioLevel={audioLevel}
         onPrimary={voiceCapture?.phase === "confirming" ? addConfirmed : confirmVoice}
         onCancel={cancelVoice}
         onMeasure={measureCapsule}

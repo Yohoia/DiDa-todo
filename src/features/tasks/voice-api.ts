@@ -19,6 +19,7 @@ export async function transcribeAudio(
   }
   if (response.status === 503) throw new Error("not_configured");
   if (response.status === 429) throw new Error("rate_limited");
+  if (response.status === 504) throw new Error("asr_timeout");
   if (!response.ok) throw new Error("asr_failed");
   const data = (await response.json()) as { transcript?: string };
   return (data.transcript ?? "").trim();

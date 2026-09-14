@@ -14,10 +14,13 @@ export class WavRecorder {
   private context: AudioContext | null = null;
   private stream: MediaStream | null = null;
   private source: MediaStreamAudioSourceNode | null = null;
+  private worklet: AudioWorkletNode | null = null;
   private processor: ScriptProcessorNode | null = null;
   private mute: GainNode | null = null;
   private chunks: Float32Array[] = [];
   private seconds = 0;
+  private smoothedLevel = 0;
+  private onLevel: ((level: number) => void) | null = null;
   private recording = false;
   private starting = false;
   private operation = 0;
@@ -41,7 +44,7 @@ export class WavRecorder {
     return this.recording;
   }
 
-  async start(): Promise<boolean> {
+  async start(onLevel?: (level: number) => void): Promise<boolean> {
     if (this.recording || this.starting) return false;
     const operation = ++this.operation;
     this.starting = true;
@@ -55,6 +58,18 @@ export class WavRecorder {
     let stream: MediaStream | null = null;
     try {
       if (context.state === "suspended") await context.resume();
+      const canUseWorklet = Boolean(
+        context.audioWorklet && typeof AudioWorkletNode !== "undefined",
+      );
+      let workletReady = false;
+      if (canUseWorklet) {
+        try {
+          await context.audioWorklet.addModule("/audio/pcm-capture-worklet.js");
+          workletReady = true;
+        } catch {
+          // 极旧或限制 AudioWorklet 的浏览器继续使用兼容分支。
+        }
+      }
       stream = await requestMicStream();
       // abort() cannot cancel a pending permission prompt. If it ran while we
       // were awaiting the stream, immediately release the late result.
@@ -65,24 +80,37 @@ export class WavRecorder {
 
       this.stream = stream;
       this.source = context.createMediaStreamSource(stream);
-      this.processor = context.createScriptProcessor(4096, 1, 1);
-      this.processor.onaudioprocess = (event) => {
-        if (!this.recording) return;
-        const input = event.inputBuffer.getChannelData(0);
-        this.seconds += input.length / context.sampleRate;
-        if (this.seconds > MAX_RECORD_SECONDS) return;
-        this.chunks.push(new Float32Array(input));
-      };
-      // ScriptProcessor 需要连到 destination 才会回调，经零增益节点避免外放
       this.mute = context.createGain();
       this.mute.gain.value = 0;
-      this.source.connect(this.processor);
-      this.processor.connect(this.mute);
       this.mute.connect(context.destination);
-
       this.chunks = [];
       this.seconds = 0;
+      this.smoothedLevel = 0;
+      this.onLevel = onLevel ?? null;
       this.recording = true;
+
+      if (workletReady) {
+        this.worklet = new AudioWorkletNode(context, "dida-pcm-capture", {
+          numberOfInputs: 1,
+          numberOfOutputs: 1,
+          outputChannelCount: [1],
+        });
+        this.worklet.port.onmessage = (event: MessageEvent<unknown>) => {
+          if (event.data instanceof Float32Array) this.capture(event.data, context.sampleRate);
+        };
+        this.source.connect(this.worklet);
+        this.worklet.connect(this.mute);
+      } else {
+        // 仅为不支持 AudioWorklet 的旧浏览器保留兼容路径。
+        this.processor = context.createScriptProcessor(4096, 1, 1);
+        this.processor.onaudioprocess = (event) => {
+          this.capture(event.inputBuffer.getChannelData(0), context.sampleRate);
+        };
+        // ScriptProcessor 需要连到 destination 才会回调，经零增益节点避免外放。
+        this.source.connect(this.processor);
+        this.processor.connect(this.mute);
+      }
+
       return true;
     } catch (error) {
       stopStream(stream);
@@ -114,17 +142,41 @@ export class WavRecorder {
     this.releaseGraph();
   }
 
+  /** 保存 PCM，并把真实响度映射到 0..1（带噪声门与快起慢落平滑）。 */
+  private capture(input: Float32Array, sampleRate: number) {
+    if (!this.recording) return;
+    this.seconds += input.length / sampleRate;
+    if (this.seconds <= MAX_RECORD_SECONDS) this.chunks.push(new Float32Array(input));
+
+    let energy = 0;
+    for (const sample of input) energy += sample * sample;
+    const rms = Math.sqrt(energy / input.length);
+    const decibels = 20 * Math.log10(Math.max(rms, 1e-7));
+    // -50dB 以下按环境底噪处理；约 -18dB 的正常近讲语音映射到满幅。
+    const measured = Math.max(0, Math.min(1, (decibels + 50) / 32));
+    const factor = measured > this.smoothedLevel ? 0.55 : 0.22;
+    this.smoothedLevel += (measured - this.smoothedLevel) * factor;
+    if (this.smoothedLevel < 0.025) this.smoothedLevel = 0;
+    this.onLevel?.(this.smoothedLevel);
+  }
+
   private releaseGraph() {
     this.recording = false;
+    this.onLevel?.(0);
+    this.onLevel = null;
+    this.smoothedLevel = 0;
     this.chunks = [];
     this.seconds = 0;
+    if (this.worklet) this.worklet.port.onmessage = null;
     if (this.processor) this.processor.onaudioprocess = null;
+    this.worklet?.disconnect();
     this.processor?.disconnect();
     this.mute?.disconnect();
     this.source?.disconnect();
     this.stream?.getTracks().forEach((track) => track.stop());
     const context = this.context;
     this.context = null;
+    this.worklet = null;
     this.processor = null;
     this.mute = null;
     this.source = null;

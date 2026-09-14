@@ -2,7 +2,7 @@
 
 import { useI18n } from "@/features/preferences/preferences-provider";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { HiCheck, HiXMark } from "react-icons/hi2";
 import { cn } from "@/lib/utils";
@@ -35,6 +35,7 @@ export function useVoiceCapture() {
   const flowRef = useRef(0);
   const requestRef = useRef<AbortController | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [audioLevel, setAudioLevel] = useState(0);
 
   useEffect(() => {
     return () => {
@@ -60,6 +61,7 @@ export function useVoiceCapture() {
     if (voiceCapture || startingRef.current || busyRef.current) return;
     const flow = ++flowRef.current;
     startingRef.current = true;
+    setAudioLevel(0);
     recorderRef.current ??= new WavRecorder();
     // demo 模式不采集音频，跳过 prewarm 以免白开一个 AudioContext 悬挂着
     if (!isVoiceDemo()) recorderRef.current.prewarm();
@@ -80,7 +82,7 @@ export function useVoiceCapture() {
         }
       }
       if (isVoiceDemo()) return;
-      const started = await recorderRef.current?.start();
+      const started = await recorderRef.current?.start(setAudioLevel);
       if (flow !== flowRef.current) return;
       if (!started) {
         recorderRef.current?.abort();
@@ -106,6 +108,7 @@ export function useVoiceCapture() {
     requestRef.current?.abort();
     requestRef.current = controller;
     busyRef.current = true;
+    setAudioLevel(0);
     setVoiceCapture({ ...state, phase: "thinking" });
 
     let transcript = "";
@@ -148,7 +151,9 @@ export function useVoiceCapture() {
               ? "语音服务未配置"
               : code === "rate_limited"
                 ? "尝试太频繁，请稍后再试"
-                : "识别失败，请重试",
+                : code === "asr_timeout"
+                  ? "识别超时，请再试一次"
+                  : "识别失败，请重试",
         });
         requestRef.current = null;
         setVoiceCapture(null);
@@ -195,6 +200,7 @@ export function useVoiceCapture() {
     busyRef.current = false;
     startingRef.current = false;
     recorderRef.current?.abort();
+    setAudioLevel(0);
     setVoiceCapture(null);
   }
 
@@ -223,10 +229,10 @@ export function useVoiceCapture() {
     setVoiceCapture(null);
   }
 
-  return { startVoice, confirmVoice, cancelVoice, addConfirmed, editConfirmed };
+  return { startVoice, confirmVoice, cancelVoice, addConfirmed, editConfirmed, audioLevel };
 }
 
-/** 13 根白色圆头竖条：静态高度呈中间高两侧低的纺锤形（参考 Typeless），动画叠加轻微伸缩 */
+/** 13 根白色圆头竖条：响度为零时收拢，有真实声音时按麦克风电平展开。 */
 const BAR_HEIGHTS = [10, 14, 18, 22, 26, 29, 31, 29, 26, 22, 18, 14, 10];
 
 /** 听写胶囊内容：左 × 取消 / 中间随阶段切换（声纹→思考点→转写文本）/ 右 ✓ 主操作。
@@ -236,11 +242,13 @@ export function VoiceCaptureBar({
   onPrimary,
   onCancel,
   onMeasure,
+  audioLevel,
 }: {
   state: VoiceCaptureState | null;
   onPrimary: () => void;
   onCancel: () => void;
   onMeasure: (width: number, height: number) => void;
+  audioLevel: number;
 }) {
   const { t } = useI18n();
   const barRef = useRef<HTMLDivElement>(null);
@@ -301,7 +309,7 @@ export function VoiceCaptureBar({
             <i
               key={index}
               className={styles.wave}
-              style={{ height: `${height}px`, animationDelay: `${Math.abs(index - 6) * 0.08}s` }}
+              style={{ height: `${waveHeight(height, index, audioLevel)}px` }}
             />
           ))}
         </span>
@@ -325,6 +333,13 @@ export function VoiceCaptureBar({
       </button>
     </motion.div>
   );
+}
+
+function waveHeight(maxHeight: number, index: number, level: number) {
+  const restingHeight = 5 + (maxHeight / 31) * 3;
+  const sensitivity = 0.8 + (1 - Math.abs(index - 6) / 6) * 0.2;
+  const audibleLevel = Math.max(0, Math.min(1, level * sensitivity));
+  return Math.round((restingHeight + (maxHeight - restingHeight) * audibleLevel) * 10) / 10;
 }
 
 function ariaKeyFor(phase: VoiceCaptureState["phase"]) {

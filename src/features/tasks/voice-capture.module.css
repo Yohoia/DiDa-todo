@@ -15,11 +15,6 @@
   gap: 12px;
 }
 
-/* 隐藏态：仅停掉声纹动画（定位保留，尺寸可测） */
-.idle .wave {
-  animation-play-state: paused;
-}
-
 /* 两端操作圆钮 */
 .side {
   display: flex;
@@ -44,7 +39,7 @@
   cursor: default;
 }
 
-/* 声纹：13 根白色圆头细条，静态高度纺锤分布 + 轻微伸缩动画 */
+/* 声纹：高度只由实时麦克风电平更新，静音时保持收拢且不自行播放动画。 */
 .waves {
   display: flex;
   align-items: center;
@@ -54,17 +49,7 @@
   width: 3px;
   border-radius: 999px;
   background: #ffffff;
-  transform-origin: center;
-  animation: wave 0.9s ease-in-out infinite;
-}
-@keyframes wave {
-  0%,
-  100% {
-    transform: scaleY(0.55);
-  }
-  50% {
-    transform: scaleY(1);
-  }
+  transition: height 70ms linear;
 }
 
 /* 思考中：三颗白点交替脉动（识别 + 解析在 UI 上合并为一个阶段） */
@@ -112,9 +97,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .wave {
-    animation-duration: 2.4s;
-  }
   .dot {
     animation-duration: 2.4s;
   }

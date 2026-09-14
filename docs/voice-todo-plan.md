@@ -63,10 +63,10 @@ VOICE_ASR_MODEL    = （可选）默认 qwen-audio-3.0-asr-flash
 
 **统一采集为 WAV / 16kHz / 单声道**，一次性规避容器格式问题：
 
-- `MediaRecorder` 的产出依浏览器而异（Chrome: webm/opus，Safari: mp4/aac），而现行 qwen-audio-3.0-asr-flash 的 parameters.format 明确支持 wav/mp3/opus。与其做格式协商，不如用 `AudioContext`（sampleRate 16000）+ ScriptProcessor/AudioWorklet 采 PCM，前端编码 WAV（约 30 行，零依赖）。
+- `MediaRecorder` 的产出依浏览器而异（Chrome: webm/opus，Safari: mp4/aac），而现行 qwen-audio-3.0-asr-flash 的 parameters.format 明确支持 wav/mp3/opus。与其做格式协商，不如用 `AudioContext`（sampleRate 16000）+ `AudioWorkletNode` 采 PCM，前端编码 WAV；仅为不支持 AudioWorklet 的旧浏览器保留 ScriptProcessor 兼容分支。
 - 体量：32KB/s → 10 秒 ≈ 320KB（base64 后 ≈ 430KB），60 秒上限 ≈ 1.9MB（base64 ≈ 2.6MB），远低于 10MB 限制。
 - 保留现有 `enumerateDevices` 麦克风预检与 `?voice-demo` 样式预览通道；Web Speech API 引擎代码退役删除。
-- 实施：`WavRecorder` 类（`src/lib/audio/wav-recorder.ts`，`prewarm/start/stop/abort`）+ `useVoiceCapture` 流程钩子（`voice-capture.tsx`）。prewarm 在麦克风点击的同步段创建并 resume AudioContext（iOS 手势限制）；原生率 ≠ 16k 时编码前线性插值降采样；60s 到点钩子自动走确认。StrictMode 双挂载下 start/stop/abort 幂等。
+- 实施：`WavRecorder` 类（`src/lib/audio/wav-recorder.ts`，`prewarm/start/stop/abort`）+ `useVoiceCapture` 流程钩子（`voice-capture.tsx`）。prewarm 在麦克风点击的同步段创建并 resume AudioContext（iOS 手势限制）；原生率 ≠ 16k 时编码前线性插值降采样；RMS 响度经噪声门与平滑后实时驱动声纹，静音时声纹不动；60s 到点钩子自动走确认。StrictMode 双挂载下 start/stop/abort 幂等。
 
 ### 3.2 服务端路由
 
@@ -97,7 +97,7 @@ VOICE_ASR_MODEL    = （可选）默认 qwen-audio-3.0-asr-flash
 ```
 
 - 要点：`parameters.format` 必填（新模型在 OpenAI 兼容模式实测报 `format is empty`，勿走兼容模式）；`vocabulary` 即时热词替代旧 system 词表用法，提升清单专名识别；`language_hints` 跟随 locale（zh/en 单语种），混合语种省略让模型自动判断；ITN（"三点"→"3点"）默认开启。响应取 `output.text`。
-- 出参：`{ transcript: string }`；错误时 `{ error: "asr_failed" | "audio_invalid" | "not_configured" }`。
+- 出参：`{ transcript: string }`；错误时 `{ error: "asr_failed" | "asr_timeout" | "audio_invalid" | "not_configured" }`。Vercel 函数时限设为 60s，上游 ASR 超时设为 45s，给函数留出返回结构化错误的收尾时间。
 
 **`POST /api/voice/parse`**（`src/app/api/voice/parse/route.ts`）
 
@@ -160,7 +160,7 @@ VOICE_ASR_MODEL    = （可选）默认 qwen-audio-3.0-asr-flash
 | -------- | ------------------------------------------- | -------------------------------------------------------------------- |
 | 预检     | 无麦克风                                    | 现状不变：toast"未检测到麦克风"，不变身                              |
 | 录音     | getUserMedia 拒绝                           | toast"无法访问麦克风"，收回导航栏                                    |
-| 上传/ASR | 网络/5xx/超时(10s)                          | toast"识别失败，请重试"，收回                                        |
+| 上传/ASR | 网络/5xx/超时(45s)                          | 网络错误提示"识别失败"；超时明确提示"识别超时"，随后收回             |
 | ASR      | 空音频/空文本                               | 同上                                                                 |
 | 解析     | LLM 两次均失败                              | 走降级：原文进确认卡（Inbox/无日期），用户仍可编辑                   |
 | 服务端   | 未配置 DASHSCOPE_API_KEY / DEEPSEEK_API_KEY | 路由返回 not_configured → toast"语音服务未配置"（本地无 key 时友好） |

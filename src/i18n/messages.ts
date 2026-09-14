@@ -664,6 +664,10 @@ export const messages = {
     "zh-CN": "识别失败，请重试",
     en: "Recognition failed — please try again",
   },
+  "识别超时，请再试一次": {
+    "zh-CN": "识别超时，请再试一次",
+    en: "Recognition timed out — please try again",
+  },
   "尝试太频繁，请稍后再试": {
     "zh-CN": "尝试太频繁，请稍后再试",
     en: "Too many attempts — please wait a moment",

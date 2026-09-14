@@ -9,9 +9,13 @@
 
 import { guardVoiceRequest } from "@/lib/server/voice-request-guard";
 
+/** 覆盖未启用 Fluid Compute 时较短的 Vercel 默认时限。 */
+export const maxDuration = 60;
+
 const MAX_BYTES = 12 * 1024 * 1024;
 const MAX_REQUEST_BYTES = MAX_BYTES + 64 * 1024;
 const MAX_SECONDS = 61; // 客户端按 60s 截断，留 1s 舍入余量
+const ASR_TIMEOUT_MS = 45_000;
 
 type WavInfo = { byteRate: number; dataBytes: number };
 
@@ -120,13 +124,23 @@ export async function POST(request: Request) {
           ...(language ? { language_hints: [language] } : {}),
         },
       }),
-      signal: AbortSignal.timeout(20_000),
+      signal: AbortSignal.timeout(ASR_TIMEOUT_MS),
     });
-  } catch {
-    return Response.json({ error: "asr_failed" }, { status: 504 });
+  } catch (error) {
+    const timedOut = error instanceof Error && error.name === "TimeoutError";
+    return Response.json(
+      { error: timedOut ? "asr_timeout" : "asr_failed" },
+      { status: timedOut ? 504 : 502 },
+    );
   }
 
   if (!upstream.ok) {
+    if (upstream.status === 408 || upstream.status === 504) {
+      return Response.json({ error: "asr_timeout" }, { status: 504 });
+    }
+    if (upstream.status === 429) {
+      return Response.json({ error: "rate_limited" }, { status: 429 });
+    }
     return Response.json({ error: "asr_failed" }, { status: 502 });
   }
   // 原生协议返回 output.text（实测响应还内嵌了一层 output.output.text，做防御性取值）
