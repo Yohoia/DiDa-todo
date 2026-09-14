@@ -48,6 +48,53 @@
   color: rgb(255 255 255 / 60%);
 }
 
+/* 多条待办清单：每项一行（勾选圆钮 + 标题 + 元信息） */
+.items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.itemBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pick {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin: 1px 0 0;
+  padding: 0;
+  border: 1px solid rgb(255 255 255 / 35%);
+  border-radius: 50%;
+  background: transparent;
+  color: #141414;
+  cursor: pointer;
+  flex: none;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+.pick[aria-checked="true"] {
+  background: #ffffff;
+  border-color: #ffffff;
+}
+.pick:hover {
+  border-color: rgb(255 255 255 / 70%);
+}
+
 .actions {
   display: flex;
   align-items: center;

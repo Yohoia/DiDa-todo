@@ -20,7 +20,7 @@ export function isVoiceDemo(): boolean {
   );
 }
 
-const DEMO_TRANSCRIPT = "明天下午三点提醒我交房租";
+const DEMO_TRANSCRIPT = "明天下午三点提醒我交房租，后天上午去超市买牛奶和鸡蛋";
 
 /**
  * 语音待办流程：录音（WavRecorder）→ 上传转写 → LLM 解析 → 确认卡。
@@ -65,7 +65,7 @@ export function useVoiceCapture() {
     recorderRef.current ??= new WavRecorder();
     // demo 模式不采集音频，跳过 prewarm 以免白开一个 AudioContext 悬挂着
     if (!isVoiceDemo()) recorderRef.current.prewarm();
-    setVoiceCapture({ phase: "recording", list: "Inbox", transcript: "", parsed: null });
+    setVoiceCapture({ phase: "recording", list: "Inbox", transcript: "", parsed: [] });
     void beginCapture(flow);
   }
 
@@ -112,19 +112,29 @@ export function useVoiceCapture() {
     setVoiceCapture({ ...state, phase: "thinking" });
 
     let transcript = "";
-    let parsed: VoiceParsed | null = null;
+    let parsed: VoiceParsed[] | null = null;
     if (isVoiceDemo()) {
       await new Promise((resolve) => setTimeout(resolve, 900));
       if (flow !== flowRef.current) return;
       transcript = DEMO_TRANSCRIPT;
-      parsed = {
-        isTodo: true,
-        title: "交房租",
-        list: "Life",
-        date: getDemoDate(1),
-        time: "15:00",
-        reason: "",
-      };
+      parsed = [
+        {
+          isTodo: true,
+          title: "交房租",
+          list: "Life",
+          date: getDemoDate(1),
+          time: "15:00",
+          reason: "",
+        },
+        {
+          isTodo: true,
+          title: "去超市买牛奶和鸡蛋",
+          list: "Life",
+          date: getDemoDate(2),
+          time: null,
+          reason: "",
+        },
+      ];
     } else {
       let blob: Blob | null = null;
       try {
@@ -145,6 +155,9 @@ export function useVoiceCapture() {
       } catch (error) {
         if (controller.signal.aborted || flow !== flowRef.current) return;
         const code = error instanceof Error ? error.message : "";
+        // 服务端诊断信息（如 upstream_401_invalid_api_key）打到控制台，方便线上排障
+        const detail = (error as Error & { detail?: string }).detail;
+        if (detail) console.warn(`[voice] transcribe failed: ${code} (${detail})`);
         notify({
           key:
             code === "not_configured"
@@ -176,15 +189,17 @@ export function useVoiceCapture() {
         parsed = null;
       }
       if (flow !== flowRef.current) return;
-      parsed ??= {
-        isTodo: true,
-        title: transcript,
-        list: state.list,
-        date: null,
-        time: null,
-        reason: "",
-        degraded: true,
-      };
+      parsed ??= [
+        {
+          isTodo: true,
+          title: transcript,
+          list: state.list,
+          date: null,
+          time: null,
+          reason: "",
+          degraded: true,
+        },
+      ];
     }
     setVoiceCapture({ ...state, phase: "confirming", transcript, parsed });
     busyRef.current = false;
@@ -204,27 +219,30 @@ export function useVoiceCapture() {
     setVoiceCapture(null);
   }
 
-  function addConfirmed() {
+  /** ✓ 添加：落库确认卡上勾选的全部条目（多条时逐条 addTask，最后一条的 toast 保留）。 */
+  function addConfirmed(items: VoiceParsed[]) {
     const state = voiceCapture;
-    if (!state?.parsed?.isTodo) return;
-    addTask(
-      state.parsed.title ?? state.transcript,
-      state.parsed.list ?? state.list,
-      state.parsed.date ?? "",
-      state.parsed.time ?? undefined,
-    );
+    if (!state || !items.length) return;
+    for (const item of items) {
+      addTask(
+        item.title ?? state.transcript,
+        item.list ?? state.list,
+        item.date ?? "",
+        item.time ?? undefined,
+      );
+    }
     setVoiceCapture(null);
   }
 
-  function editConfirmed() {
+  /** 编辑：把单条解析结果预填进 QuickAdd（多条场景在确认卡上不提供编辑入口）。 */
+  function editConfirmed(item: VoiceParsed) {
     const state = voiceCapture;
     if (!state) return;
-    const parsed = state.parsed;
     setQuickAdd({
-      list: parsed?.list ?? state.list,
-      date: parsed?.date ?? undefined,
-      time: parsed?.time ?? undefined,
-      title: parsed?.title ?? state.transcript,
+      list: item.list ?? state.list,
+      date: item.date ?? undefined,
+      time: item.time ?? undefined,
+      title: item.title ?? state.transcript,
     });
     setVoiceCapture(null);
   }

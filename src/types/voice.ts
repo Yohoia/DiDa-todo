@@ -24,5 +24,6 @@ export type VoiceCaptureState = {
   /** 兜底落点清单（解析结果优先生效） */
   list: TaskList;
   transcript: string;
-  parsed: VoiceParsed | null;
+  /** 一段语音可拆出多条（≤8）；空数组 = 整段都不像待办 */
+  parsed: VoiceParsed[];
 };

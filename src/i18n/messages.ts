@@ -696,6 +696,10 @@ export const messages = {
     "zh-CN": "添加",
     en: "Add",
   },
+  "添加 {count} 项": {
+    "zh-CN": "添加 {count} 项",
+    en: "Add {count} tasks",
+  },
   知道了: {
     "zh-CN": "知道了",
     en: "Got it",

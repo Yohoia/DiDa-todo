@@ -128,20 +128,49 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     const timedOut = error instanceof Error && error.name === "TimeoutError";
+    // 只记错误元数据（超时/网络异常名），不含音频与转写内容
+    console.error(
+      `[voice/transcribe] upstream fetch failed: ${
+        timedOut
+          ? "timeout"
+          : error instanceof Error
+            ? `${error.name}: ${error.message}`
+            : String(error)
+      }`,
+    );
     return Response.json(
-      { error: timedOut ? "asr_timeout" : "asr_failed" },
+      {
+        error: timedOut ? "asr_timeout" : "asr_failed",
+        detail: timedOut ? "timeout" : "unreachable",
+      },
       { status: timedOut ? 504 : 502 },
     );
   }
 
   if (!upstream.ok) {
     if (upstream.status === 408 || upstream.status === 504) {
-      return Response.json({ error: "asr_timeout" }, { status: 504 });
+      return Response.json({ error: "asr_timeout", detail: "upstream_timeout" }, { status: 504 });
     }
     if (upstream.status === 429) {
       return Response.json({ error: "rate_limited" }, { status: 429 });
     }
-    return Response.json({ error: "asr_failed" }, { status: 502 });
+    // 401/403/400 等上游错误：状态码与错误 code 记入服务端日志与响应 detail，
+    // 用于区分 key 无效 / 地域限制 / 参数问题（同样是只记错误元数据）
+    const body = await upstream.text().catch(() => "");
+    let upstreamCode = "";
+    try {
+      upstreamCode = String(JSON.parse(body)?.error?.code ?? "") || "";
+    } catch {
+      upstreamCode = "";
+    }
+    console.error(`[voice/transcribe] upstream ${upstream.status}: ${body.slice(0, 300)}`);
+    return Response.json(
+      {
+        error: "asr_failed",
+        detail: `upstream_${upstream.status}${upstreamCode ? `_${upstreamCode}` : ""}`,
+      },
+      { status: 502 },
+    );
   }
   // 原生协议返回 output.text（实测响应还内嵌了一层 output.output.text，做防御性取值）
   const payload = (await upstream.json()) as {

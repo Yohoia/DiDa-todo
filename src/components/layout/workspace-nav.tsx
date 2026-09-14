@@ -174,7 +174,12 @@ export function WorkspaceNav() {
       <VoiceCaptureBar
         state={voiceCapture}
         audioLevel={audioLevel}
-        onPrimary={voiceCapture?.phase === "confirming" ? addConfirmed : confirmVoice}
+        onPrimary={
+          voiceCapture?.phase === "confirming"
+            ? // 胶囊上的 ✓ 快捷键：无勾选上下文，直接添加全部条目
+              () => addConfirmed(voiceCapture.parsed.filter((item) => item.isTodo))
+            : confirmVoice
+        }
         onCancel={cancelVoice}
         onMeasure={measureCapsule}
       />
