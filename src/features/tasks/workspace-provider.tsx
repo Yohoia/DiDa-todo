@@ -4,6 +4,7 @@ import type { MessageValues } from "@/i18n/translate";
 
 import { createContext, useContext, useState, type ReactNode } from "react";
 import type { Task, TaskList } from "@/types/task";
+import { createId } from "@/lib/utils";
 import { initialTasks } from "./demo-data";
 
 type Preferences = {
@@ -106,7 +107,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   }
   function addTask(title: string, list: TaskList = "Inbox", date = "", time?: string) {
     if (!title.trim()) return;
-    const id = crypto.randomUUID();
+    const id = createId();
     const [hour, minute] = (time ?? "").split(":").map(Number);
     setTasks((current) => [
       ...current,

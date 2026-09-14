@@ -8,14 +8,6 @@ export const messages = {
     "zh-CN": "收件箱",
     en: "Inbox",
   },
-  Upcoming: {
-    "zh-CN": "即将到来",
-    en: "Upcoming",
-  },
-  Calendar: {
-    "zh-CN": "日历",
-    en: "Calendar",
-  },
   Schedule: {
     "zh-CN": "日程",
     en: "Schedule",
@@ -408,6 +400,102 @@ export const messages = {
     "zh-CN": "“每两小时的深度专注，都能培育一棵新树。”",
     en: '"Every 2 hours of deep work grows a new tree."',
   },
+  Architect: {
+    "zh-CN": "架构师",
+    en: "Architect",
+  },
+  "All day": {
+    "zh-CN": "全天",
+    en: "All day",
+  },
+  Overdue: {
+    "zh-CN": "已过期",
+    en: "Overdue",
+  },
+  Locked: {
+    "zh-CN": "已锁定",
+    en: "Locked",
+  },
+  "Unlock task": {
+    "zh-CN": "解锁任务",
+    en: "Unlock task",
+  },
+  任务状态: {
+    "zh-CN": "任务状态",
+    en: "Task status",
+  },
+  "profile.avatarPlaceholder": {
+    "zh-CN": "{name} 的默认头像",
+    en: "Default avatar for {name}",
+  },
+  "profile.memberSince": {
+    "zh-CN": "加入于 {date}",
+    en: "Member since {date}",
+  },
+  "profile.levelTitle": {
+    "zh-CN": "{level} 级 · {title}",
+    en: "Level {level} · {title}",
+  },
+  "profile.level": {
+    "zh-CN": "等级 {level}",
+    en: "LVL {level}",
+  },
+  "profile.xpToNext": {
+    "zh-CN": "{current} / {next} 经验值升至下一级",
+    en: "{current} / {next} XP to next level",
+  },
+  "profile.weeklyGarden": {
+    "zh-CN": "本周花圃",
+    en: "This Week's Garden",
+  },
+  "profile.weeklyGoal": {
+    "zh-CN": "本周目标 {count}/{goal}",
+    en: "Weekly goal {count}/{goal}",
+  },
+  "profile.focusedThisWeek": {
+    "zh-CN": "本周专注",
+    en: "Focused this week",
+  },
+  "profile.plantsGrown": {
+    "zh-CN": "已培育",
+    en: "Plants grown",
+  },
+  "profile.plantCount": {
+    "zh-CN": "{count} / {goal} 株",
+    en: "{count} / {goal} plants",
+  },
+  "profile.currentStreak": {
+    "zh-CN": "连续专注",
+    en: "Current streak",
+  },
+  "profile.dayCount": {
+    "zh-CN": "{count} 天",
+    en: { one: "{count} day", other: "{count} days" },
+  },
+  "profile.gardenPlots": {
+    "zh-CN": "本周专注花圃进度",
+    en: "Weekly focus garden progress",
+  },
+  "profile.growingPlant": {
+    "zh-CN": "正在培育的新芽",
+    en: "A seedling currently growing",
+  },
+  "profile.emptyPlot": {
+    "zh-CN": "待解锁",
+    en: "Locked",
+  },
+  "profile.nextPlant": {
+    "zh-CN": "下一株正在生长",
+    en: "Your next plant is growing",
+  },
+  "profile.minutesRemaining": {
+    "zh-CN": "再专注 {count} 分钟",
+    en: { one: "{count} minute to go", other: "{count} minutes to go" },
+  },
+  "profile.nextPlantProgress": {
+    "zh-CN": "下一株植物的培育进度",
+    en: "Progress toward the next plant",
+  },
   Unorganized: {
     "zh-CN": "未整理",
     en: "Unorganized",
@@ -680,25 +768,45 @@ export const messages = {
     "zh-CN": "工作与项目 →",
     en: "Work & Projects →",
   },
-  "Upcoming →": {
-    "zh-CN": "即将到来 →",
-    en: "Upcoming →",
+  回到今天: {
+    "zh-CN": "回到今天",
+    en: "Back to today",
   },
-  "September Horizon": {
-    "zh-CN": "九月展望",
-    en: "September Horizon",
+  上一月: {
+    "zh-CN": "上一月",
+    en: "Previous month",
   },
-  "A clear horizon": {
-    "zh-CN": "前方一片晴朗",
-    en: "A clear horizon",
+  下一月: {
+    "zh-CN": "下一月",
+    en: "Next month",
   },
-  "No upcoming tasks in this list.": {
-    "zh-CN": "此清单中暂无即将到来的任务。",
-    en: "No upcoming tasks in this list.",
+  "schedule.calendarRegion": {
+    "zh-CN": "按日期浏览待办",
+    en: "Browse tasks by date",
   },
-  "View calendar →": {
-    "zh-CN": "查看日历 →",
-    en: "View calendar →",
+  "schedule.expandCalendar": {
+    "zh-CN": "展开当月日历",
+    en: "Expand month calendar",
+  },
+  "schedule.collapseCalendar": {
+    "zh-CN": "收起日历",
+    en: "Collapse calendar",
+  },
+  "schedule.selectDay": {
+    "zh-CN": "查看 {date}",
+    en: "View {date}",
+  },
+  "schedule.emptyDay": {
+    "zh-CN": "这一天还没有安排",
+    en: "Nothing planned for this day",
+  },
+  "schedule.emptyHint": {
+    "zh-CN": "点击右上角「添加任务」，或按 ⌘K 快速记录。",
+    en: "Click “Add Task” in the top right, or press ⌘K to capture one.",
+  },
+  "schedule.emptyFilteredHint": {
+    "zh-CN": "此清单在这一天没有任务，试试切换筛选。",
+    en: "No tasks from this list on this day — try another filter.",
   },
   Tomorrow: {
     "zh-CN": "明天",
@@ -1100,6 +1208,14 @@ export const messages = {
     "zh-CN": "暂无搜索记录",
     en: "No recent searches",
   },
+  最近搜索: {
+    "zh-CN": "最近搜索",
+    en: "Recent searches",
+  },
+  清除搜索记录: {
+    "zh-CN": "清除搜索记录",
+    en: "Clear search history",
+  },
   没有匹配的任务: {
     "zh-CN": "没有匹配的任务",
     en: "No matching tasks",
@@ -1274,6 +1390,14 @@ export const messages = {
     "zh-CN": "选择日期",
     en: "Pick a date",
   },
+  选择月份: {
+    "zh-CN": "选择月份",
+    en: "Pick a month",
+  },
+  取消: {
+    "zh-CN": "取消",
+    en: "Cancel",
+  },
   选择日期与时间: {
     "zh-CN": "选择日期与时间",
     en: "Pick date and time",
@@ -1310,85 +1434,9 @@ export const messages = {
     "zh-CN": "任务时间",
     en: "Task time",
   },
-  "calendar.filter": {
-    "zh-CN": "按清单筛选",
-    en: "Filter by list",
-  },
-  "calendar.board": {
-    "zh-CN": "待办日程视图",
-    en: "Task schedule view",
-  },
-  "calendar.anytime": {
-    "zh-CN": "全天",
-    en: "Anytime",
-  },
-  "calendar.collapse": {
-    "zh-CN": "收起",
-    en: "Collapse",
-  },
-  "calendar.dragHint": {
-    "zh-CN": "拖动任务可调整日期与时间",
-    en: "Drag tasks to change their date and time",
-  },
-  "calendar.showCompleted": {
-    "zh-CN": "显示已完成",
-    en: "Show completed",
-  },
-  "calendar.addOn": {
-    "zh-CN": "在 {date} 添加任务",
-    en: "Add a task on {date}",
-  },
-  "calendar.addAt": {
-    "zh-CN": "在 {date} {time} 添加任务",
-    en: "Add a task at {time} on {date}",
-  },
-  "calendar.more": {
-    "zh-CN": "还有 {count} 项",
-    en: { one: "{count} more", other: "{count} more" },
-  },
-  "calendar.taskCount": {
-    "zh-CN": "{count} 项待办",
-    en: { one: "{count} task", other: "{count} tasks" },
-  },
-  "calendar.completedCount": {
-    "zh-CN": "已完成 {count} 项",
-    en: { one: "{count} completed", other: "{count} completed" },
-  },
-  "calendar.emptyDay": {
-    "zh-CN": "这一天还没有安排",
-    en: "Nothing planned yet",
-  },
-  "calendar.emptyDayHint": {
-    "zh-CN": "点击添加一项待办",
-    en: "Click to add a task",
-  },
-  "calendar.unscheduled": {
-    "zh-CN": "待安排",
-    en: "Unscheduled",
-  },
-  "calendar.planFromInbox": {
-    "zh-CN": "从待办中排期",
-    en: "Plan from tasks",
-  },
-  "calendar.scheduleOn": {
-    "zh-CN": "将 {title} 安排到 {date}",
-    en: "Schedule {title} on {date}",
-  },
-  "calendar.backlogEmpty": {
-    "zh-CN": "所有待办都已安排日期",
-    en: "Every task has a date",
-  },
   "tasks.deleted": {
     "zh-CN": "任务已从本次预览中删除",
     en: "Task deleted from this preview",
-  },
-  "calendar.open": {
-    "zh-CN": "查看日历任务：{title}",
-    en: "View calendar task: {title}",
-  },
-  "calendar.day": {
-    "zh-CN": "查看 {date}",
-    en: "View {date}",
   },
   "profile.plant": {
     "zh-CN": "专注花园植物 {index}",

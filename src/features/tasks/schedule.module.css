@@ -1,0 +1,42 @@
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  /* PageHeader 底对齐后，h1 自带 8px 下边距；补齐后按钮底部与标题文字底部平齐 */
+  align-self: flex-end;
+  margin-bottom: 8px;
+}
+.addButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 6px 14px;
+  border: 1px solid var(--foreground);
+  border-radius: 20px;
+  background: var(--foreground);
+  color: var(--card);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+.addButton:hover {
+  background: var(--brand-gold);
+  border-color: var(--brand-gold);
+}
+.list {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+@media (max-width: 600px) {
+  .headerActions {
+    justify-content: flex-start;
+  }
+}

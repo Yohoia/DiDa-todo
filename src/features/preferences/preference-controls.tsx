@@ -4,24 +4,26 @@ import { HiLanguage, HiMoon, HiSun } from "react-icons/hi2";
 import { SiGithub } from "react-icons/si";
 import { useI18n, usePreferences } from "./preferences-provider";
 import { isLocale } from "@/i18n/config";
+import { Select } from "@/components/ui/select";
 import styles from "./preferences.module.css";
 
 export function LanguageSelect() {
   const { locale, setLocale, changingLocale } = usePreferences();
   const { t } = useI18n();
   return (
-    <select
-      className={styles.select}
-      aria-label={t("Language")}
+    <Select
+      className={styles.languageSelect}
+      ariaLabel={t("Language")}
       value={locale}
       disabled={changingLocale}
-      onChange={(event) => {
-        if (isLocale(event.target.value)) setLocale(event.target.value);
+      onValueChange={(nextLocale) => {
+        if (isLocale(nextLocale)) setLocale(nextLocale);
       }}
-    >
-      <option value="zh-CN">简体中文</option>
-      <option value="en">English</option>
-    </select>
+      options={[
+        { value: "zh-CN", label: "简体中文" },
+        { value: "en", label: "English" },
+      ]}
+    />
   );
 }
 export function ThemeToggle() {

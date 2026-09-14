@@ -106,7 +106,8 @@ const examples: (Partial<Task> & Pick<Task, "id" | "title">)[] = [
   {
     id: "otp",
     title: "修复登录 OTP 验证码偶发失效",
-    date: DEMO_TODAY,
+    date: getDemoDate(-1),
+    priority: 2,
     frozen: true,
     tags: ["development"],
     inWorkList: true,

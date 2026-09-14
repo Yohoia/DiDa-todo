@@ -5,6 +5,7 @@ import { LanguageSelect, ThemeToggle } from "@/features/preferences/preference-c
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useWorkspace } from "@/features/tasks/workspace-provider";
+import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import shared from "@/styles/workspace.module.css";
 import styles from "./settings.module.css";
@@ -58,7 +59,47 @@ function Switch({
     </button>
   );
 }
-export function SettingsPage() {
+/**
+ * 数字输入允许清空与中途非法态（本地草稿），失焦或回车时才校验提交，
+ * 避免受控值拒绝空串导致用户无法删除重输。
+ */
+function NumberField({
+  label,
+  value,
+  min,
+  max,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (value: number) => void;
+}) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const shown = draft ?? String(value);
+  const commit = () => {
+    if (draft === null) return;
+    const next = Math.round(Number(draft));
+    setDraft(null);
+    if (Number.isFinite(next) && next >= min && next <= max) onChange(next);
+  };
+  return (
+    <input
+      aria-label={label}
+      type="number"
+      min={min}
+      max={max}
+      value={shown}
+      onChange={(event) => setDraft(event.target.value)}
+      onBlur={commit}
+      onKeyDown={(event) => {
+        if (event.key === "Enter") event.currentTarget.blur();
+      }}
+    />
+  );
+}
+export function SettingsPage({ profileName }: { profileName: string }) {
   const { t, label } = useI18n();
   const { preferences, setPreferences, notify } = useWorkspace();
   const [section, setSection] = useState("General");
@@ -95,14 +136,16 @@ export function SettingsPage() {
               title={t("First Day of Week")}
               description={t("Set the starting day for calendar and weekly views.")}
             >
-              <select
-                aria-label={t("First Day of Week")}
+              <Select
+                ariaLabel={t("First Day of Week")}
                 value={preferences.firstDay}
-                onChange={(event) => save({ firstDay: event.target.value as "Monday" | "Sunday" })}
-              >
-                <option value="Monday">{t("Monday")}</option>
-                <option value="Sunday">{t("Sunday")}</option>
-              </select>
+                onValueChange={(firstDay) => save({ firstDay })}
+                align="end"
+                options={[
+                  { value: "Monday", label: t("Monday") },
+                  { value: "Sunday", label: t("Sunday") },
+                ]}
+              />
             </SettingRow>
             <SettingRow
               title={t("Sound Effects")}
@@ -123,16 +166,12 @@ export function SettingsPage() {
               title={t("Pomodoro Duration")}
               description={t("Standard deep work session length in minutes.")}
             >
-              <input
-                aria-label={t("Pomodoro Duration")}
-                type="number"
+              <NumberField
+                label={t("Pomodoro Duration")}
+                value={preferences.duration}
                 min={1}
                 max={120}
-                value={preferences.duration}
-                onChange={(event) => {
-                  const duration = Number(event.target.value);
-                  if (duration >= 1 && duration <= 120) setPreferences({ duration });
-                }}
+                onChange={(duration) => save({ duration })}
               />
             </SettingRow>
             <SettingRow
@@ -154,16 +193,12 @@ export function SettingsPage() {
               title={t("Daily Capacity")}
               description={t("Choose a comfortable number of tasks for your day.")}
             >
-              <input
-                aria-label={t("Daily Capacity")}
-                type="number"
+              <NumberField
+                label={t("Daily Capacity")}
+                value={preferences.dailyCapacity}
                 min={1}
                 max={30}
-                value={preferences.dailyCapacity}
-                onChange={(event) => {
-                  const dailyCapacity = Number(event.target.value);
-                  if (dailyCapacity >= 1 && dailyCapacity <= 30) setPreferences({ dailyCapacity });
-                }}
+                onChange={(dailyCapacity) => save({ dailyCapacity })}
               />
             </SettingRow>
             <Link href="/today" className={shared.textButton}>
@@ -201,7 +236,7 @@ export function SettingsPage() {
         {section === "Account & Sync" && (
           <section className={styles.section}>
             <h2>{t("Account & Sync")}</h2>
-            <SettingRow title="Alex" description={t("Preview account")}>
+            <SettingRow title={profileName} description={t("Preview account")}>
               <Link href="/profile" className={shared.button}>
                 {t("View Profile")}
               </Link>

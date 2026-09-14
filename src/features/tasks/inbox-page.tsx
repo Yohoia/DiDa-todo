@@ -12,7 +12,7 @@ const TITLE_LIMIT = 200;
 
 export function InboxPage() {
   const { t } = useI18n();
-  const { tasks, addTask, toggleTask, toggleSubtask, selectTask } = useWorkspace();
+  const { tasks, addTask, toggleTask, toggleSubtask, updateTask, selectTask } = useWorkspace();
   const [title, setTitle] = useState("");
   const [justAddedId, setJustAddedId] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -95,6 +95,7 @@ export function InboxPage() {
                 onOpen={() => selectTask(task.id)}
                 onToggle={() => toggleTask(task.id)}
                 onToggleSubtask={(subtaskId) => toggleSubtask(task.id, subtaskId)}
+                onUnlock={() => updateTask(task.id, { frozen: false })}
               />
             ))}
           </AnimatePresence>

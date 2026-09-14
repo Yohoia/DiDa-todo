@@ -1,0 +1,268 @@
+/* Collapsible month calendar.
+   Geometry contract (px): handle(2..22) | collapsed labels top 24 | title 34 |
+   labels 20 | row 48. The sheet always renders the full 6-week grid; collapsed
+   it slides up by (selectedRow * 48 + title + sheetTop) so the selected week
+   lands under the pinned weekday labels, exactly like the reference demo.
+   The anchor only reserves the collapsed strip height; the expanding box is
+   absolutely positioned on top so the list below never shifts. */
+.anchor {
+  --row-h: 48px;
+  --title-h: 34px;
+  --labels-h: 20px;
+  --sheet-top: 22px;
+  --collapsed-labels-top: 24px;
+  --pre-grid: calc(var(--title-h) + var(--collapsed-labels-top) + var(--labels-h));
+  position: relative;
+  height: calc(var(--collapsed-labels-top) + var(--labels-h) + var(--row-h) + 8px);
+}
+.box {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  overflow: hidden;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  height: calc(var(--collapsed-labels-top) + var(--labels-h) + var(--row-h) + 8px);
+  transition:
+    height 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.45s ease;
+}
+.box.open {
+  height: calc(var(--sheet-top) + var(--pre-grid) + 6 * var(--row-h) + 8px);
+  box-shadow: 0 18px 40px rgb(28 25 23 / 14%);
+}
+
+/* Collapsed top mask: hides the month header and the week above the selected
+   row while the sheet is slid up; the weekday labels sit on it. Fades out as
+   the box expands so the month header scrolls into view. */
+.topMask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: calc(var(--collapsed-labels-top) + var(--labels-h));
+  background: var(--card);
+  z-index: 1;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.box.open .topMask {
+  opacity: 0;
+}
+
+/* 小粗横杠把手：悬浮变金色提示可展开/收起 */
+.handle {
+  position: absolute;
+  top: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  cursor: pointer;
+}
+.handle::after {
+  content: "";
+  width: 32px;
+  height: 4px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--muted-foreground) 45%, transparent);
+  transition: background 0.15s ease;
+}
+.handle:hover::after {
+  background: var(--brand-gold);
+}
+
+.sheet {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: var(--sheet-top);
+  transform: translateY(
+    calc((var(--shift) * var(--row-h) + var(--title-h) + var(--sheet-top)) * -1)
+  );
+  transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.box.open .sheet {
+  transform: translateY(0);
+}
+
+.monthHeader {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  height: var(--title-h);
+}
+.monthTitle {
+  justify-self: center;
+  padding: 4px 12px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--foreground);
+  font-family: var(--font-serif);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease;
+}
+.monthTitle:hover {
+  color: var(--brand-gold);
+  background: var(--secondary);
+}
+.monthArrow {
+  justify-self: start;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  color: var(--muted-foreground);
+  background: transparent;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+.monthArrow:last-of-type {
+  justify-self: end;
+}
+.monthArrow:hover {
+  color: var(--foreground);
+  background: var(--secondary);
+}
+.monthArrow:active {
+  color: var(--on-gold);
+  background: var(--brand-gold);
+}
+
+.spacer {
+  height: calc(var(--pre-grid) - var(--title-h));
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+.day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+  height: var(--row-h);
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+.dayNum {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: var(--foreground);
+  font-family: var(--font-serif);
+  font-size: 14.5px;
+  font-weight: 500;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.day:hover .dayNum {
+  background: var(--secondary);
+}
+/* 选中日悬浮保持金底（略加深），避免 hover 的浅底 + 白字看不清 */
+.day.selected:hover .dayNum {
+  background: color-mix(in srgb, var(--brand-gold) 86%, black);
+}
+.adjacent .dayNum {
+  color: var(--muted-foreground);
+  font-weight: 500;
+}
+.today {
+  color: var(--brand-gold);
+  box-shadow: inset 0 0 0 1.5px var(--brand-gold);
+}
+.selected .dayNum {
+  background: var(--brand-gold);
+  color: var(--on-gold);
+  font-weight: 600;
+}
+.selected .dayNum.today {
+  box-shadow: none;
+}
+
+.dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: transparent;
+}
+.hasTodo {
+  background: var(--brand-gold);
+}
+.adjacentDot {
+  opacity: 0.45;
+}
+
+.weekdays {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: var(--collapsed-labels-top);
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  height: var(--labels-h);
+  align-items: center;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  background: var(--card);
+  transition: top 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 2;
+}
+.weekdaysOpen {
+  top: calc(var(--sheet-top) + var(--title-h) + 4px);
+}
+.weekdays span {
+  text-align: center;
+}
+
+@media (max-width: 600px) {
+  .anchor {
+    --row-h: 44px;
+    --sheet-top: 20px;
+  }
+  .dayNum {
+    width: 30px;
+    height: 30px;
+    font-size: 13.5px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .box,
+  .sheet,
+  .weekdays {
+    transition: none;
+  }
+}

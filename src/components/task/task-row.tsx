@@ -1,14 +1,15 @@
 "use client";
 import { useI18n } from "@/features/preferences/preferences-provider";
-import { isDemoToday } from "@/lib/date-utils";
+import { getTodayKey } from "@/lib/date-utils";
 
-import { HiCheck, HiClock, HiLockClosed, HiLockOpen } from "react-icons/hi2";
+import { HiCheck, HiClock } from "react-icons/hi2";
 import { motion } from "framer-motion";
 import type { Task } from "@/types/task";
 import { cn } from "@/lib/utils";
 import taskStyles from "./task-row.module.css";
 import workspaceStyles from "@/styles/workspace.module.css";
 import { SubtaskPopover } from "./subtask-popover";
+import { TaskLockButton } from "./task-lock-button";
 
 type Props = {
   task: Task;
@@ -20,6 +21,8 @@ type Props = {
   variant?: "default" | "inbox";
   /** 刚捕获的条目播放一次高亮动画 */
   highlight?: boolean;
+  /** Today 仅显示时刻；分组页显示全天；跨日期清单显示完整日期和时刻。 */
+  whenMode?: "contextual" | "time" | "detailed";
 };
 export function TaskRow({
   task,
@@ -29,17 +32,23 @@ export function TaskRow({
   onUnlock,
   variant = "default",
   highlight = false,
+  whenMode = "contextual",
 }: Props) {
   const { t, date: formatDate } = useI18n();
   const isInbox = variant === "inbox";
   const hasSubtasks = task.subtasks.length > 0;
   const hasMeta = task.priority === 1 || task.tags.length > 0 || hasSubtasks;
-  const isToday = task.date && isDemoToday(task.date);
+  const isToday = task.date === getTodayKey();
   const when = !task.date
     ? t("Any")
     : isToday
       ? task.time || t("Any")
       : formatDate(task.date, { month: "numeric", day: "numeric" });
+  const detailedDate = task.date
+    ? `${formatDate(task.date, { year: "numeric", month: "short", day: "numeric" })} · ${formatDate(task.date, { weekday: "short" })}`
+    : t("No due date");
+  const detailedTime = task.date ? task.time || t("All day") : undefined;
+  const groupTime = task.time || t("All day");
   // 「随时」没有时间锚点，时间槽用弱化样式与真实时间区分
   const isAnytime = when === t("Any");
   return (
@@ -57,9 +66,27 @@ export function TaskRow({
         task.frozen && taskStyles.frozen,
       )}
     >
-      {!isInbox && !task.frozen && (
-        <span className={cn(taskStyles.time, isAnytime && taskStyles.timeAny)}>{when}</span>
-      )}
+      {!isInbox &&
+        (!task.frozen || whenMode === "detailed") &&
+        (whenMode === "detailed" ? (
+          <span className={taskStyles.schedule}>
+            <span className={taskStyles.scheduleDate}>{detailedDate}</span>
+            {detailedTime && (
+              <span className={taskStyles.scheduleTime}>
+                <HiClock size={11} aria-hidden="true" /> {detailedTime}
+              </span>
+            )}
+          </span>
+        ) : (
+          <span
+            className={cn(
+              taskStyles.time,
+              (whenMode === "time" ? !task.time : isAnytime) && taskStyles.timeAny,
+            )}
+          >
+            {whenMode === "time" ? groupTime : when}
+          </span>
+        ))}
       <button
         type="button"
         role="checkbox"
@@ -97,23 +124,7 @@ export function TaskRow({
           </div>
         )}
       </div>
-      {task.frozen && onUnlock && (
-        <button
-          type="button"
-          className={taskStyles.commitmentButton}
-          aria-label={t("解除今日必做")}
-          title={t("解除今日必做")}
-          onClick={(event) => {
-            event.stopPropagation();
-            onUnlock();
-          }}
-        >
-          <span className={taskStyles.commitmentIcons} aria-hidden="true">
-            <HiLockClosed size={17} className={taskStyles.lockedIcon} />
-            <HiLockOpen size={17} className={taskStyles.unlockedIcon} />
-          </span>
-        </button>
-      )}
+      {task.frozen && onUnlock && <TaskLockButton onUnlock={onUnlock} />}
     </motion.div>
   );
 }

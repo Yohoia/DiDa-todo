@@ -11,9 +11,11 @@ import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { ReminderBell } from "@/components/ui/reminder-bell";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Stepper } from "@/components/ui/stepper";
+import { Select } from "@/components/ui/select";
+import { TaskLockButton } from "@/components/task/task-lock-button";
 import { useWorkspace } from "./workspace-provider";
 import type { Task, TaskList } from "@/types/task";
-import { cn } from "@/lib/utils";
+import { cn, createId } from "@/lib/utils";
 import shared from "@/styles/workspace.module.css";
 import styles from "./task-detail.module.css";
 
@@ -74,6 +76,11 @@ function TaskEditor({ task }: { task: Task }) {
     updateTask(task.id, { tags: task.tags.filter((item) => item !== tag) });
   return (
     <>
+      {task.frozen && (
+        <div className={styles.stateActions}>
+          <TaskLockButton onUnlock={() => updateTask(task.id, { frozen: false })} />
+        </div>
+      )}
       <label className="sr-only" htmlFor="detail-title">
         {t("任务标题")}
       </label>
@@ -129,24 +136,24 @@ function TaskEditor({ task }: { task: Task }) {
             ]}
           />
         </div>
-        <label className={styles.property}>
-          {t("List")}{" "}
-          <select
+        <div className={styles.property}>
+          <span>{t("List")}</span>
+          <Select
+            ariaLabel={t("List")}
             value={task.list}
-            onChange={(event) =>
+            onValueChange={(value) =>
               updateTask(task.id, {
-                list: event.target.value as TaskList,
-                inWorkList: event.target.value === "Work",
+                list: value,
+                inWorkList: value === "Work",
               })
             }
-          >
-            {["Inbox", "Work", "Study", "Life"].map((value) => (
-              <option key={value} value={value}>
-                {label(value)}
-              </option>
-            ))}
-          </select>
-        </label>
+            align="end"
+            options={(["Inbox", "Work", "Study", "Life"] as TaskList[]).map((value) => ({
+              value,
+              label: label(value),
+            }))}
+          />
+        </div>
         <div className={styles.property}>
           {t("Tags")}{" "}
           <div
@@ -272,7 +279,7 @@ function TaskEditor({ task }: { task: Task }) {
                   updateTask(task.id, {
                     subtasks: [
                       ...task.subtasks,
-                      { id: crypto.randomUUID(), title: subtask.trim(), completed: false },
+                      { id: createId(), title: subtask.trim(), completed: false },
                     ],
                   });
                   setSubtask("");

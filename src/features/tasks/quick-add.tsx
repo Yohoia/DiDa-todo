@@ -7,6 +7,7 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { Select } from "@/components/ui/select";
 import { workspaceLinks } from "@/components/layout/workspace-nav";
 import { useWorkspace } from "./workspace-provider";
 import type { TaskList } from "@/types/task";
@@ -113,20 +114,18 @@ function QuickAddForm({
       ) : (
         <>
           <div className={styles.row}>
-            <label className={styles.muted}>
-              {t("List")}{" "}
-              <select
+            <div className={styles.selectGroup}>
+              <span className={styles.selectLabel}>{t("List")}</span>
+              <Select
                 value={list}
-                onChange={(event) => setList(event.target.value as TaskList)}
-                className={styles.select}
-              >
-                {["Inbox", "Work", "Study", "Life"].map((value) => (
-                  <option key={value} value={value}>
-                    {label(value)}
-                  </option>
-                ))}
-              </select>
-            </label>
+                onValueChange={setList}
+                ariaLabel={t("List")}
+                options={(["Inbox", "Work", "Study", "Life"] as TaskList[]).map((value) => ({
+                  value,
+                  label: label(value),
+                }))}
+              />
+            </div>
             <label className={styles.muted}>
               {t("Date")}{" "}
               <input
@@ -137,7 +136,7 @@ function QuickAddForm({
                   setDate(event.target.value);
                   if (!event.target.value) setTime("");
                 }}
-                className={styles.select}
+                className={styles.fieldInput}
               />
             </label>
             <label className={styles.muted}>
@@ -148,7 +147,7 @@ function QuickAddForm({
                 value={time}
                 disabled={!date}
                 onChange={(event) => setTime(event.target.value)}
-                className={styles.select}
+                className={styles.fieldInput}
               />
             </label>
           </div>

@@ -1,0 +1,125 @@
+.trigger {
+  display: inline-flex;
+  min-width: 148px;
+  max-width: 100%;
+  min-height: 38px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--card);
+  color: var(--foreground);
+  font-size: 13px;
+  text-align: left;
+  box-shadow: 0 1px 0 rgb(0 0 0 / 2%);
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background-color 0.18s ease;
+}
+.trigger:hover {
+  border-color: color-mix(in srgb, var(--foreground) 35%, var(--border));
+  background: color-mix(in srgb, var(--card) 92%, var(--secondary));
+}
+.trigger[data-state="open"] {
+  border-color: var(--brand-gold);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand-gold) 12%, transparent);
+}
+.trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chevron {
+  flex: none;
+  color: var(--muted-foreground);
+  transition: transform 0.18s ease;
+}
+.trigger[data-state="open"] .chevron {
+  color: var(--brand-gold);
+  transform: rotate(180deg);
+}
+.content {
+  z-index: 320;
+  width: max-content;
+  min-width: var(--radix-popover-trigger-width);
+  max-width: min(320px, calc(100vw - 24px));
+  padding: 5px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: 0 14px 38px rgb(28 25 23 / 10%);
+  transform-origin: var(--radix-popover-content-transform-origin);
+  animation: selectIn 0.16s ease-out;
+}
+.option {
+  width: 100%;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 9px;
+  border-radius: 4px;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 1.3;
+  text-align: left;
+  cursor: default;
+}
+.option:hover,
+.option:focus-visible {
+  outline: none;
+  background: var(--secondary);
+  color: var(--foreground);
+}
+.option[aria-selected="true"] {
+  color: var(--foreground);
+  font-weight: 500;
+}
+.option:disabled {
+  opacity: 0.4;
+}
+.optionCopy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.description {
+  color: var(--muted-foreground);
+  font-size: 11px;
+  font-weight: 400;
+}
+.check {
+  flex: none;
+  color: var(--brand-gold);
+  opacity: 0;
+}
+.check[data-visible="true"] {
+  opacity: 1;
+}
+@keyframes selectIn {
+  from {
+    opacity: 0;
+    transform: translateY(-3px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@media (max-width: 600px) {
+  .trigger,
+  .option {
+    font-size: 16px;
+  }
+}

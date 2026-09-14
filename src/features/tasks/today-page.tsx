@@ -7,8 +7,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { SectionLabel, EmptyState } from "@/components/shared/workspace-ui";
 import { TaskRow } from "@/components/task/task-row";
 import { SubtaskPopover } from "@/components/task/subtask-popover";
+import { useTodayKey } from "@/hooks/use-today-key";
 import { useWorkspace } from "./workspace-provider";
-import { DEMO_TODAY } from "./demo-data";
 import { cn } from "@/lib/utils";
 import type { Task } from "@/types/task";
 import shared from "@/styles/workspace.module.css";
@@ -25,11 +25,12 @@ export function TodayPage() {
   const { t, date: formatDate } = useI18n();
   const { tasks, preferences, selectTask, toggleTask, toggleSubtask, startFocus, updateTask } =
     useWorkspace();
-  const today = tasks.filter((task) => task.date === DEMO_TODAY);
+  const todayKey = useTodayKey();
+  const today = tasks.filter((task) => task.date === todayKey);
   const active = today.filter((task) => !task.completed);
   const featured = today.find((task) => task.featured && !task.completed);
-  const now = new Date();
-  const todayLine = `${now.getFullYear()} / ${now.getMonth() + 1} / ${now.getDate()} ${formatDate(now, { weekday: "long" })}`;
+  const [year, month, day] = todayKey.split("-").map(Number);
+  const todayLine = `${year} / ${month} / ${day} ${formatDate(todayKey, { weekday: "long" })}`;
   const timelineTasks = today.filter((task) => !task.frozen && !task.featured);
   const timedTasks = timelineTasks
     .filter((task) => task.time)
@@ -68,7 +69,7 @@ export function TodayPage() {
       onOpen={() => selectTask(task.id)}
       onToggle={() => toggleTask(task.id)}
       onToggleSubtask={(subtaskId) => toggleSubtask(task.id, subtaskId)}
-      onUnlock={task.frozen ? () => updateTask(task.id, { frozen: false }) : undefined}
+      onUnlock={() => updateTask(task.id, { frozen: false })}
     />
   );
   return (

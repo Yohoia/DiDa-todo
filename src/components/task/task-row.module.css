@@ -92,7 +92,28 @@
   color: var(--task-muted);
   font-weight: 400;
 }
-.frozen .content,
+.schedule {
+  width: 132px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.scheduleDate {
+  color: var(--foreground);
+  font-size: 11px;
+  font-weight: 500;
+}
+.scheduleTime {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted-foreground);
+  font-size: 10px;
+}
 .frozen .checkButton {
   opacity: 0.7;
 }
@@ -137,56 +158,14 @@
 .inboxRowNew {
   animation: inboxCapture 1.4s ease-out;
 }
-.commitmentButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  flex: none;
-  color: var(--task-muted);
-  border-radius: 4px;
-  transition:
-    color 0.2s,
-    background-color 0.2s;
-}
-.commitmentButton:hover,
-.commitmentButton:focus-visible {
-  color: var(--brand-gold);
-  background: var(--task-accent-light);
-}
-.commitmentIcons {
-  position: relative;
-  width: 17px;
-  height: 17px;
-}
-.commitmentIcons > svg {
-  position: absolute;
-  inset: 0;
-  transition:
-    opacity 0.18s ease,
-    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.lockedIcon {
-  opacity: 1;
-  transform: rotate(0deg) scale(1);
-}
-.unlockedIcon {
-  opacity: 0;
-  transform: translateY(2px) rotate(-12deg) scale(0.65);
-}
-.commitmentButton:hover .lockedIcon,
-.commitmentButton:focus-visible .lockedIcon {
-  opacity: 0;
-  transform: translateY(-2px) rotate(12deg) scale(0.65);
-}
-.commitmentButton:hover .unlockedIcon,
-.commitmentButton:focus-visible .unlockedIcon {
-  opacity: 1;
-  transform: translateY(0) rotate(0deg) scale(1);
-}
 @media (max-width: 600px) {
   .row {
     gap: 12px;
+  }
+  .schedule {
+    width: 104px;
+  }
+  .scheduleDate {
+    font-size: 10px;
   }
 }

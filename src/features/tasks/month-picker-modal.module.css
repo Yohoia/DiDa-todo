@@ -1,0 +1,120 @@
+.dialog {
+  width: 320px;
+  max-width: calc(100vw - 32px);
+  display: block;
+  gap: 0;
+  padding: 20px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.srTitle {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+/* 头部已有「取消 / 确定」，隐藏 DialogContent 内置的右上角关闭按钮避免与「确定」重叠 */
+.hidden {
+  display: none;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.cancel,
+.confirm {
+  border: none;
+  background: none;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cancel {
+  padding: 6px 8px;
+  margin-left: -8px;
+  border-radius: 6px;
+  color: var(--muted-foreground);
+  transition: color 0.15s ease;
+}
+.cancel:hover {
+  color: var(--foreground);
+}
+.confirm {
+  padding: 7px 16px;
+  border-radius: 6px;
+  background: var(--brand-gold);
+  color: var(--on-gold);
+  transition: filter 0.15s ease;
+}
+.confirm:hover {
+  filter: brightness(1.05);
+}
+
+.captions {
+  display: flex;
+  justify-content: center;
+  column-gap: 28px;
+}
+.captionYear,
+.captionMonth {
+  font-size: 10px;
+  color: var(--muted-foreground);
+  text-align: center;
+}
+.captionYear {
+  width: 96px;
+}
+.captionMonth {
+  width: 72px;
+}
+
+.wheelGrid {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+.wheel {
+  align-items: center;
+  column-gap: 28px;
+}
+/* react-mobile-picker draws its own hairline overlay; the gold band replaces it. */
+.wheel > :last-child {
+  display: none;
+}
+.item {
+  display: block;
+  width: 100%;
+  text-align: center;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+}
+.itemSelected {
+  color: var(--foreground);
+  font-weight: 600;
+}
+.highlight {
+  position: absolute;
+  /* Columns total 96 + 28 gap + 72 = 196px; inset the band to hug them. */
+  left: 50%;
+  width: 204px;
+  transform: translateX(-50%);
+  top: 50%;
+  height: 36px;
+  margin-top: -18px;
+  border-top: 1px solid color-mix(in srgb, var(--brand-gold) 40%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--brand-gold) 40%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--brand-gold) 8%, transparent);
+  pointer-events: none;
+}

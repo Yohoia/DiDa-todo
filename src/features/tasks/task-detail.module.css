@@ -31,6 +31,17 @@
   text-transform: uppercase;
   letter-spacing: 1px;
 }
+.stateActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-height: 32px;
+  margin-bottom: -12px;
+}
+.stateActions > button {
+  margin-left: 0;
+}
 .title {
   font-family: var(--font-serif);
   font-size: 1.5rem;
@@ -142,8 +153,7 @@
   font-size: 13px;
   color: var(--muted-foreground);
 }
-.property input,
-.property select {
+.property input {
   color: var(--foreground);
   max-width: 65%;
   text-align: right;
@@ -453,7 +463,6 @@
     font-size: 20px;
   }
   .property input,
-  .property select,
   .subtask input:not([type="checkbox"]),
   .description {
     font-size: 16px;

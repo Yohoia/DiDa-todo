@@ -186,7 +186,6 @@
 }
 
 @layer base {
-  select,
   textarea {
     font: inherit;
     color: inherit;
@@ -199,10 +198,6 @@
   textarea::placeholder {
     color: var(--task-muted);
     opacity: 1;
-  }
-  select option {
-    background: var(--card);
-    color: var(--foreground);
   }
   :lang(zh-CN) {
     text-wrap: pretty;

@@ -11,8 +11,7 @@ import styles from "./workspace-nav.module.css";
 export const workspaceLinks = [
   { href: "/today", label: "Today", description: "今日计划" },
   { href: "/inbox", label: "Inbox", description: "收集想法" },
-  { href: "/upcoming", label: "Upcoming", description: "即将到来" },
-  { href: "/calendar", label: "Calendar", description: "日历视图" },
+  { href: "/schedule", label: "Schedule", description: "按日期查看待办" },
   { href: "/list-detail", label: "Work & Projects", description: "工作清单" },
   { href: "/completed", label: "Archive", description: "已完成任务" },
   { href: "/insight", label: "Insights", description: "效率统计" },
@@ -28,10 +27,10 @@ export function WorkspaceNav() {
     { href: "/today", label: "今日待办", Icon: HiClock, active: pathname === "/today" },
     { href: "/inbox", label: "Inbox", Icon: HiInbox, active: pathname === "/inbox" },
     {
-      href: "/calendar",
+      href: "/schedule",
       label: "日程安排",
       Icon: HiCalendar,
-      active: ["/calendar", "/upcoming"].includes(pathname),
+      active: pathname === "/schedule",
     },
     {
       href: "/profile",

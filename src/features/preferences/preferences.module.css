@@ -50,25 +50,12 @@
   background: var(--muted);
   color: var(--foreground);
 }
-.select {
+.languageSelect {
   min-height: 36px;
   max-width: 180px;
-  background: var(--card);
-  color: var(--foreground);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 6px 10px;
-  font-size: 13px;
-}
-.select option {
-  background: var(--card);
-  color: var(--foreground);
 }
 @media (max-width: 600px) {
   .controls {
     gap: 0;
-  }
-  .select {
-    font-size: 16px;
   }
 }
