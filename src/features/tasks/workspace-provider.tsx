@@ -4,6 +4,7 @@ import type { MessageValues } from "@/i18n/translate";
 
 import { createContext, useContext, useState, type ReactNode } from "react";
 import type { Task, TaskList } from "@/types/task";
+import type { VoiceCaptureState } from "@/types/voice";
 import { createId } from "@/lib/utils";
 import { initialTasks } from "./demo-data";
 
@@ -16,7 +17,7 @@ type Preferences = {
   reminders: boolean;
 };
 type Notice = { key: MessageKey; values?: MessageValues };
-export type QuickAddPreset = { list: TaskList; date?: string; time?: string };
+export type QuickAddPreset = { list: TaskList; date?: string; time?: string; title?: string };
 
 type WorkspaceState = {
   tasks: Task[];
@@ -29,9 +30,9 @@ type WorkspaceState = {
   selectTask: (id: string | null) => void;
   quickAdd: QuickAddPreset | null;
   setQuickAdd: (preset: TaskList | QuickAddPreset | null) => void;
-  /** 语音速记：悬浮在导航栏上方的听写条，说完自动落入指定清单。 */
-  voiceCapture: QuickAddPreset | null;
-  setVoiceCapture: (preset: QuickAddPreset | null) => void;
+  /** 语音速记：导航栏变形为听写胶囊，录音→识别→确认卡三阶段。 */
+  voiceCapture: VoiceCaptureState | null;
+  setVoiceCapture: (state: VoiceCaptureState | null) => void;
   searchOpen: boolean;
   setSearchOpen: (open: boolean) => void;
   focusId: string | null;
@@ -48,7 +49,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [tasks, setTasks] = useState(initialTasks);
   const [selectedId, selectTask] = useState<string | null>(null);
   const [quickAdd, updateQuickAdd] = useState<QuickAddPreset | null>(null);
-  const [voiceCapture, updateVoiceCapture] = useState<QuickAddPreset | null>(null);
+  const [voiceCapture, updateVoiceCapture] = useState<VoiceCaptureState | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [focusId, setFocusId] = useState<string | null>(null);
   const [notice, notify] = useState<Notice | null>(null);

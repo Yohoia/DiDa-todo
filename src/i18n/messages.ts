@@ -420,6 +420,10 @@ export const messages = {
     "zh-CN": "解锁任务",
     en: "Unlock task",
   },
+  "Lock task": {
+    "zh-CN": "锁定任务",
+    en: "Lock task",
+  },
   任务状态: {
     "zh-CN": "任务状态",
     en: "Task status",
@@ -643,6 +647,54 @@ export const messages = {
   语音输入不可用: {
     "zh-CN": "当前浏览器不支持语音",
     en: "Not supported in this browser",
+  },
+  "正在识别…": {
+    "zh-CN": "正在识别…",
+    en: "Recognizing…",
+  },
+  "已识别，按回车添加": {
+    "zh-CN": "已识别，按回车添加",
+    en: "Recognized — press Enter to add",
+  },
+  语音服务未配置: {
+    "zh-CN": "语音服务未配置，请在 .env.local 填入 API Key",
+    en: "Voice service not configured — add an API key to .env.local",
+  },
+  "识别失败，请重试": {
+    "zh-CN": "识别失败，请重试",
+    en: "Recognition failed — please try again",
+  },
+  "尝试太频繁，请稍后再试": {
+    "zh-CN": "尝试太频繁，请稍后再试",
+    en: "Too many attempts — please wait a moment",
+  },
+  "没有听清，请再试一次": {
+    "zh-CN": "没有听清，请再试一次",
+    en: "Didn't catch that — please try again",
+  },
+  确认语音待办: {
+    "zh-CN": "确认语音待办",
+    en: "Confirm voice task",
+  },
+  这句话不太像待办: {
+    "zh-CN": "这句话不太像待办",
+    en: "That doesn't sound like a task",
+  },
+  丢弃: {
+    "zh-CN": "丢弃",
+    en: "Discard",
+  },
+  编辑: {
+    "zh-CN": "编辑",
+    en: "Edit",
+  },
+  添加: {
+    "zh-CN": "添加",
+    en: "Add",
+  },
+  知道了: {
+    "zh-CN": "知道了",
+    en: "Got it",
   },
   未检测到麦克风: {
     "zh-CN": "未检测到麦克风，请检查设备与系统权限",

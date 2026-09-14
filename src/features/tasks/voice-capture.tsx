@@ -6,159 +6,263 @@ import { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { HiCheck, HiXMark } from "react-icons/hi2";
 import { cn } from "@/lib/utils";
+import { MAX_RECORD_SECONDS, WavRecorder } from "@/lib/audio/wav-recorder";
+import { getDemoDate } from "@/lib/date-utils";
 import { useWorkspace } from "./workspace-provider";
+import { parseTranscript, transcribeAudio } from "./voice-api";
+import type { VoiceCaptureState, VoiceParsed } from "@/types/voice";
 import styles from "./voice-capture.module.css";
 
-/** 浏览器 Web Speech API 的最小结构（TS lib 未内置）。 */
-type SpeechRecognitionLike = {
-  lang: string;
-  interimResults: boolean;
-  continuous: boolean;
-  onresult: ((event: SpeechRecognitionResultLike) => void) | null;
-  onend: (() => void) | null;
-  onerror: ((event: { error?: string }) => void) | null;
-  start: () => void;
-  stop: () => void;
-};
-type SpeechRecognitionResultLike = {
-  resultIndex: number;
-  results: { length: number; [index: number]: { [index: number]: { transcript: string } } };
-};
-
-export function getRecognitionCtor(): (new () => SpeechRecognitionLike) | null {
-  if (typeof window === "undefined") return null;
-  const scope = window as unknown as {
-    SpeechRecognition?: new () => SpeechRecognitionLike;
-    webkitSpeechRecognition?: new () => SpeechRecognitionLike;
-  };
-  return scope.SpeechRecognition ?? scope.webkitSpeechRecognition ?? null;
-}
-
-/** 演示模式（URL 带 ?voice-demo）：跳过设备检测与真实识别，仅预览听写胶囊样式。 */
+/** 演示模式（URL 带 ?voice-demo）：跳过设备检测与真实录音，用固定语料预览完整流程。 */
 export function isVoiceDemo(): boolean {
   return (
     typeof window !== "undefined" && new URLSearchParams(window.location.search).has("voice-demo")
   );
 }
 
+const DEMO_TRANSCRIPT = "明天下午三点提醒我交房租";
+
 /**
- * 语音听写引擎：底部导航栏变形为听写胶囊时启动识别；说完（onend）或点 ✓
- * 自动把识别文本落库，点 × 丢弃。收尾动作返回给胶囊上的按钮。
+ * 语音待办流程：录音（WavRecorder）→ 上传转写 → LLM 解析 → 确认卡。
+ * busyRef 挡住按钮/键盘/60s 定时器的重复提交；收尾动作返回给胶囊上的按钮。
  */
-export function useVoiceRecognition() {
+export function useVoiceCapture() {
   const { locale } = useI18n();
-  const { voiceCapture: preset, setVoiceCapture, addTask, notify } = useWorkspace();
-  const transcriptRef = useRef("");
-  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
-  const doneRef = useRef(false);
+  const { voiceCapture, setVoiceCapture, addTask, setQuickAdd, notify } = useWorkspace();
+  const recorderRef = useRef<WavRecorder | null>(null);
+  const busyRef = useRef(false);
+  const startingRef = useRef(false);
+  const flowRef = useRef(0);
+  const requestRef = useRef<AbortController | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!preset) return;
-    transcriptRef.current = "";
-    doneRef.current = false;
-    // 演示模式：不接识别引擎，胶囊仅作样式预览（× 可关、✓ 无内容时仅收起）
-    if (isVoiceDemo()) return;
-    const Recognition = getRecognitionCtor();
-    if (!Recognition) {
-      // 浏览器不支持语音：提示后直接收起，不留悬挂的听写胶囊
-      notify({ key: "语音输入不可用" });
-      setVoiceCapture(null);
-      return;
-    }
-    const recognition = new Recognition();
-    recognition.lang = locale === "zh-CN" ? "zh-CN" : "en-US";
-    recognition.interimResults = true;
-    recognition.continuous = false;
-    recognition.onresult = (event) => {
-      let text = "";
-      for (let index = 0; index < event.results.length; index++) {
-        text += event.results[index][0].transcript;
-      }
-      transcriptRef.current = text.trim();
-    };
-    recognition.onend = () => finish();
-    recognition.onerror = (event) => {
-      // 权限/设备类错误给出明确提示；no-speech/aborted 等静默收起
-      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-        notify({ key: "无法访问麦克风" });
-      } else if (event.error === "audio-capture") {
-        notify({ key: "未检测到麦克风" });
-      }
-      setVoiceCapture(null);
-    };
-    recognitionRef.current = recognition;
-    recognition.start();
     return () => {
-      recognition.onend = null;
-      recognition.onerror = null;
-      recognitionRef.current = null;
-      recognition.stop();
+      if (timerRef.current) clearTimeout(timerRef.current);
+      flowRef.current += 1;
+      requestRef.current?.abort();
+      recorderRef.current?.abort();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- preset 与 locale 变化即重启识别，挂载期语义
-  }, [preset]);
+  }, []);
 
-  /** 说完（或点确认）：有内容就自动落库，然后收回导航栏；doneRef 挡住双路径重复入库 */
-  function finish() {
-    if (doneRef.current) return;
-    doneRef.current = true;
-    if (preset && transcriptRef.current) {
-      addTask(transcriptRef.current, preset.list, preset.date, preset.time || undefined);
+  // 录满 60s 自动走确认，与服务端时长上限对齐
+  useEffect(() => {
+    if (voiceCapture?.phase !== "recording" || isVoiceDemo()) return;
+    timerRef.current = setTimeout(() => void confirmVoice(), MAX_RECORD_SECONDS * 1000);
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 只随录音态起停定时器
+  }, [voiceCapture?.phase]);
+
+  /** 麦克风点击入口：prewarm 必须在手势同步段（iOS AudioContext 限制），其余放异步。 */
+  function startVoice() {
+    if (voiceCapture || startingRef.current || busyRef.current) return;
+    const flow = ++flowRef.current;
+    startingRef.current = true;
+    recorderRef.current ??= new WavRecorder();
+    // demo 模式不采集音频，跳过 prewarm 以免白开一个 AudioContext 悬挂着
+    if (!isVoiceDemo()) recorderRef.current.prewarm();
+    setVoiceCapture({ phase: "recording", list: "Inbox", transcript: "", parsed: null });
+    void beginCapture(flow);
+  }
+
+  async function beginCapture(flow: number) {
+    try {
+      if (!isVoiceDemo() && navigator.mediaDevices?.enumerateDevices) {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        if (flow !== flowRef.current) return;
+        if (!devices.some((device) => device.kind === "audioinput")) {
+          notify({ key: "未检测到麦克风" });
+          recorderRef.current?.abort();
+          setVoiceCapture(null);
+          return;
+        }
+      }
+      if (isVoiceDemo()) return;
+      const started = await recorderRef.current?.start();
+      if (flow !== flowRef.current) return;
+      if (!started) {
+        recorderRef.current?.abort();
+        setVoiceCapture(null);
+      }
+    } catch {
+      if (flow !== flowRef.current) return;
+      notify({ key: "无法访问麦克风" });
+      recorderRef.current?.abort();
+      setVoiceCapture(null);
+    } finally {
+      if (flow === flowRef.current) startingRef.current = false;
     }
-    setVoiceCapture(null);
   }
-  function confirmVoice() {
-    // 摘掉 onend 再手动收尾，避免 stop() 触发的 onend 与按钮路径重复入库
-    if (recognitionRef.current) recognitionRef.current.onend = null;
-    finish();
+
+  /** ✓：停录 → 上传转写 → 解析 → confirming；转写失败是唯一致命路径（无文本可确认）。 */
+  async function confirmVoice() {
+    const state = voiceCapture;
+    if (busyRef.current || !state || state.phase !== "recording") return;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    const flow = flowRef.current;
+    const controller = new AbortController();
+    requestRef.current?.abort();
+    requestRef.current = controller;
+    busyRef.current = true;
+    setVoiceCapture({ ...state, phase: "thinking" });
+
+    let transcript = "";
+    let parsed: VoiceParsed | null = null;
+    if (isVoiceDemo()) {
+      await new Promise((resolve) => setTimeout(resolve, 900));
+      if (flow !== flowRef.current) return;
+      transcript = DEMO_TRANSCRIPT;
+      parsed = {
+        isTodo: true,
+        title: "交房租",
+        list: "Life",
+        date: getDemoDate(1),
+        time: "15:00",
+        reason: "",
+      };
+    } else {
+      let blob: Blob | null = null;
+      try {
+        blob = (await recorderRef.current?.stop()) ?? null;
+      } catch {
+        blob = null;
+      }
+      if (!blob) {
+        // 过短或采集失败：没有可用音频，直接收回
+        notify({ key: "没有听清，请再试一次" });
+        requestRef.current = null;
+        setVoiceCapture(null);
+        busyRef.current = false;
+        return;
+      }
+      try {
+        transcript = await transcribeAudio(blob, locale, controller.signal);
+      } catch (error) {
+        if (controller.signal.aborted || flow !== flowRef.current) return;
+        const code = error instanceof Error ? error.message : "";
+        notify({
+          key:
+            code === "not_configured"
+              ? "语音服务未配置"
+              : code === "rate_limited"
+                ? "尝试太频繁，请稍后再试"
+                : "识别失败，请重试",
+        });
+        requestRef.current = null;
+        setVoiceCapture(null);
+        busyRef.current = false;
+        return;
+      }
+      if (flow !== flowRef.current) return;
+      if (!transcript) {
+        notify({ key: "没有听清，请再试一次" });
+        requestRef.current = null;
+        setVoiceCapture(null);
+        busyRef.current = false;
+        return;
+      }
+      // 解析失败（网络/未配置/超时）降级：原文 + 兜底清单进确认卡，仍可编辑
+      try {
+        parsed = await parseTranscript(transcript, locale, controller.signal);
+      } catch {
+        if (controller.signal.aborted || flow !== flowRef.current) return;
+        parsed = null;
+      }
+      if (flow !== flowRef.current) return;
+      parsed ??= {
+        isTodo: true,
+        title: transcript,
+        list: state.list,
+        date: null,
+        time: null,
+        reason: "",
+        degraded: true,
+      };
+    }
+    setVoiceCapture({ ...state, phase: "confirming", transcript, parsed });
+    busyRef.current = false;
+    requestRef.current = null;
   }
+
+  /** × / Esc：丢弃录音或确认卡，释放设备并收回导航栏。 */
   function cancelVoice() {
-    if (recognitionRef.current) recognitionRef.current.onend = null;
-    doneRef.current = true;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    flowRef.current += 1;
+    requestRef.current?.abort();
+    requestRef.current = null;
+    busyRef.current = false;
+    startingRef.current = false;
+    recorderRef.current?.abort();
     setVoiceCapture(null);
   }
 
-  return { confirmVoice, cancelVoice };
+  function addConfirmed() {
+    const state = voiceCapture;
+    if (!state?.parsed?.isTodo) return;
+    addTask(
+      state.parsed.title ?? state.transcript,
+      state.parsed.list ?? state.list,
+      state.parsed.date ?? "",
+      state.parsed.time ?? undefined,
+    );
+    setVoiceCapture(null);
+  }
+
+  function editConfirmed() {
+    const state = voiceCapture;
+    if (!state) return;
+    const parsed = state.parsed;
+    setQuickAdd({
+      list: parsed?.list ?? state.list,
+      date: parsed?.date ?? undefined,
+      time: parsed?.time ?? undefined,
+      title: parsed?.title ?? state.transcript,
+    });
+    setVoiceCapture(null);
+  }
+
+  return { startVoice, confirmVoice, cancelVoice, addConfirmed, editConfirmed };
 }
 
 /** 13 根白色圆头竖条：静态高度呈中间高两侧低的纺锤形（参考 Typeless），动画叠加轻微伸缩 */
 const BAR_HEIGHTS = [10, 14, 18, 22, 26, 29, 31, 29, 26, 22, 18, 14, 10];
 
-/** 听写胶囊内容：左 × 取消 / 中声纹 / 右 ✓ 完成。常驻挂载，由 active 切换显隐、焦点与键盘操作；
-    挂载后回报一次自然内容尺寸，供导航栏做真实宽高动画的目标值。 */
+/** 听写胶囊内容：左 × 取消 / 中间随阶段切换（声纹→思考点→转写文本）/ 右 ✓ 主操作。
+    常驻挂载、绝对定位不占流，每阶段渲染后回报自然尺寸，供导航栏做真实宽高动画。 */
 export function VoiceCaptureBar({
-  active,
-  onConfirm,
+  state,
+  onPrimary,
   onCancel,
   onMeasure,
 }: {
-  active: boolean;
-  onConfirm: () => void;
+  state: VoiceCaptureState | null;
+  onPrimary: () => void;
   onCancel: () => void;
   onMeasure: (width: number, height: number) => void;
 }) {
   const { t } = useI18n();
   const barRef = useRef<HTMLDivElement>(null);
-  const measuredRef = useRef(false);
+  const active = state !== null;
+  const phase = state?.phase ?? "recording";
 
   useEffect(() => {
-    // 进入语音态把焦点收到胶囊上：Esc 取消 / Enter 确认可纯键盘操作
+    // 进入语音态把焦点收到胶囊上：Esc 取消 / Enter 主操作可纯键盘完成
     if (active) barRef.current?.focus();
   }, [active]);
 
   useEffect(() => {
     const el = barRef.current;
-    if (el && !measuredRef.current) {
-      measuredRef.current = true;
-      onMeasure(el.offsetWidth, el.offsetHeight);
-    }
-  }, [onMeasure]);
+    if (el && active) onMeasure(el.offsetWidth, el.offsetHeight);
+  }, [active, phase, state?.transcript, onMeasure]);
 
   return (
     <motion.div
       ref={barRef}
       className={cn(styles.bar, !active && styles.idle)}
       role={active ? "status" : undefined}
-      aria-label={active ? t("正在聆听…") : undefined}
+      aria-label={active ? t(ariaKeyFor(phase)) : undefined}
       inert={!active}
       tabIndex={-1}
       initial={false}
@@ -184,30 +288,47 @@ export function VoiceCaptureBar({
           onCancel();
         } else if (event.key === "Enter" && event.target === event.currentTarget) {
           event.preventDefault();
-          onConfirm();
+          if (phase !== "thinking") onPrimary();
         }
       }}
     >
       <button type="button" className={styles.side} aria-label={t("取消")} onClick={onCancel}>
         <HiXMark size={15} aria-hidden="true" />
       </button>
-      <span className={styles.waves} aria-hidden="true">
-        {BAR_HEIGHTS.map((height, index) => (
-          <i
-            key={index}
-            className={styles.wave}
-            style={{ height: `${height}px`, animationDelay: `${Math.abs(index - 6) * 0.08}s` }}
-          />
-        ))}
-      </span>
+      {phase === "recording" && (
+        <span className={styles.waves} aria-hidden="true">
+          {BAR_HEIGHTS.map((height, index) => (
+            <i
+              key={index}
+              className={styles.wave}
+              style={{ height: `${height}px`, animationDelay: `${Math.abs(index - 6) * 0.08}s` }}
+            />
+          ))}
+        </span>
+      )}
+      {phase === "thinking" && (
+        <span className={styles.dots} aria-hidden="true">
+          <i className={styles.dot} />
+          <i className={styles.dot} />
+          <i className={styles.dot} />
+        </span>
+      )}
+      {phase === "confirming" && state && <p className={styles.script}>{state.transcript}</p>}
       <button
         type="button"
-        className={styles.side}
+        className={cn(styles.side, styles.confirm)}
         aria-label={t("完成语音输入")}
-        onClick={onConfirm}
+        disabled={phase === "thinking"}
+        onClick={onPrimary}
       >
         <HiCheck size={15} aria-hidden="true" />
       </button>
     </motion.div>
   );
+}
+
+function ariaKeyFor(phase: VoiceCaptureState["phase"]) {
+  if (phase === "recording") return "正在聆听…";
+  if (phase === "thinking") return "正在识别…";
+  return "已识别，按回车添加";
 }

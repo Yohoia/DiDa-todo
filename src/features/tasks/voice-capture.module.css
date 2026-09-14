@@ -1,21 +1,21 @@
 /* 语音听写胶囊（参考 Typeless 终稿）：由底部导航栏整体变形承载——
-   导航容器负责纯黑胶囊底与弹簧形变，本组件只负责内容布局：
-   两端深灰圆钮（左 × 取消 / 右 ✓ 完成）+ 中间白色圆头声纹条纺锤分布。 */
+   导航容器负责纯黑胶囊底与形变，本组件只负责内容布局：
+   两端深灰圆钮（左 × 取消 / 右 ✓ 主操作）+ 中间随阶段切换的内容。 */
 
+/* 常驻绝对定位 + max-content：无论 dock 当前行内宽多少，测量值都是自然内容宽，
+   与 framer 的 transform 通过独立 translate 属性叠加互不覆盖 */
 .bar {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  width: max-content;
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-/* 隐藏态：脱离文档流并双向居中。CSS translate 属性独立于 framer-motion
-   写入的 transform，二者叠加互不覆盖 */
-.idle {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  translate: -50% -50%;
-}
+/* 隐藏态：仅停掉声纹动画（定位保留，尺寸可测） */
 .idle .wave {
   animation-play-state: paused;
 }
@@ -38,6 +38,10 @@
 }
 .side:hover {
   filter: brightness(1.3);
+}
+.side:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 /* 声纹：13 根白色圆头细条，静态高度纺锤分布 + 轻微伸缩动画 */
@@ -63,8 +67,55 @@
   }
 }
 
+/* 思考中：三颗白点交替脉动（识别 + 解析在 UI 上合并为一个阶段） */
+.dots {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 4px;
+}
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ffffff;
+  animation: dot 1s ease-in-out infinite;
+}
+.dot:nth-child(2) {
+  animation-delay: 0.18s;
+}
+.dot:nth-child(3) {
+  animation-delay: 0.36s;
+}
+@keyframes dot {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* 已识别：转写文本单行截断，宽度钳制让胶囊保持紧凑 */
+.script {
+  margin: 0;
+  max-width: min(44vw, 200px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgb(255 255 255 / 92%);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .wave {
+    animation-duration: 2.4s;
+  }
+  .dot {
     animation-duration: 2.4s;
   }
 }

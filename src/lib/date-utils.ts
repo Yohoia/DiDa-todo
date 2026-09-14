@@ -80,8 +80,8 @@ export function isDemoToday(date: string): boolean {
  * A task becomes overdue after its due day has passed and it is still incomplete.
  * Undated tasks are never considered overdue.
  */
-export function isDemoOverdue(date: string, completed: boolean): boolean {
-  return Boolean(date) && date < DEMO_ANCHOR && !completed;
+export function isOverdue(date: string, completed: boolean): boolean {
+  return Boolean(date) && date < getTodayKey() && !completed;
 }
 
 /**

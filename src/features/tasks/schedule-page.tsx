@@ -24,8 +24,13 @@ export function SchedulePage() {
   const [filter, setFilter] = useState<string>("All");
 
   const datesWithTodos = useMemo(
-    () => new Set(tasks.filter((task) => task.date).map((task) => task.date)),
-    [tasks],
+    () =>
+      new Set(
+        tasks
+          .filter((task) => task.date && (filter === "All" || task.list === filter))
+          .map((task) => task.date),
+      ),
+    [filter, tasks],
   );
   const dayTasks = tasks
     .filter((task) => task.date === selected && (filter === "All" || task.list === filter))

@@ -7,7 +7,8 @@ import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { motion, type Variants } from "framer-motion";
 import { HiCalendar, HiClock, HiInbox, HiMicrophone, HiUser } from "react-icons/hi2";
 import { useWorkspace } from "@/features/tasks/workspace-provider";
-import { VoiceCaptureBar, isVoiceDemo, useVoiceRecognition } from "@/features/tasks/voice-capture";
+import { VoiceCaptureBar, useVoiceCapture } from "@/features/tasks/voice-capture";
+import { VoiceConfirmCard } from "@/features/tasks/voice-confirm-card";
 import { cn } from "@/lib/utils";
 import styles from "./workspace-nav.module.css";
 
@@ -61,10 +62,11 @@ const DOCK_CHROME_Y = 22;
 export function WorkspaceNav() {
   const { t, label: translateLabel } = useI18n();
   const pathname = usePathname();
-  const { setVoiceCapture, notify, tasks, voiceCapture } = useWorkspace();
-  const { confirmVoice, cancelVoice } = useVoiceRecognition();
+  const { tasks, voiceCapture } = useWorkspace();
+  const { startVoice, confirmVoice, cancelVoice, addConfirmed, editConfirmed } = useVoiceCapture();
   const navRef = useRef<HTMLElement>(null);
   const rowRef = useRef<HTMLDivElement>(null);
+  const capsuleMode = voiceCapture !== null;
   const [capsuleSize, setCapsuleSize] = useState<{ w: number; h: number } | null>(null);
   const measureCapsule = useCallback(
     (w: number, h: number) => setCapsuleSize({ w: w + DOCK_CHROME, h: h + DOCK_CHROME_Y }),
@@ -86,19 +88,8 @@ export function WorkspaceNav() {
         : row.offsetWidth + DOCK_CHROME;
     const h = row.offsetHeight + DOCK_CHROME_Y;
     setNavSize((prev) => (prev?.w === w && prev?.h === h ? prev : { w, h }));
-  }, [voiceCapture]);
-  const size = voiceCapture ? capsuleSize : navSize;
-  /** 无麦克风（宿主无系统权限时会枚举为空）时直接提示，不变身听写胶囊；?voice-demo 跳过检测用于样式预览 */
-  async function startVoice() {
-    if (!isVoiceDemo() && navigator.mediaDevices?.enumerateDevices) {
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      if (!devices.some((device) => device.kind === "audioinput")) {
-        notify({ key: "未检测到麦克风" });
-        return;
-      }
-    }
-    setVoiceCapture({ list: "Inbox" });
-  }
+  }, [capsuleMode]);
+  const size = capsuleMode ? capsuleSize : navSize;
   const items = [
     { href: "/today", label: "今日待办", Icon: HiClock, active: pathname === "/today" },
     { href: "/inbox", label: "Inbox", Icon: HiInbox, active: pathname === "/inbox" },
@@ -180,11 +171,19 @@ export function WorkspaceNav() {
         ))}
       </motion.div>
       <VoiceCaptureBar
-        active={Boolean(voiceCapture)}
-        onConfirm={confirmVoice}
+        state={voiceCapture}
+        onPrimary={voiceCapture?.phase === "confirming" ? addConfirmed : confirmVoice}
         onCancel={cancelVoice}
         onMeasure={measureCapsule}
       />
+      {voiceCapture?.phase === "confirming" && (
+        <VoiceConfirmCard
+          state={voiceCapture}
+          onDiscard={cancelVoice}
+          onEdit={editConfirmed}
+          onAdd={addConfirmed}
+        />
+      )}
     </motion.nav>
   );
 }

@@ -5,7 +5,7 @@ import { useDialogFocus } from "@/hooks/use-dialog-focus";
 
 import { useRef, useState } from "react";
 import { AnimatePresence, Reorder, motion, useDragControls } from "framer-motion";
-import { HiBars3, HiChevronDown, HiPlus, HiTrash, HiXMark } from "react-icons/hi2";
+import { HiBars3, HiChevronDown, HiLockClosed, HiPlus, HiTrash, HiXMark } from "react-icons/hi2";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { ReminderBell } from "@/components/ui/reminder-bell";
@@ -76,11 +76,20 @@ function TaskEditor({ task }: { task: Task }) {
     updateTask(task.id, { tags: task.tags.filter((item) => item !== tag) });
   return (
     <>
-      {task.frozen && (
-        <div className={styles.stateActions}>
+      <div className={styles.stateActions}>
+        {task.frozen ? (
           <TaskLockButton onUnlock={() => updateTask(task.id, { frozen: false })} />
-        </div>
-      )}
+        ) : (
+          <button
+            type="button"
+            className={styles.lockAction}
+            onClick={() => updateTask(task.id, { frozen: true })}
+          >
+            <HiLockClosed size={14} aria-hidden="true" />
+            {t("Lock task")}
+          </button>
+        )}
+      </div>
       <label className="sr-only" htmlFor="detail-title">
         {t("任务标题")}
       </label>

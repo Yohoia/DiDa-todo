@@ -121,6 +121,32 @@
   font-weight: 400;
   color: var(--muted-foreground);
 }
+.statuses {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+}
+/* 已过期印章：细红描边矩形 + 倾角 + 宽字距，像盖在行右上角的章；
+   绝对定位不占行内布局，pointer-events 关掉避免挡住下层点击 */
+.overdue {
+  position: absolute;
+  top: 5px;
+  right: 2px;
+  rotate: -8deg;
+  padding: 2px 8px;
+  border: 1px solid color-mix(in srgb, var(--destructive) 58%, transparent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--destructive) 4%, transparent);
+  color: var(--destructive);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  line-height: 1.5;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 1;
+}
 /* 收件箱变体：无时间锚点的「草稿/便签」样式，一眼区分未整理项 */
 .inboxRow {
   height: auto;

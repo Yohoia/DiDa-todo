@@ -42,6 +42,27 @@
 .stateActions > button {
   margin-left: 0;
 }
+.lockAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 5px 9px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  transition:
+    border-color 0.2s,
+    color 0.2s,
+    background-color 0.2s;
+}
+.lockAction:hover,
+.lockAction:focus-visible {
+  border-color: color-mix(in srgb, var(--brand-gold) 55%, var(--border));
+  background: var(--task-accent-light);
+  color: var(--brand-gold);
+}
 .title {
   font-family: var(--font-serif);
   font-size: 1.5rem;

@@ -38,10 +38,11 @@ export function QuickAdd() {
         <DialogDescription>{t("记录一个想法，或者输入 / 跳转到其他页面。")}</DialogDescription>
         {quickAdd && (
           <QuickAddForm
-            key={`${quickAdd.list}-${quickAdd.date ?? ""}-${quickAdd.time ?? ""}-${pathname}`}
+            key={`${quickAdd.list}-${quickAdd.date ?? ""}-${quickAdd.time ?? ""}-${quickAdd.title ?? ""}-${pathname}`}
             initialList={quickAdd.list}
             initialDate={quickAdd.date}
             initialTime={quickAdd.time}
+            initialTitle={quickAdd.title}
           />
         )}
       </DialogContent>
@@ -53,15 +54,17 @@ function QuickAddForm({
   initialList,
   initialDate = "",
   initialTime,
+  initialTitle = "",
 }: {
   initialList: TaskList;
   initialDate?: string;
   initialTime?: string;
+  initialTitle?: string;
 }) {
   const { t, label } = useI18n();
   const { addTask, setQuickAdd } = useWorkspace();
   const router = useRouter();
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(initialTitle);
   // 预设的清单/日期/时间不再铺开成表单，静默生效：从日程页进入时任务直接落在选中日
   const [created, setCreated] = useState(false);
 
