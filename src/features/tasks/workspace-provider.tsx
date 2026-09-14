@@ -29,6 +29,9 @@ type WorkspaceState = {
   selectTask: (id: string | null) => void;
   quickAdd: QuickAddPreset | null;
   setQuickAdd: (preset: TaskList | QuickAddPreset | null) => void;
+  /** 语音速记：悬浮在导航栏上方的听写条，说完自动落入指定清单。 */
+  voiceCapture: QuickAddPreset | null;
+  setVoiceCapture: (preset: QuickAddPreset | null) => void;
   searchOpen: boolean;
   setSearchOpen: (open: boolean) => void;
   focusId: string | null;
@@ -45,6 +48,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [tasks, setTasks] = useState(initialTasks);
   const [selectedId, selectTask] = useState<string | null>(null);
   const [quickAdd, updateQuickAdd] = useState<QuickAddPreset | null>(null);
+  const [voiceCapture, updateVoiceCapture] = useState<QuickAddPreset | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [focusId, setFocusId] = useState<string | null>(null);
   const [notice, notify] = useState<Notice | null>(null);
@@ -179,6 +183,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         quickAdd,
         setQuickAdd: (preset) =>
           updateQuickAdd(typeof preset === "string" ? { list: preset } : preset),
+        voiceCapture,
+        setVoiceCapture: updateVoiceCapture,
         searchOpen,
         setSearchOpen,
         focusId,

@@ -1,0 +1,81 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* 标题：衬线大字 + 聚焦时金线从中缝向两侧展开 */
+.titleBox {
+  position: relative;
+}
+.title {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid var(--separator);
+  background: none;
+  padding: 4px 2px 10px;
+  font-family: var(--font-serif);
+  font-size: 19px;
+  color: var(--foreground);
+}
+.title::placeholder {
+  color: var(--muted-foreground);
+  opacity: 0.55;
+}
+.title:focus {
+  outline: none;
+}
+.titleLine {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--brand-gold);
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.titleBox:focus-within .titleLine {
+  transform: scaleX(1);
+}
+
+/* 提交按钮：常态复用 shared.primary（由 TSX 切换），成功态整组换成自有样式，
+   避免与 .primary 的 background 声明层叠竞争。 */
+.submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 44px;
+  padding: 14px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.submitDone {
+  background: var(--brand-gold);
+  border-color: var(--brand-gold);
+  opacity: 1;
+  animation: pop 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes pop {
+  0% {
+    transform: scale(0.94);
+  }
+  55% {
+    transform: scale(1.03);
+  }
+  100% {
+    transform: scale(1);
+  }
+}

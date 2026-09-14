@@ -1,0 +1,70 @@
+/* 语音听写胶囊（参考 Typeless 终稿）：由底部导航栏整体变形承载——
+   导航容器负责纯黑胶囊底与弹簧形变，本组件只负责内容布局：
+   两端深灰圆钮（左 × 取消 / 右 ✓ 完成）+ 中间白色圆头声纹条纺锤分布。 */
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* 隐藏态：脱离文档流并双向居中。CSS translate 属性独立于 framer-motion
+   写入的 transform，二者叠加互不覆盖 */
+.idle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+}
+.idle .wave {
+  animation-play-state: paused;
+}
+
+/* 两端操作圆钮 */
+.side {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: #3a3a3c;
+  color: #ffffff;
+  cursor: pointer;
+  flex: none;
+  transition: filter 0.15s ease;
+}
+.side:hover {
+  filter: brightness(1.3);
+}
+
+/* 声纹：13 根白色圆头细条，静态高度纺锤分布 + 轻微伸缩动画 */
+.waves {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.wave {
+  width: 3px;
+  border-radius: 999px;
+  background: #ffffff;
+  transform-origin: center;
+  animation: wave 0.9s ease-in-out infinite;
+}
+@keyframes wave {
+  0%,
+  100% {
+    transform: scaleY(0.55);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wave {
+    animation-duration: 2.4s;
+  }
+}

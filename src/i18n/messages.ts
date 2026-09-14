@@ -612,6 +612,46 @@ export const messages = {
     "zh-CN": "创建任务",
     en: "Create Task",
   },
+  已创建: {
+    "zh-CN": "已创建",
+    en: "Created",
+  },
+  下周一: {
+    "zh-CN": "下周一",
+    en: "Next Monday",
+  },
+  清除日期: {
+    "zh-CN": "再次点击可清除日期",
+    en: "Click again to clear the date",
+  },
+  语音输入: {
+    "zh-CN": "语音输入",
+    en: "Voice input",
+  },
+  "正在聆听…": {
+    "zh-CN": "正在聆听…",
+    en: "Listening…",
+  },
+  完成语音输入: {
+    "zh-CN": "完成语音输入",
+    en: "Finish voice input",
+  },
+  点击取消语音输入: {
+    "zh-CN": "点击取消语音输入",
+    en: "Click to cancel voice input",
+  },
+  语音输入不可用: {
+    "zh-CN": "当前浏览器不支持语音",
+    en: "Not supported in this browser",
+  },
+  未检测到麦克风: {
+    "zh-CN": "未检测到麦克风，请检查设备与系统权限",
+    en: "No microphone detected — check the device and system permission",
+  },
+  无法访问麦克风: {
+    "zh-CN": "无法访问麦克风，请在系统设置中允许",
+    en: "Microphone blocked — allow access in System Settings",
+  },
   "Enter to create · Esc to close · / to navigate": {
     "zh-CN": "Enter 创建 · Esc 关闭 · / 跳转页面",
     en: "Enter to create · Esc to close · / to navigate",
@@ -863,14 +903,6 @@ export const messages = {
   工作台导航: {
     "zh-CN": "工作台导航",
     en: "Workspace navigation",
-  },
-  快速添加任务: {
-    "zh-CN": "快速添加任务",
-    en: "Quick add task",
-  },
-  "快速添加 · ⌘K / Ctrl+K": {
-    "zh-CN": "快速添加 · ⌘K / Ctrl+K",
-    en: "Quick add · ⌘K / Ctrl+K",
   },
   "DiDa-todo 首页": {
     "zh-CN": "DiDa-todo 首页",

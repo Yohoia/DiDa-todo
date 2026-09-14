@@ -32,6 +32,17 @@ export function parseDateKey(key: string): { year: number; month: number; day: n
   return { year, month: month - 1, day };
 }
 
+/** Next Monday strictly after the given day, as YYYY-MM-DD. */
+export function nextMondayKey(from: string): string {
+  const { year, month, day } = parseDateKey(from);
+  const date = new Date(year, month, day);
+  const weekday = (date.getDay() + 6) % 7; // 0 = Monday
+  date.setDate(date.getDate() + ((7 - weekday) % 7 || 7));
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+    date.getDate(),
+  ).padStart(2, "0")}`;
+}
+
 /** Demo seed data follows the real app-local day instead of a hard-coded date. */
 export const DEMO_ANCHOR = getTodayKey();
 

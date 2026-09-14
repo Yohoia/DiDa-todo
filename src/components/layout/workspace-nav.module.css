@@ -1,21 +1,57 @@
 .dock {
   position: fixed;
   bottom: max(30px, env(safe-area-inset-bottom));
-  left: 50%;
-  transform: translateX(-50%);
+  /* 居中不用 transform（会被 framer-motion 的 layout 形变覆盖），改由左右锚定 + margin auto */
+  left: 0;
+  right: 0;
+  margin-inline: auto;
+  width: max-content;
+  display: flex;
+  align-items: center;
   background: color-mix(in srgb, var(--card) 90%, transparent);
   backdrop-filter: blur(20px);
   border: 1px solid var(--border);
   padding: 10px 16px;
   border-radius: 100px;
+  box-shadow: 0 10px 40px rgb(0 0 0 / 6%);
+  z-index: 100;
+  /* 宽高由 framer 做真实数值动画；语音态胶囊内容作为唯一流内子元素需居中 */
+  justify-content: center;
+  transition:
+    background-color 0.5s cubic-bezier(0.32, 0.72, 0, 1),
+    border-color 0.5s cubic-bezier(0.32, 0.72, 0, 1),
+    box-shadow 0.5s cubic-bezier(0.32, 0.72, 0, 1);
+}
+/* 语音态：整条导航栏变形为纯黑听写胶囊（宽度由胶囊内容撑开，交给 layout 弹簧动画） */
+.voiceDock {
+  background: #141414;
+  border-color: transparent;
+  box-shadow: 0 14px 34px rgb(0 0 0 / 22%);
+}
+.row {
   display: flex;
   align-items: center;
   gap: 13px;
-  box-shadow: 0 10px 40px rgb(0 0 0 / 6%);
-  z-index: 100;
+  /* 回弹早期 dock 尚窄，行内容不参与压缩，避免图标被挤变形 */
+  flex: none;
 }
+/* 语音态下原导航内容悬到胶囊中心错落淡出。居中用 CSS translate 属性——
+   它与 framer-motion 写入的 transform 相互独立、可叠加，且比容器宽也不会
+   退化成左锚（inset+margin:auto 在过约束时失效，会让图标被收缩边缘拖着跑） */
+.floating {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max-content;
+  height: max-content;
+  translate: -50% -50%;
+}
+/* slot 是参与 stagger 动画的最小单元（麦克风与其右侧图标同组），
+   内部间距与 row gap 保持一致，视觉节奏不变 */
 .slot {
-  display: contents;
+  display: flex;
+  align-items: center;
+  gap: 13px;
 }
 .item {
   display: flex;
@@ -77,7 +113,7 @@
 }
 .add:hover {
   background: var(--brand-gold);
-  transform: rotate(90deg);
+  transform: scale(1.06);
 }
 .dot {
   position: absolute;
@@ -92,8 +128,12 @@
   .dock {
     width: calc(100% - 40px);
     max-width: 380px;
-    justify-content: space-between;
     bottom: max(20px, env(safe-area-inset-bottom));
+  }
+  /* 图标间距改由 row 内部均匀分布（slot 分组后不再是 dock 直接子元素） */
+  .row {
+    width: 100%;
+    justify-content: space-between;
   }
   .item {
     width: 40px;

@@ -6,12 +6,15 @@ import { useDialogFocus } from "@/hooks/use-dialog-focus";
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+import { HiCheck } from "react-icons/hi2";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import { Select } from "@/components/ui/select";
 import { workspaceLinks } from "@/components/layout/workspace-nav";
 import { useWorkspace } from "./workspace-provider";
 import type { TaskList } from "@/types/task";
-import styles from "@/styles/workspace.module.css";
+import { cn } from "@/lib/utils";
+import shared from "@/styles/workspace.module.css";
+import styles from "./quick-add.module.css";
 
 export function QuickAdd() {
   const { t } = useI18n();
@@ -27,9 +30,9 @@ export function QuickAdd() {
     >
       <DialogContent
         {...focusReturn}
-        className={styles.dialog}
-        overlayClassName={styles.overlay}
-        closeButtonClassName={styles.close}
+        className={shared.dialog}
+        overlayClassName={shared.overlay}
+        closeButtonClassName={shared.close}
       >
         <DialogTitle>{t("Quick Add")}</DialogTitle>
         <DialogDescription>{t("记录一个想法，或者输入 / 跳转到其他页面。")}</DialogDescription>
@@ -45,6 +48,7 @@ export function QuickAdd() {
     </Dialog>
   );
 }
+
 function QuickAddForm({
   initialList,
   initialDate = "",
@@ -58,12 +62,19 @@ function QuickAddForm({
   const { addTask, setQuickAdd } = useWorkspace();
   const router = useRouter();
   const [title, setTitle] = useState("");
-  const [list, setList] = useState(initialList);
-  const [date, setDate] = useState(initialDate);
-  const [time, setTime] = useState(initialTime ?? "");
+  // 预设的清单/日期/时间不再铺开成表单，静默生效：从日程页进入时任务直接落在选中日
+  const [created, setCreated] = useState(false);
+
+  const commands = title.startsWith("/");
+  const matchingLinks = workspaceLinks.filter((link) =>
+    `${link.label} ${link.description} ${label(link.label)} ${label(link.description)}`
+      .toLowerCase()
+      .includes(title.slice(1).toLowerCase()),
+  );
+
   function submit(event: FormEvent) {
     event.preventDefault();
-    if (!title.trim()) return;
+    if (!title.trim() || created) return;
     if (commands) {
       if (matchingLinks[0]) {
         router.push(matchingLinks[0].href);
@@ -71,29 +82,28 @@ function QuickAddForm({
       }
       return;
     }
-    addTask(title, list, date, time || undefined);
-    setQuickAdd(null);
+    addTask(title, initialList, initialDate, initialTime || undefined);
+    setCreated(true);
+    setTimeout(() => setQuickAdd(null), 560);
   }
-  const commands = title.startsWith("/");
-  const matchingLinks = workspaceLinks.filter((link) =>
-    `${link.label} ${link.description} ${label(link.label)} ${label(link.description)}`
-      .toLowerCase()
-      .includes(title.slice(1).toLowerCase()),
-  );
+
   return (
-    <form onSubmit={submit} className="flex flex-col gap-4">
-      <label className="sr-only" htmlFor="quick-task-title">
-        {t("任务标题或页面名称")}
-      </label>
-      <input
-        id="quick-task-title"
-        className="w-full border-b border-border py-3 text-base"
-        placeholder={t("What needs to be done?")}
-        maxLength={200}
-        value={title}
-        onChange={(event) => setTitle(event.target.value)}
-        autoFocus
-      />
+    <form onSubmit={submit} className={styles.form}>
+      <div className={styles.titleBox}>
+        <label className="sr-only" htmlFor="quick-task-title">
+          {t("任务标题或页面名称")}
+        </label>
+        <input
+          id="quick-task-title"
+          className={styles.title}
+          placeholder={t("What needs to be done?")}
+          maxLength={200}
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+          autoFocus
+        />
+        <i className={styles.titleLine} aria-hidden="true" />
+      </div>
       {commands ? (
         <nav
           aria-label={t("快捷页面导航")}
@@ -101,7 +111,7 @@ function QuickAddForm({
         >
           {matchingLinks.map((link) => (
             <Link
-              className={styles.button}
+              className={shared.button}
               href={link.href}
               key={link.href}
               onClick={() => setQuickAdd(null)}
@@ -109,54 +119,25 @@ function QuickAddForm({
               {label(link.label)}
             </Link>
           ))}
-          {!matchingLinks.length && <p className={styles.muted}>{t("No matching pages")}</p>}
+          {!matchingLinks.length && <p className={shared.muted}>{t("No matching pages")}</p>}
         </nav>
       ) : (
-        <>
-          <div className={styles.row}>
-            <div className={styles.selectGroup}>
-              <span className={styles.selectLabel}>{t("List")}</span>
-              <Select
-                value={list}
-                onValueChange={setList}
-                ariaLabel={t("List")}
-                options={(["Inbox", "Work", "Study", "Life"] as TaskList[]).map((value) => ({
-                  value,
-                  label: label(value),
-                }))}
-              />
-            </div>
-            <label className={styles.muted}>
-              {t("Date")}{" "}
-              <input
-                aria-label={t("任务日期")}
-                type="date"
-                value={date}
-                onChange={(event) => {
-                  setDate(event.target.value);
-                  if (!event.target.value) setTime("");
-                }}
-                className={styles.fieldInput}
-              />
-            </label>
-            <label className={styles.muted}>
-              {t("Time")}{" "}
-              <input
-                aria-label={t("任务时间")}
-                type="time"
-                value={time}
-                disabled={!date}
-                onChange={(event) => setTime(event.target.value)}
-                className={styles.fieldInput}
-              />
-            </label>
-          </div>
-          <button type="submit" className={styles.primary} disabled={!title.trim()}>
-            {t("Create Task")}
-          </button>
-        </>
+        <motion.button
+          type="submit"
+          className={cn(styles.submit, !created && shared.primary, created && styles.submitDone)}
+          disabled={!title.trim() || created}
+          whileTap={created ? undefined : { scale: 0.98 }}
+        >
+          {created ? (
+            <>
+              <HiCheck size={15} aria-hidden="true" /> {t("已创建")}
+            </>
+          ) : (
+            t("Create Task")
+          )}
+        </motion.button>
       )}
-      <p className={styles.muted}>{t("Enter to create · Esc to close · / to navigate")}</p>
+      <p className={shared.muted}>{t("Enter to create · Esc to close · / to navigate")}</p>
     </form>
   );
 }
