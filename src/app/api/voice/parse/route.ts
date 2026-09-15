@@ -185,9 +185,8 @@ function degrade(transcript: string): VoiceParsed[] {
 }
 
 export async function POST(request: Request) {
-  const rejected = guardVoiceRequest(request, {
+  const rejected = await guardVoiceRequest(request, {
     scope: "parse",
-    limit: 16,
     maxBodyBytes: 4 * 1024,
   });
   if (rejected) return rejected;

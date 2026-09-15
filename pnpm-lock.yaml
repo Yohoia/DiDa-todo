@@ -53,6 +53,9 @@ importers:
       react-mobile-picker:
         specifier: 1.2.0
         version: 1.2.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      react-nice-avatar:
+        specifier: 1.5.0
+        version: 1.5.0(react@19.2.8)
       tailwind-merge:
         specifier: ^3.6.0
         version: 3.6.0
@@ -151,6 +154,10 @@ packages:
     resolution: {integrity: sha512-E8lTAYNB1KW+FH+VGJuZM1ioAx2E6oVlvQFRrf5P8ZZmsiJXYAD9vTFV7yyEURNzgh1dFqMZuO6tUwcARbqFCA==}
     engines: {node: '>=6.0.0'}
     hasBin: true
+
+  '@babel/runtime@7.29.7':
+    resolution: {integrity: sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw==}
+    engines: {node: '>=6.9.0'}
 
   '@babel/template@7.29.7':
     resolution: {integrity: sha512-puq+Gf35oI24FeN11LkoUQFqv9uwNeWpxXZi/Ji3rRIoKAzKnxRaZ+Gkj0vKS9ZCiTESfng1N9LyOyXvo+m+Gg==}
@@ -1162,6 +1169,9 @@ packages:
     resolution: {integrity: sha512-N9oWFcegS0sFr9oh1oz2d7Npos6vNoWW9HvtCg5N1KRFpUhaAhvTv5Y58g880fZaEYSNm3qDz8SU1UrGvp+n7A==}
     engines: {node: '>=10'}
 
+  chroma-js@2.6.0:
+    resolution: {integrity: sha512-BLHvCB9s8Z1EV4ethr6xnkl/P2YRFOGqfgvuMG/MyCbZPrTA+NeiByY6XvgF0zP4/2deU2CXnWyMa3zu1LqQ3A==}
+
   client-only@0.0.1:
     resolution: {integrity: sha512-IV3Ou0jSMzZrd3pZ48nLkT9DA7Ag1pnPzaiQhpW7c3RbcqqzvzzVu+L8gfqMp/8IM2MQtSiqaCxrrcfu8I8rMA==}
 
@@ -2144,6 +2154,11 @@ packages:
       react: ^18 || ^19
       react-dom: ^18 || ^19
 
+  react-nice-avatar@1.5.0:
+    resolution: {integrity: sha512-sGusqbgWIA4Il6Y0zHEfs4XF+a06etNljhwFYiHIGATDmVVf53Nez7U7GY5EwEz5/xGuUhs6uel5AC5NN/2UPg==}
+    peerDependencies:
+      react: '>=16.0.0'
+
   react-remove-scroll-bar@2.3.8:
     resolution: {integrity: sha512-9r+yi9+mgU33AKcj6IbT9oRCO78WriSj6t/cF8DWBZJ9aOGPOTEDvdUDz1FwKim7QXWwmHqtdHnRJfhAxEG46Q==}
     engines: {node: '>=10'}
@@ -2593,6 +2608,8 @@ snapshots:
   '@babel/parser@7.29.8':
     dependencies:
       '@babel/types': 7.29.8
+
+  '@babel/runtime@7.29.7': {}
 
   '@babel/template@7.29.7':
     dependencies:
@@ -3563,6 +3580,8 @@ snapshots:
     dependencies:
       ansi-styles: 4.1.0
       supports-color: 7.1.0
+
+  chroma-js@2.6.0: {}
 
   client-only@0.0.1: {}
 
@@ -4670,6 +4689,13 @@ snapshots:
     dependencies:
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
+
+  react-nice-avatar@1.5.0(react@19.2.8):
+    dependencies:
+      '@babel/runtime': 7.29.7
+      chroma-js: 2.6.0
+      prop-types: 15.8.1
+      react: 19.2.8
 
   react-remove-scroll-bar@2.3.8(@types/react@19.2.18)(react@19.2.8):
     dependencies:

@@ -61,6 +61,41 @@ type PreferencesRow = {
   reminders: boolean;
 };
 
+const READ_PAGE_SIZE = 500;
+
+async function loadAllTaskRows(client: SupabaseClient): Promise<TaskRow[]> {
+  const rows: TaskRow[] = [];
+  for (let from = 0; ; from += READ_PAGE_SIZE) {
+    const { data, error } = await client
+      .from("tasks")
+      .select("*")
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, from + READ_PAGE_SIZE - 1);
+    if (error) throw new Error(error.message);
+    const page = (data ?? []) as TaskRow[];
+    rows.push(...page);
+    if (page.length < READ_PAGE_SIZE) return rows;
+  }
+}
+
+async function loadAllSubtaskRows(client: SupabaseClient): Promise<SubtaskRow[]> {
+  const rows: SubtaskRow[] = [];
+  for (let from = 0; ; from += READ_PAGE_SIZE) {
+    const { data, error } = await client
+      .from("subtasks")
+      .select("id, task_id, title, completed, position")
+      .order("task_id", { ascending: true })
+      .order("position", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, from + READ_PAGE_SIZE - 1);
+    if (error) throw new Error(error.message);
+    const page = (data ?? []) as SubtaskRow[];
+    rows.push(...page);
+    if (page.length < READ_PAGE_SIZE) return rows;
+  }
+}
+
 function rowToTask(row: TaskRow, subtasks: SubtaskRow[]): Task {
   const date = row.date ?? "";
   const time = row.time ? row.time.slice(0, 5) : undefined;
@@ -172,25 +207,18 @@ export type Repository = {
 export function createRepository(client: SupabaseClient, userId: string): Repository {
   const repository: Repository = {
     async loadTasks() {
-      const [tasksResult, subtasksResult] = await Promise.all([
-        client.from("tasks").select("*").order("created_at", { ascending: true }),
-        client
-          .from("subtasks")
-          .select("id, task_id, title, completed, position")
-          .order("position", { ascending: true }),
+      const [taskRows, subtaskRows] = await Promise.all([
+        loadAllTaskRows(client),
+        loadAllSubtaskRows(client),
       ]);
-      if (tasksResult.error) throw new Error(tasksResult.error.message);
-      if (subtasksResult.error) throw new Error(subtasksResult.error.message);
 
       const grouped = new Map<string, SubtaskRow[]>();
-      for (const row of (subtasksResult.data ?? []) as SubtaskRow[]) {
+      for (const row of subtaskRows) {
         const list = grouped.get(row.task_id) ?? [];
         list.push(row);
         grouped.set(row.task_id, list);
       }
-      return ((tasksResult.data ?? []) as TaskRow[]).map((row) =>
-        rowToTask(row, grouped.get(row.id) ?? []),
-      );
+      return taskRows.map((row) => rowToTask(row, grouped.get(row.id) ?? []));
     },
 
     async createTask(task) {

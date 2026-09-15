@@ -660,6 +660,10 @@ export const messages = {
     "zh-CN": "语音服务未配置，请在 .env.local 填入 API Key",
     en: "Voice service not configured — add an API key to .env.local",
   },
+  请先登录后再使用语音输入: {
+    "zh-CN": "请先登录后再使用语音输入",
+    en: "Sign in to use voice input",
+  },
   "识别失败，请重试": {
     "zh-CN": "识别失败，请重试",
     en: "Recognition failed — please try again",
@@ -1733,6 +1737,22 @@ export const messages = {
   隐藏密码: {
     "zh-CN": "隐藏密码",
     en: "Hide password",
+  },
+  换一个头像: {
+    "zh-CN": "换一个头像",
+    en: "Shuffle avatar",
+  },
+  头像: {
+    "zh-CN": "头像",
+    en: "Avatar",
+  },
+  "根据你的邮箱生成专属形象，可随时更换。": {
+    "zh-CN": "根据你的邮箱生成专属形象，可随时更换。",
+    en: "A unique look generated from your email — shuffle anytime.",
+  },
+  "正在生成…": {
+    "zh-CN": "正在生成…",
+    en: "Generating…",
   },
   退出登录: {
     "zh-CN": "退出登录",

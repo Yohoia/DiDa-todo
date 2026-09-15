@@ -34,7 +34,7 @@ export async function getInsights(): Promise<InsightsData> {
     };
   }
 
-  const stats = await loadFocusStats(supabase, data.user.id);
+  const stats = await loadFocusStats(supabase);
   return {
     isDemo: false,
     completedTasks: stats.completedTasksThisMonth,

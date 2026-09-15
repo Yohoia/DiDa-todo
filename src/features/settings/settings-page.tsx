@@ -4,9 +4,12 @@ import { useI18n } from "@/features/preferences/preferences-provider";
 import { LanguageSelect, ThemeToggle } from "@/features/preferences/preference-controls";
 import { useState, type FormEvent, type ReactNode } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useWorkspace } from "@/features/tasks/workspace-provider";
 import { Select } from "@/components/ui/select";
+import { AvatarView } from "@/components/shared/avatar-view";
+import { avatarImageSrc, avatarSeed, randomAvatarSeed } from "@/lib/avatar";
+import { meetsPasswordPolicy, PASSWORD_RULES } from "@/lib/password-policy";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import shared from "@/styles/workspace.module.css";
@@ -119,6 +122,10 @@ function PasswordForm() {
       setError("两次输入的密码不一致。");
       return;
     }
+    if (!meetsPasswordPolicy(password)) {
+      setError("密码不满足要求，请对照下方规则修改。");
+      return;
+    }
     setPending(true);
     setError("");
     try {
@@ -162,6 +169,13 @@ function PasswordForm() {
         value={confirm}
         onChange={(event) => setConfirm(event.target.value)}
       />
+      <ul className={styles.passwordRules} aria-label={t("密码要求")}>
+        {PASSWORD_RULES.map(({ key, test }) => (
+          <li key={key} data-valid={test(password)}>
+            {test(password) ? "✓" : "·"} {t(key)}
+          </li>
+        ))}
+      </ul>
       <button type="submit" className={shared.button} disabled={pending}>
         {t("更新密码")}
       </button>
@@ -173,7 +187,63 @@ function PasswordForm() {
     </form>
   );
 }
-export function SettingsPage({ profileName }: { profileName: string }) {
+/** 账户头像：按种子（邮箱/随机）客户端生成 nice-avatar，「换一个」写入新随机种子 */
+function AvatarRow({
+  avatarUrl,
+  email,
+  userId,
+}: {
+  avatarUrl: string | null;
+  email: string;
+  userId: string;
+}) {
+  const { t } = useI18n();
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+  const imageSrc = avatarImageSrc(avatarUrl);
+  const seed = avatarSeed(avatarUrl, email);
+
+  async function shuffle() {
+    setPending(true);
+    try {
+      const { error } = await createClient()
+        .from("profiles")
+        .update({ avatar_url: `niceavatar://${randomAvatarSeed()}` })
+        .eq("id", userId);
+      if (!error) router.refresh();
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <SettingRow title={t("头像")} description={t("根据你的邮箱生成专属形象，可随时更换。")}>
+      <div className={styles.accountActions}>
+        {seed && <AvatarView seed={seed} className={styles.avatarPreview} />}
+        {imageSrc && (
+          // eslint-disable-next-line @next/next/no-img-element -- authenticated avatar URLs are dynamic
+          <img className={styles.avatarPreview} src={imageSrc} alt={t("头像")} />
+        )}
+        <button
+          type="button"
+          className={shared.textButton}
+          disabled={pending}
+          onClick={() => void shuffle()}
+        >
+          {pending ? t("正在生成…") : t("换一个头像")}
+        </button>
+      </div>
+    </SettingRow>
+  );
+}
+
+export function SettingsPage({
+  profileName,
+  avatarUrl,
+}: {
+  profileName: string;
+  avatarUrl: string | null;
+}) {
   const { t, label } = useI18n();
   const { preferences, setPreferences, notify, user, signOut } = useWorkspace();
   // 密码重置链接经 /auth/callback 换会话后落到 ?recovery=1：直达账户区改密码
@@ -333,6 +403,9 @@ export function SettingsPage({ profileName }: { profileName: string }) {
                     </button>
                   </div>
                 </SettingRow>
+                {user.email && (
+                  <AvatarRow avatarUrl={avatarUrl} email={user.email} userId={user.id} />
+                )}
                 <div className={styles.passwordBlock}>
                   <div>
                     <div className={styles.title}>{t("修改密码")}</div>

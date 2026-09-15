@@ -5,8 +5,8 @@ import { supabaseEnv } from "@/lib/supabase/client";
 
 /**
  * Supabase 会话刷新代理（本版本 Next.js 的 middleware 已更名为 proxy）。
- * 每个页面请求前读取/写回 auth cookie；语音 API 是无状态接口，跳过以省延迟。
- * 路由保护（未登录重定向）等 Auth UI 落地后再加。
+ * 每个页面请求前读取/写回 auth cookie。语音 API 在 Route Handler 内验证会话并限流，
+ * 此处跳过，避免重复校验；Proxy 只负责刷新页面会话，不作为数据安全边界。
  */
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });

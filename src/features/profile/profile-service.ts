@@ -12,6 +12,8 @@ export type ProfilePlant = {
 export type ProfileData = {
   isDemo: boolean;
   displayName: string;
+  email: string | null;
+  userId: string | null;
   avatarUrl: string | null;
   joinedAt: string;
   level: number;
@@ -32,6 +34,8 @@ export type ProfileData = {
 const demoProfile: ProfileData = {
   isDemo: true,
   displayName: "Alex",
+  email: null,
+  userId: null,
   avatarUrl: null,
   joinedAt: "2026-09-01",
   level: 5,
@@ -69,14 +73,13 @@ export async function getProfile(): Promise<ProfileData> {
       avatarUrl: process.env.DIDA_PROFILE_AVATAR_URL?.trim() || demoProfile.avatarUrl,
     };
   }
-
   const [{ data: row }, stats] = await Promise.all([
     supabase
       .from("profiles")
       .select("display_name, avatar_url, created_at")
       .eq("id", user.id)
       .maybeSingle(),
-    loadFocusStats(supabase, user.id).catch((error: unknown) => {
+    loadFocusStats(supabase).catch((error: unknown) => {
       console.error("load profile stats failed:", error);
       return null;
     }),
@@ -94,6 +97,8 @@ export async function getProfile(): Promise<ProfileData> {
   return {
     isDemo: false,
     displayName: row?.display_name?.trim() || user.email?.split("@")[0] || "Friend",
+    email: user.email ?? null,
+    userId: user.id,
     avatarUrl: row?.avatar_url ?? null,
     joinedAt: (row?.created_at ?? user.created_at ?? demoProfile.joinedAt).slice(0, 10),
     level,

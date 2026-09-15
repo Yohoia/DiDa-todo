@@ -30,6 +30,7 @@ export async function transcribeAudio(
     if (signal?.aborted) throw error;
     throw new Error("asr_failed");
   }
+  if (response.status === 401) throw new Error("auth_required");
   if (response.status === 503) throw new Error("not_configured");
   if (response.status === 429) throw new Error("rate_limited");
   if (response.status === 504) throw new Error("asr_timeout");
@@ -55,6 +56,7 @@ export async function parseTranscript(
     if (signal?.aborted) throw error;
     throw new Error("parse_failed");
   }
+  if (response.status === 401) throw new Error("auth_required");
   if (response.status === 503) throw new Error("not_configured");
   if (response.status === 429) throw new Error("rate_limited");
   if (!response.ok) throw new Error("parse_failed");

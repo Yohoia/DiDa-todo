@@ -19,7 +19,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { createPortal } from "react-dom";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { MessageKey } from "@/i18n/messages";
+import { randomAvatarSeed } from "@/lib/avatar";
+import { meetsPasswordPolicy, PASSWORD_RULES } from "@/lib/password-policy";
 import { createClient } from "@/lib/supabase/client";
 
 import styles from "./auth-dialog.module.css";
@@ -38,15 +39,6 @@ function defaultName(email: string): string {
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
 }
-
-/** 注册密码强度规则：提交前逐条校验，避免验证码被消耗后才发现密码不合规 */
-const PASSWORD_RULES: { key: MessageKey; test: (password: string) => boolean }[] = [
-  { key: "长度至少 8 个字符", test: (p) => p.length >= 8 },
-  { key: "包含大写字母", test: (p) => /[A-Z]/.test(p) },
-  { key: "包含小写字母", test: (p) => /[a-z]/.test(p) },
-  { key: "包含数字", test: (p) => /\d/.test(p) },
-  { key: "包含特殊字符（如 !@#$%）", test: (p) => /[^A-Za-z0-9]/.test(p) },
-];
 
 /**
  * 密码输入框：右侧带查看密码按钮（HTML 无原生显隐，需自行实现）；
@@ -464,7 +456,10 @@ function AuthForm({
             ? {
                 shouldCreateUser: true,
                 // name/avatar_url 经注册触发器写入 profiles（见 supabase/migrations/0003）
-                data: { name: defaultName(email), avatar_url: "/avatar-default.svg" },
+                data: {
+                  name: defaultName(email),
+                  avatar_url: `niceavatar://${randomAvatarSeed()}`,
+                },
               }
             : { shouldCreateUser: false },
       });
@@ -495,7 +490,7 @@ function AuthForm({
       setNotice("邮箱格式不正确，请检查后重试。");
       return;
     }
-    if (view === "register" && !PASSWORD_RULES.every(({ test }) => test(password))) {
+    if (view === "register" && !meetsPasswordPolicy(password)) {
       setNotice("密码不满足要求，请对照下方规则修改。");
       return;
     }
@@ -514,26 +509,10 @@ function AuthForm({
           setNotice("请输入完整的 6 位验证码。");
           return;
         }
-        const token = code;
-        // 注册的验证码类型按账号状态兜底：新用户 signup → 已注册未确认 email_confirm → 老用户 magiclink
-        const types: ("signup" | "email_confirm" | "magiclink")[] =
-          view === "register" ? ["signup", "email_confirm", "magiclink"] : ["magiclink"];
-        let verifyError: { code?: string; message: string } | null = null;
-        for (const type of types) {
-          const { error } = await supabase.auth.verifyOtp({ email, token, type });
-          if (!error) {
-            verifyError = null;
-            break;
-          }
-          verifyError = error;
-          const text = error.message.toLowerCase();
-          // 验证码本身错误/过期时换类型也没有意义，避免无谓的重试消耗风控额度
-          if (error.code === "otp_expired" || text.includes("otp") || text.includes("expired")) {
-            break;
-          }
-        }
-        if (verifyError) {
-          setNotice(authErrorText(verifyError));
+        // signInWithOtp 发送的是邮箱 OTP；注册和登录均使用 email 类型验证。
+        const { error } = await supabase.auth.verifyOtp({ email, token: code, type: "email" });
+        if (error) {
+          setNotice(authErrorText(error));
           return;
         }
         // OTP 建号默认无密码：注册流程验证通过后立即写入用户设置的密码
@@ -635,10 +614,6 @@ function AuthForm({
       )}
       {isLogin && loginMode === "password" && (
         <div className={styles.formActions}>
-          <label className={styles.remember}>
-            <input type="checkbox" name="remember" />
-            {t("记住我")}
-          </label>
           <button
             className={styles.link}
             type="button"

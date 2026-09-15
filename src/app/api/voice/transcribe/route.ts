@@ -127,9 +127,8 @@ function buildAsrEndpoint(baseUrl: string): URL {
 }
 
 export async function POST(request: Request) {
-  const rejected = guardVoiceRequest(request, {
+  const rejected = await guardVoiceRequest(request, {
     scope: "transcribe",
-    limit: 8,
     maxBodyBytes: MAX_REQUEST_BYTES,
   });
   if (rejected) return rejected;

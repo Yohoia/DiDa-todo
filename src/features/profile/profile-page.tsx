@@ -14,6 +14,8 @@ import {
   HiSparkles,
 } from "react-icons/hi2";
 import { SectionLabel } from "@/components/shared/workspace-ui";
+import { AvatarView } from "@/components/shared/avatar-view";
+import { avatarImageSrc, avatarSeed } from "@/lib/avatar";
 import { getProfile } from "./profile-service";
 import shared from "@/styles/workspace.module.css";
 import styles from "./profile.module.css";
@@ -59,13 +61,18 @@ export async function ProfilePage() {
   const hours = Math.floor(focusGarden.weeklyMinutes / 60);
   const minutes = focusGarden.weeklyMinutes % 60;
   const focusedTime = locale === "zh-CN" ? `${hours} 小时 ${minutes} 分` : `${hours}h ${minutes}m`;
+  // 头像解析：niceavatar:// 种子在客户端生成；空值用邮箱种子兜底；预览账号保留首字母占位
+  const imageSrc = avatarImageSrc(profile.avatarUrl);
+  const seed = avatarSeed(profile.avatarUrl, profile.isDemo ? null : profile.email);
 
   return (
     <div className={shared.page}>
       <header className={styles.header}>
-        {profile.avatarUrl ? (
+        {imageSrc ? (
           // eslint-disable-next-line @next/next/no-img-element -- authenticated avatar URLs are dynamic
-          <img className={styles.avatarImage} src={profile.avatarUrl} alt={profile.displayName} />
+          <img className={styles.avatarImage} src={imageSrc} alt={profile.displayName} />
+        ) : seed ? (
+          <AvatarView seed={seed} className={styles.avatarImage} />
         ) : (
           <div
             className={styles.avatarPlaceholder}

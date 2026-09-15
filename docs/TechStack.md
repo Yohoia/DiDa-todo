@@ -335,7 +335,7 @@ Sentry
 - 忘记密码（邮件链接经 /auth/callback 回跳至设置页）
 - Session
 - Logout
-- Profile（默认用户名取邮箱前缀，默认头像内置）
+- Profile（默认用户名取邮箱前缀；默认头像由 react-nice-avatar 按邮箱种子本地生成）
 - 用户数据隔离
 
 ### Task
@@ -1620,9 +1620,9 @@ Weekly Review
 
 ---
 
-# 53. Resend 已于 Phase 1 提前引入（认证邮件）
+# 53. Resend 自定义 SMTP（生产环境已启用）
 
-Phase 1 的 Supabase OTP 生产环境需要自定义 SMTP，因此 Resend 已在本阶段作为 Supabase 自定义 SMTP 启用（Dashboard → Auth → SMTP Settings 配置，代码无需邮件密钥）：
+Supabase OTP 的生产环境需要自定义 SMTP。当前生产项目已在 Dashboard → Auth → SMTP Settings 启用 Resend（代码无需邮件密钥）：
 
 ```text
 Resend → smtp.resend.com → Supabase Auth 发信
@@ -2173,7 +2173,7 @@ PostHog 同理。
 | Semantic Search | pgvector |
 | Reminder | Inngest |
 | Recurring Task | Inngest |
-| Email | Resend（认证邮件已于 Phase 1 经 Supabase SMTP 启用） |
+| Email | Resend（生产环境通过 Supabase 自定义 SMTP 配置） |
 | Agent | AI SDK + Tools + Inngest |
 
 ---

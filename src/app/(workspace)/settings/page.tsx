@@ -10,5 +10,5 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function Page() {
   const profile = await getProfile();
-  return <SettingsPage profileName={profile.displayName} />;
+  return <SettingsPage profileName={profile.displayName} avatarUrl={profile.avatarUrl} />;
 }

@@ -62,7 +62,7 @@ pnpm dev
 - `NEXT_PUBLIC_SUPABASE_URL`：Supabase 项目 URL。
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`：匿名公钥（配合数据库 RLS 行级安全使用）。
 
-注册流程为邮箱 + 密码 + 邮箱六位验证码（OTP），验证通过自动设置密码并登录；无需填写用户名（默认取邮箱前缀）与头像（内置默认头像）。登录支持密码与验证码两种方式。邮件发送通过 Resend 的自定义 SMTP 在 Supabase Dashboard 配置（代码无需邮件密钥），邮件模板见 [docs/email-templates/](docs/email-templates)；密码重置邮件的回跳地址为 `/auth/callback`，需在 Supabase Auth 的 Redirect URLs 中登记。未配置时其余功能不受影响，工作台以预览模式运行。
+注册流程为邮箱 + 密码 + 邮箱六位验证码（OTP），验证通过自动设置密码并登录；无需填写用户名（默认取邮箱前缀）与头像（自动生成占位头像）。登录支持密码与验证码两种方式。当前生产项目已启用 Resend 自定义 SMTP（代码无需邮件密钥），邮件模板见 [docs/email-templates/](docs/email-templates)；密码重置邮件的回跳地址为 `/auth/callback`，并已加入 Supabase Auth 的 Redirect URLs。
 
 ### 语音待办（可选）
 
@@ -117,9 +117,9 @@ pnpm build
 
 ## 当前边界
 
-- 任务数据不持久化：刷新后恢复示例数据，数据库中目前只有账号资料、偏好与语音记录。
-- 音效、自动休息和通知开关仅保存前端偏好，不会启动系统能力。
-- 任务示例日期以应用当前日期动态生成；统计、经验值和花园仍为示例。
+- 未登录时使用预览数据；登录后任务、偏好、语音记录和专注记录均通过 RLS 隔离并保存到 Supabase。
+- 音效、自动休息和通知开关会保存为账户偏好；通知开关目前不会主动申请系统通知权限。
+- 预览任务日期以应用当前日期动态生成；登录后的统计、经验值和花园从真实任务与专注记录聚合。
 - 当前使用 Cookie 管理语言、主题与会话，因此根布局按请求渲染，不适用于纯静态导出。
 
 ## 路线与文档
@@ -129,4 +129,4 @@ pnpm build
 - [界面设计规范](./docs/style.md)
 - [开发约定](./docs/Development.md)
 
-下一阶段将进入 Todo 数据接入：任务、清单与统计写入 Supabase（沿用现有 RLS 与数据访问边界），并为真实业务逻辑补充 Vitest、Testing Library 和 Playwright。账号认证（Supabase Auth + 邮箱 OTP + Resend SMTP）已在本阶段完成。
+任务、清单与统计已经接入 Supabase，并沿用 RLS 与统一数据访问边界。账号认证代码、生产邮箱 OTP、自定义 SMTP 与邮件模板均已完成配置。

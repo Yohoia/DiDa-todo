@@ -454,7 +454,7 @@ Today
 默认值：
 
 - 用户名：取邮箱前缀（异常时随机「用户XXXX」），可事后在资料页修改
-- 头像：内置默认头像（`/avatar-default.svg`）
+- 头像：react-nice-avatar 按邮箱/随机种子本地生成；在设置 → Account & Sync 可「换一个头像」
 
 无需 Profile Setup 环节。
 

@@ -165,13 +165,15 @@ export function useVoiceCapture() {
         if (detail) console.warn(`[voice] transcribe failed: ${code} (${detail})`);
         notify({
           key:
-            code === "not_configured"
-              ? "语音服务未配置"
-              : code === "rate_limited"
-                ? "尝试太频繁，请稍后再试"
-                : code === "asr_timeout"
-                  ? "识别超时，请再试一次"
-                  : "识别失败，请重试",
+            code === "auth_required"
+              ? "请先登录后再使用语音输入"
+              : code === "not_configured"
+                ? "语音服务未配置"
+                : code === "rate_limited"
+                  ? "尝试太频繁，请稍后再试"
+                  : code === "asr_timeout"
+                    ? "识别超时，请再试一次"
+                    : "识别失败，请重试",
         });
         requestRef.current = null;
         setVoiceCapture(null);
