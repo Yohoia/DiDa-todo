@@ -1,10 +1,14 @@
 import { PreferenceControls } from "@/features/preferences/preference-controls";
 import { getI18n } from "@/i18n/server";
+import Link from "next/link";
 import { HiArrowRight, HiClock, HiSparkles } from "react-icons/hi2";
 import { TbTarget } from "react-icons/tb";
 
 import { Brand } from "@/components/shared/brand";
+import { AvatarView } from "@/components/shared/avatar-view";
 import { AuthDialogProvider, AuthTrigger } from "@/features/auth/auth-dialog";
+import { avatarSeed } from "@/lib/avatar";
+import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
 import { features, reviews } from "./landing-content";
@@ -13,6 +17,22 @@ import { TaskPreview } from "./task-preview";
 
 export async function LandingPage() {
   const { t, label } = await getI18n();
+  // 登录用户头部显示头像+名字直达工作台；访客保持登录按钮
+  const supabase = await createClient();
+  const { data: auth } = await supabase.auth.getUser();
+  const user = auth.user;
+  let avatarUrl: string | null = null;
+  if (user) {
+    const { data: row } = await supabase
+      .from("profiles")
+      .select("avatar_url")
+      .eq("id", user.id)
+      .maybeSingle();
+    avatarUrl = row?.avatar_url ?? null;
+  }
+  const displayName =
+    (user?.user_metadata?.name as string | undefined)?.trim() || user?.email?.split("@")[0] || "";
+  const seed = user ? avatarSeed(avatarUrl, user.email) : null;
   return (
     <AuthDialogProvider>
       <div className={styles.page} id="home">
@@ -29,7 +49,14 @@ export async function LandingPage() {
           </nav>
           <div className={styles.navActions}>
             <PreferenceControls />
-            <AuthTrigger className={cn(styles.btn, styles.btnOutline)}>{t("Log In")}</AuthTrigger>
+            {user && seed ? (
+              <Link href="/today" className={styles.userChip} title={displayName}>
+                <AvatarView seed={seed} className={styles.userAvatar} />
+                <span>{displayName}</span>
+              </Link>
+            ) : (
+              <AuthTrigger className={cn(styles.btn, styles.btnOutline)}>{t("Log In")}</AuthTrigger>
+            )}
           </div>
         </header>
 
@@ -50,12 +77,18 @@ export async function LandingPage() {
                     "DiDa-todo 是一款克制、优雅且强大的待办事项应用。剔除繁杂，聚焦核心，将您的时间管理升华为一门艺术。",
                   )}
                 </p>
-                <AuthTrigger
-                  view="register"
-                  className={cn(styles.btn, styles.btnGold, styles.heroButton)}
-                >
-                  {t("立即开始探索")}
-                </AuthTrigger>
+                {user ? (
+                  <Link href="/today" className={cn(styles.btn, styles.btnGold, styles.heroButton)}>
+                    {t("进入工作台")}
+                  </Link>
+                ) : (
+                  <AuthTrigger
+                    view="register"
+                    className={cn(styles.btn, styles.btnGold, styles.heroButton)}
+                  >
+                    {t("立即开始探索")}
+                  </AuthTrigger>
+                )}
                 <div className={styles.stats}>
                   <div className={styles.statItem}>
                     <h3>500k+</h3>
@@ -159,12 +192,18 @@ export async function LandingPage() {
           <section id="get-started" className={styles.bottomCta} aria-labelledby="start-title">
             <div className={styles.container}>
               <h2 id="start-title">{t("重塑您的时间秩序。")}</h2>
-              <AuthTrigger
-                view="register"
-                className={cn(styles.btn, styles.btnGold, styles.ctaButton)}
-              >
-                {t("开启尊享体验")}
-              </AuthTrigger>
+              {user ? (
+                <Link href="/today" className={cn(styles.btn, styles.btnGold, styles.ctaButton)}>
+                  {t("进入工作台")}
+                </Link>
+              ) : (
+                <AuthTrigger
+                  view="register"
+                  className={cn(styles.btn, styles.btnGold, styles.ctaButton)}
+                >
+                  {t("开启尊享体验")}
+                </AuthTrigger>
+              )}
             </div>
           </section>
         </main>

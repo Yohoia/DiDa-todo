@@ -725,3 +725,33 @@
     padding-top: 150px;
   }
 }
+
+/* 登录用户头部：头像 + 名字的直达工作台胶囊 */
+.userChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 14px 5px 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--foreground);
+  max-width: 180px;
+  transition:
+    border-color 0.3s,
+    background-color 0.3s;
+}
+.userChip:hover {
+  border-color: var(--foreground);
+}
+.userChip > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.userAvatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}

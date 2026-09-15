@@ -1754,6 +1754,10 @@ export const messages = {
     "zh-CN": "正在生成…",
     en: "Generating…",
   },
+  进入工作台: {
+    "zh-CN": "进入工作台",
+    en: "Open Workspace",
+  },
   退出登录: {
     "zh-CN": "退出登录",
     en: "Sign Out",
