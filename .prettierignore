@@ -10,3 +10,6 @@ next-env.d.ts
 docs/PRD.md
 docs/TechStack.md
 docs/reference/
+
+# Email templates are hand-tuned HTML for mail clients.
+docs/email-templates/

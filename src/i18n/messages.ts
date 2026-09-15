@@ -1686,6 +1686,54 @@ export const messages = {
     "zh-CN": "使用密码登录",
     en: "Sign in with password",
   },
+  "验证码第 {index} 位": {
+    "zh-CN": "验证码第 {index} 位",
+    en: "Verification code digit {index}",
+  },
+  "请输入完整的 6 位验证码。": {
+    "zh-CN": "请输入完整的 6 位验证码。",
+    en: "Enter the full 6-digit code.",
+  },
+  "邮箱格式不正确，请检查后重试。": {
+    "zh-CN": "邮箱格式不正确，请检查后重试。",
+    en: "That doesn't look like a valid email address.",
+  },
+  密码要求: {
+    "zh-CN": "密码要求",
+    en: "Password requirements",
+  },
+  "长度至少 8 个字符": {
+    "zh-CN": "长度至少 8 个字符",
+    en: "At least 8 characters",
+  },
+  包含大写字母: {
+    "zh-CN": "包含大写字母",
+    en: "An uppercase letter",
+  },
+  包含小写字母: {
+    "zh-CN": "包含小写字母",
+    en: "A lowercase letter",
+  },
+  包含数字: {
+    "zh-CN": "包含数字",
+    en: "A number",
+  },
+  "包含特殊字符（如 !@#$%）": {
+    "zh-CN": "包含特殊字符（如 !@#$%）",
+    en: "A special character (!@#$%)",
+  },
+  "密码不满足要求，请对照下方规则修改。": {
+    "zh-CN": "密码不满足要求，请对照下方规则修改。",
+    en: "Password doesn't meet the requirements — check the list below.",
+  },
+  显示密码: {
+    "zh-CN": "显示密码",
+    en: "Show password",
+  },
+  隐藏密码: {
+    "zh-CN": "隐藏密码",
+    en: "Hide password",
+  },
   退出登录: {
     "zh-CN": "退出登录",
     en: "Sign Out",

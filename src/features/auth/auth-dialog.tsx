@@ -15,9 +15,11 @@ import {
   type ReactNode,
 } from "react";
 
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
+import { createPortal } from "react-dom";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { MessageKey } from "@/i18n/messages";
 import { createClient } from "@/lib/supabase/client";
 
 import styles from "./auth-dialog.module.css";
@@ -30,6 +32,221 @@ function defaultName(email: string): string {
   const local = email.split("@")[0]?.trim() ?? "";
   if (local.length >= 2 && local.length <= 30) return local;
   return `用户${Math.floor(1000 + Math.random() * 9000)}`;
+}
+
+/** 常见邮箱格式的宽松校验（最终能否收信以验证码为准） */
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
+}
+
+/** 注册密码强度规则：提交前逐条校验，避免验证码被消耗后才发现密码不合规 */
+const PASSWORD_RULES: { key: MessageKey; test: (password: string) => boolean }[] = [
+  { key: "长度至少 8 个字符", test: (p) => p.length >= 8 },
+  { key: "包含大写字母", test: (p) => /[A-Z]/.test(p) },
+  { key: "包含小写字母", test: (p) => /[a-z]/.test(p) },
+  { key: "包含数字", test: (p) => /\d/.test(p) },
+  { key: "包含特殊字符（如 !@#$%）", test: (p) => /[^A-Za-z0-9]/.test(p) },
+];
+
+/**
+ * 密码输入框：右侧带查看密码按钮（HTML 无原生显隐，需自行实现）；
+ * status 驱动状态图标——不合规为感叹号（悬浮展开规则气泡），合规为绿色对勾。
+ */
+function PasswordField({
+  id,
+  name,
+  autoComplete,
+  placeholder,
+  minLength,
+  value,
+  onChange,
+  status,
+}: {
+  id: string;
+  name: string;
+  autoComplete: string;
+  placeholder: string;
+  minLength?: number;
+  value: string;
+  onChange: (value: string) => void;
+  status: "none" | "broken" | "ok";
+}) {
+  const { t } = useI18n();
+  const [visible, setVisible] = useState(false);
+  const iconRef = useRef<HTMLSpanElement | null>(null);
+  const [tipAt, setTipAt] = useState<{ left: number; top: number } | null>(null);
+
+  /** 气泡定位到图标右侧，经 Portal 挂到 body：弹窗容器带 transform，会劫持 fixed 定位 */
+  function openTip() {
+    const rect = iconRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setTipAt({
+      left: Math.min(rect.right + 12, window.innerWidth - 212),
+      top: rect.top + rect.height / 2,
+    });
+  }
+
+  return (
+    <div className={styles.passwordWrap}>
+      <div className={styles.passwordInput}>
+        <input
+          id={id}
+          name={name}
+          type={visible ? "text" : "password"}
+          autoComplete={autoComplete}
+          placeholder={placeholder}
+          minLength={minLength}
+          required
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+        <button
+          type="button"
+          className={styles.eyeButton}
+          aria-label={visible ? t("隐藏密码") : t("显示密码")}
+          aria-pressed={visible}
+          onClick={() => setVisible((current) => !current)}
+        >
+          {visible ? (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+              <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" />
+              <circle cx="12" cy="12" r="3" />
+              <path d="M4.5 4.5l15 15" strokeLinecap="round" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+              <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          )}
+        </button>
+      </div>
+      {status === "broken" && (
+        <span
+          ref={iconRef}
+          className={styles.statusIcon}
+          tabIndex={0}
+          role="img"
+          aria-label={t("密码不满足要求，请对照下方规则修改。")}
+          onMouseEnter={openTip}
+          onMouseLeave={() => setTipAt(null)}
+          onFocus={openTip}
+          onBlur={() => setTipAt(null)}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7.5v5.5" strokeLinecap="round" />
+            <circle cx="12" cy="16.6" r="1" fill="currentColor" stroke="none" />
+          </svg>
+        </span>
+      )}
+      {status === "ok" && (
+        <span className={`${styles.statusIcon} ${styles.statusOk}`} aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M5 12.5l4.5 4.5L19 7.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
+      )}
+      {tipAt &&
+        createPortal(
+          <span className={styles.tip} role="tooltip" style={{ left: tipAt.left, top: tipAt.top }}>
+            <span className={styles.tipTitle}>{t("密码要求")}</span>
+            <ul className={styles.rules}>
+              {PASSWORD_RULES.map(({ key, test }) => {
+                const ok = test(value);
+                return (
+                  <li key={key} className={ok ? styles.ruleOk : undefined}>
+                    {ok ? "✓" : "·"} {t(key)}
+                  </li>
+                );
+              })}
+            </ul>
+          </span>,
+          document.body,
+        )}
+    </div>
+  );
+}
+
+/**
+ * 六格验证码输入：输入自动跳下一格、退格回退、整段粘贴自动分发、
+ * 首格标记 one-time-code 以支持浏览器/系统的验证码自动填充。
+ */
+function CodeField({
+  id,
+  value,
+  onChange,
+  disabled,
+}: {
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+  disabled: boolean;
+}) {
+  const { t } = useI18n();
+  const refs = useRef<(HTMLInputElement | null)[]>([]);
+
+  function focusAt(index: number) {
+    const target = refs.current[Math.max(0, Math.min(5, index))];
+    target?.focus();
+    target?.select();
+  }
+
+  /** 从第 start 格起写入 text 中的数字（支持一次多位/粘贴），写完跳到其后一格 */
+  function write(start: number, text: string) {
+    const digits = text.replace(/\D/g, "");
+    if (!digits) return;
+    const chars = Array.from({ length: 6 }, (_, i) => value[i] ?? "");
+    for (let i = 0; i < digits.length && start + i < 6; i++) chars[start + i] = digits[i];
+    onChange(chars.join(""));
+    focusAt(start + digits.length);
+  }
+
+  return (
+    <div className={styles.otpRow}>
+      {Array.from({ length: 6 }, (_, index) => (
+        <input
+          key={index}
+          id={index === 0 ? id : undefined}
+          ref={(element) => {
+            refs.current[index] = element;
+          }}
+          className={styles.otpBox}
+          type="text"
+          inputMode="numeric"
+          autoComplete={index === 0 ? "one-time-code" : "off"}
+          maxLength={1}
+          disabled={disabled}
+          value={value[index] ?? ""}
+          aria-label={t("验证码第 {index} 位", { index: index + 1 })}
+          onChange={(event) => write(index, event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Backspace") {
+              event.preventDefault();
+              const chars = Array.from({ length: 6 }, (_, i) => value[i] ?? "");
+              if (chars[index]) {
+                chars[index] = "";
+                onChange(chars.join(""));
+              } else if (index > 0) {
+                chars[index - 1] = "";
+                onChange(chars.join(""));
+                focusAt(index - 1);
+              }
+            } else if (event.key === "ArrowLeft") {
+              focusAt(index - 1);
+            } else if (event.key === "ArrowRight") {
+              focusAt(index + 1);
+            }
+          }}
+          onPaste={(event) => {
+            event.preventDefault();
+            write(index, event.clipboardData.getData("text"));
+          }}
+          onFocus={(event) => event.currentTarget.select()}
+        />
+      ))}
+    </div>
+  );
 }
 const AuthContext = createContext<((view: AuthView, trigger: HTMLButtonElement) => void) | null>(
   null,
@@ -60,10 +277,26 @@ export function AuthTrigger({
 }
 
 export function AuthDialogProvider({ children }: { children: ReactNode }) {
-  const { t } = useI18n();
+  const { t, label } = useI18n();
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<AuthView>("login");
+  const [toast, setToast] = useState<{ id: number; text: string } | null>(null);
+  const toastTimer = useRef<number | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
+
+  /** 顶部轻提示：验证码发送结果等即时反馈，3 秒自动消失 */
+  function showToast(text: string) {
+    if (toastTimer.current !== null) window.clearTimeout(toastTimer.current);
+    setToast({ id: Date.now(), text });
+    toastTimer.current = window.setTimeout(() => setToast(null), 3000);
+  }
+
+  useEffect(
+    () => () => {
+      if (toastTimer.current !== null) window.clearTimeout(toastTimer.current);
+    },
+    [],
+  );
 
   return (
     <AuthContext.Provider
@@ -112,19 +345,43 @@ export function AuthDialogProvider({ children }: { children: ReactNode }) {
               </DialogDescription>
             </div>
             <TabsContent value="login" className={styles.view}>
-              <AuthForm view="login" onAuthed={() => setOpen(false)} />
+              <AuthForm view="login" onAuthed={() => setOpen(false)} onToast={showToast} />
             </TabsContent>
             <TabsContent value="register" className={styles.view}>
-              <AuthForm view="register" onAuthed={() => setOpen(false)} />
+              <AuthForm view="register" onAuthed={() => setOpen(false)} onToast={showToast} />
             </TabsContent>
           </Tabs>
         </DialogContent>
       </Dialog>
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            key={toast.id}
+            className={styles.toast}
+            role="status"
+            aria-live="polite"
+            initial={{ opacity: 0, y: -12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+          >
+            {label(toast.text)}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </AuthContext.Provider>
   );
 }
 
-function AuthForm({ view, onAuthed }: { view: AuthView; onAuthed: () => void }) {
+function AuthForm({
+  view,
+  onAuthed,
+  onToast,
+}: {
+  view: AuthView;
+  onAuthed: () => void;
+  onToast: (text: string) => void;
+}) {
   const { t, label } = useI18n();
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
@@ -132,9 +389,18 @@ function AuthForm({ view, onAuthed }: { view: AuthView; onAuthed: () => void }) 
   const [pending, setPending] = useState(false);
   const [loginMode, setLoginMode] = useState<LoginMode>("password");
   const [cooldown, setCooldown] = useState(0);
+  const [code, setCode] = useState("");
+  const [password, setPassword] = useState("");
   const isLogin = view === "login";
   // 注册固定走验证码；登录默认密码、可切验证码
   const useCode = !isLogin || loginMode === "code";
+  // 密码已输入但不合规时亮感叹号（悬浮出规则气泡），合规变绿勾
+  const rulesBroken = password.length > 0 && !PASSWORD_RULES.every(({ test }) => test(password));
+  const registerStatus: "none" | "broken" | "ok" = !password
+    ? "none"
+    : rulesBroken
+      ? "broken"
+      : "ok";
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -182,11 +448,14 @@ function AuthForm({ view, onAuthed }: { view: AuthView; onAuthed: () => void }) 
   async function handleSendCode() {
     const email = currentEmail();
     if (!email) {
-      setNotice("请先填写邮箱，再发送验证码。");
+      onToast("请先填写邮箱，再发送验证码。");
+      return;
+    }
+    if (!isValidEmail(email)) {
+      onToast("邮箱格式不正确，请检查后重试。");
       return;
     }
     setPending(true);
-    setNotice("");
     try {
       const { error } = await createClient().auth.signInWithOtp({
         email,
@@ -200,11 +469,11 @@ function AuthForm({ view, onAuthed }: { view: AuthView; onAuthed: () => void }) 
             : { shouldCreateUser: false },
       });
       if (error) {
-        setNotice(authErrorText(error));
+        onToast(authErrorText(error));
         return;
       }
       setCooldown(60);
-      setNotice("验证码已发送，请查收邮件。");
+      onToast("验证码已发送，请查收邮件。");
     } finally {
       setPending(false);
     }
@@ -221,6 +490,15 @@ function AuthForm({ view, onAuthed }: { view: AuthView; onAuthed: () => void }) 
     const form = event.currentTarget;
     const email = fieldValue(form, "email").trim();
     const password = fieldValue(form, "password");
+    // 邮箱格式 + 注册密码规则在发起请求前拦截（native 校验之外的双保险）
+    if (!isValidEmail(email)) {
+      setNotice("邮箱格式不正确，请检查后重试。");
+      return;
+    }
+    if (view === "register" && !PASSWORD_RULES.every(({ test }) => test(password))) {
+      setNotice("密码不满足要求，请对照下方规则修改。");
+      return;
+    }
     const supabase = createClient();
     setPending(true);
     setNotice("");
@@ -232,7 +510,11 @@ function AuthForm({ view, onAuthed }: { view: AuthView; onAuthed: () => void }) 
           return;
         }
       } else {
-        const token = fieldValue(form, "code").trim();
+        if (code.length !== 6) {
+          setNotice("请输入完整的 6 位验证码。");
+          return;
+        }
+        const token = code;
         // 注册的验证码类型按账号状态兜底：新用户 signup → 已注册未确认 email_confirm → 老用户 magiclink
         const types: ("signup" | "email_confirm" | "magiclink")[] =
           view === "register" ? ["signup", "email_confirm", "magiclink"] : ["magiclink"];
@@ -254,6 +536,14 @@ function AuthForm({ view, onAuthed }: { view: AuthView; onAuthed: () => void }) 
           setNotice(authErrorText(verifyError));
           return;
         }
+        // OTP 建号默认无密码：注册流程验证通过后立即写入用户设置的密码
+        if (view === "register" && password) {
+          const { error } = await supabase.auth.updateUser({ password });
+          if (error) {
+            setNotice(authErrorText(error));
+            return;
+          }
+        }
       }
       onAuthed();
       router.push("/today");
@@ -264,9 +554,13 @@ function AuthForm({ view, onAuthed }: { view: AuthView; onAuthed: () => void }) 
   }
 
   async function handleResetPassword() {
-    const email = formRef.current?.querySelector<HTMLInputElement>('input[name="email"]')?.value;
-    if (!email?.trim()) {
+    const email = currentEmail();
+    if (!email) {
       setNotice("请先填写邮箱，再找回密码。");
+      return;
+    }
+    if (!isValidEmail(email)) {
+      setNotice("邮箱格式不正确，请检查后重试。");
       return;
     }
     setPending(true);
@@ -295,21 +589,25 @@ function AuthForm({ view, onAuthed }: { view: AuthView; onAuthed: () => void }) 
           required
         />
       </div>
+      {!isLogin && (
+        <div className={styles.inputGroup}>
+          <label htmlFor="register-password">{t("Password")}</label>
+          <PasswordField
+            id="register-password"
+            name="password"
+            autoComplete="new-password"
+            placeholder={t("设置密码 (不少于8位)")}
+            minLength={8}
+            value={password}
+            onChange={setPassword}
+            status={registerStatus}
+          />
+        </div>
+      )}
       {useCode ? (
         <div className={styles.inputGroup}>
-          <label htmlFor={`${view}-code`}>{t("验证码")}</label>
-          <div className={styles.codeRow}>
-            <input
-              id={`${view}-code`}
-              name="code"
-              type="text"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              placeholder={t("请输入邮件中的 6 位验证码。")}
-              maxLength={6}
-              pattern="[0-9]*"
-              required
-            />
+          <div className={styles.codeHeader}>
+            <label htmlFor={`${view}-code-0`}>{t("验证码")}</label>
             <button
               type="button"
               className={styles.codeButton}
@@ -319,17 +617,19 @@ function AuthForm({ view, onAuthed }: { view: AuthView; onAuthed: () => void }) 
               {cooldown > 0 ? t("重发 ({seconds}s)", { seconds: cooldown }) : t("发送验证码")}
             </button>
           </div>
+          <CodeField id={`${view}-code-0`} value={code} onChange={setCode} disabled={pending} />
         </div>
       ) : (
         <div className={styles.inputGroup}>
-          <label htmlFor={`${view}-password`}>{t("Password")}</label>
-          <input
-            id={`${view}-password`}
+          <label htmlFor="login-password">{t("Password")}</label>
+          <PasswordField
+            id="login-password"
             name="password"
-            type="password"
             autoComplete="current-password"
             placeholder="••••••••"
-            required
+            value={password}
+            onChange={setPassword}
+            status="none"
           />
         </div>
       )}
