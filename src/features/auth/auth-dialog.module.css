@@ -202,3 +202,41 @@
 .previewLink:hover {
   color: var(--brand-gold);
 }
+
+.codeRow {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+}
+.codeRow input {
+  flex: 1;
+  min-width: 0;
+  letter-spacing: 4px;
+}
+.codeButton {
+  flex-shrink: 0;
+  padding: 10px 0 9px;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  color: var(--foreground);
+  transition:
+    color 0.3s,
+    border-color 0.3s;
+}
+.codeButton:hover:not(:disabled) {
+  border-bottom-color: var(--brand-gold);
+  color: var(--brand-gold);
+}
+.codeButton:disabled {
+  color: var(--muted-foreground);
+  cursor: not-allowed;
+}
+.switchMode {
+  display: block;
+  margin-top: 14px;
+  text-align: center;
+}

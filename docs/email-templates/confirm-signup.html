@@ -1,0 +1,47 @@
+<!-- Supabase → Authentication → Email Templates → Confirm Signup -->
+<!-- Subject：DiDa-todo 注册验证码 -->
+<div style="margin:0;padding:0;background-color:#ffffff;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#ffffff;padding:40px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="width:560px;max-width:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Helvetica Neue',Arial,'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;color:#171717;">
+          <tr>
+            <td style="padding:0 0 28px;font-size:13px;letter-spacing:4px;font-weight:600;color:#b88e57;">DI&nbsp;DA&nbsp;TODO</td>
+          </tr>
+          <tr>
+            <td style="padding:0 0 16px;">
+              <h1 style="margin:0;font-size:26px;line-height:1.35;font-weight:700;color:#171717;">注册 DiDa-todo</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 0 32px;font-size:15px;line-height:1.7;color:#525252;">
+              有人正在使用 <strong style="color:#171717;">{{ .Email }}</strong> 注册 DiDa-todo 账号。请在应用中输入下方验证码完成注册。
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 0 12px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" style="background-color:#f5f5f5;border-radius:10px;padding:26px 12px;">
+                    <span style="font-size:34px;font-weight:700;letter-spacing:10px;padding-left:10px;color:#171717;">{{ .Token }}</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 0 32px;font-size:14px;line-height:1.7;color:#525252;">
+              此验证码 <strong style="color:#171717;">10 分钟</strong>内有效。注册即表示同意我们的<a href="{{ .SiteURL }}" style="color:#b88e57;text-decoration:underline;">服务条款</a>与<a href="{{ .SiteURL }}" style="color:#b88e57;text-decoration:underline;">隐私政策</a>。
+            </td>
+          </tr>
+          <tr>
+            <td style="border-top:1px solid #e5e5e5;padding-top:20px;font-size:12px;line-height:1.8;color:#a3a3a3;">
+              如果这不是你本人的操作，请直接忽略此邮件，不会创建任何账号。DiDa-todo 团队绝不会通过电话、聊天或其他邮件向你索取此验证码。<br />
+              © 2026 DiDa-todo. 保留所有权利。
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</div>

@@ -2,10 +2,12 @@
 import { useI18n } from "@/features/preferences/preferences-provider";
 
 import { LanguageSelect, ThemeToggle } from "@/features/preferences/preference-controls";
-import { useState, type ReactNode } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useWorkspace } from "@/features/tasks/workspace-provider";
 import { Select } from "@/components/ui/select";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import shared from "@/styles/workspace.module.css";
 import styles from "./settings.module.css";
@@ -99,10 +101,84 @@ function NumberField({
     />
   );
 }
+/**
+ * 登录后修改密码：updateUser 不要求旧密码，前端校验两次一致后提交。
+ * 错误文案键与 auth-dialog 共用，label() 对未知文本原样返回。
+ */
+function PasswordForm() {
+  const { t, label } = useI18n();
+  const { notify } = useWorkspace();
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (password !== confirm) {
+      setError("两次输入的密码不一致。");
+      return;
+    }
+    setPending(true);
+    setError("");
+    try {
+      const { error } = await createClient().auth.updateUser({ password });
+      if (error) {
+        const text = error.message.toLowerCase();
+        setError(
+          error.code === "weak_password" || text.includes("password should be")
+            ? "密码强度不足，请更换更复杂的密码。"
+            : error.message,
+        );
+        return;
+      }
+      setPassword("");
+      setConfirm("");
+      notify({ key: "密码已更新。" });
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <form className={styles.passwordForm} onSubmit={handleSubmit}>
+      <input
+        type="password"
+        aria-label={t("新密码")}
+        autoComplete="new-password"
+        placeholder={t("设置密码 (不少于8位)")}
+        minLength={8}
+        required
+        value={password}
+        onChange={(event) => setPassword(event.target.value)}
+      />
+      <input
+        type="password"
+        aria-label={t("确认新密码")}
+        autoComplete="new-password"
+        placeholder={t("确认新密码")}
+        minLength={8}
+        required
+        value={confirm}
+        onChange={(event) => setConfirm(event.target.value)}
+      />
+      <button type="submit" className={shared.button} disabled={pending}>
+        {t("更新密码")}
+      </button>
+      {error && (
+        <p className={styles.passwordNotice} role="alert">
+          {label(error)}
+        </p>
+      )}
+    </form>
+  );
+}
 export function SettingsPage({ profileName }: { profileName: string }) {
   const { t, label } = useI18n();
   const { preferences, setPreferences, notify, user, signOut } = useWorkspace();
-  const [section, setSection] = useState("General");
+  // 密码重置链接经 /auth/callback 换会话后落到 ?recovery=1：直达账户区改密码
+  const isRecovery = useSearchParams().get("recovery") === "1";
+  const [section, setSection] = useState(isRecovery ? "Account & Sync" : "General");
   function save(patch: Parameters<typeof setPreferences>[0]) {
     setPreferences(patch);
     notify({ key: user ? "已保存到你的账户" : "已更新本次预览的偏好设置" });
@@ -238,6 +314,11 @@ export function SettingsPage({ profileName }: { profileName: string }) {
             <h2>{t("Account & Sync")}</h2>
             {user ? (
               <>
+                {isRecovery && (
+                  <p className={shared.muted}>
+                    {t("你已通过密码重置链接登录，请设置新密码并保存。")}
+                  </p>
+                )}
                 <SettingRow title={user.displayName || profileName} description={user.email}>
                   <div className={styles.accountActions}>
                     <Link href="/profile" className={shared.button}>
@@ -252,6 +333,15 @@ export function SettingsPage({ profileName }: { profileName: string }) {
                     </button>
                   </div>
                 </SettingRow>
+                <div className={styles.passwordBlock}>
+                  <div>
+                    <div className={styles.title}>{t("修改密码")}</div>
+                    <div className={styles.description}>
+                      {t("设置新密码后，其他设备需使用新密码重新登录。")}
+                    </div>
+                  </div>
+                  <PasswordForm />
+                </div>
                 <p className={shared.muted}>{t("任务、偏好与语音记录已同步到你的账户。")}</p>
               </>
             ) : (

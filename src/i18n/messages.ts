@@ -1618,6 +1618,74 @@ export const messages = {
     "zh-CN": "重置密码邮件已发送，请查收。",
     en: "Password reset email sent — please check your inbox.",
   },
+  修改密码: {
+    "zh-CN": "修改密码",
+    en: "Change Password",
+  },
+  "设置新密码后，其他设备需使用新密码重新登录。": {
+    "zh-CN": "设置新密码后，其他设备需使用新密码重新登录。",
+    en: "Other devices will need the new password to sign in again.",
+  },
+  新密码: {
+    "zh-CN": "新密码",
+    en: "New password",
+  },
+  确认新密码: {
+    "zh-CN": "确认新密码",
+    en: "Confirm new password",
+  },
+  更新密码: {
+    "zh-CN": "更新密码",
+    en: "Update Password",
+  },
+  "两次输入的密码不一致。": {
+    "zh-CN": "两次输入的密码不一致。",
+    en: "The two passwords don't match.",
+  },
+  "密码已更新。": {
+    "zh-CN": "密码已更新。",
+    en: "Password updated.",
+  },
+  "你已通过密码重置链接登录，请设置新密码并保存。": {
+    "zh-CN": "你已通过密码重置链接登录，请设置新密码并保存。",
+    en: "You signed in via a password reset link — please set a new password.",
+  },
+  验证码: {
+    "zh-CN": "验证码",
+    en: "Verification Code",
+  },
+  发送验证码: {
+    "zh-CN": "发送验证码",
+    en: "Send Code",
+  },
+  "重发 ({seconds}s)": {
+    "zh-CN": "重发 ({seconds}s)",
+    en: "Resend ({seconds}s)",
+  },
+  "验证码已发送，请查收邮件。": {
+    "zh-CN": "验证码已发送，请查收邮件。",
+    en: "Code sent — please check your inbox.",
+  },
+  "验证码错误或已过期。": {
+    "zh-CN": "验证码错误或已过期。",
+    en: "That code is wrong or has expired.",
+  },
+  "该邮箱尚未注册，请先注册。": {
+    "zh-CN": "该邮箱尚未注册，请先注册。",
+    en: "That email isn't registered — sign up first.",
+  },
+  "请输入邮件中的 6 位验证码。": {
+    "zh-CN": "请输入邮件中的 6 位验证码。",
+    en: "Enter the 6-digit code from your email",
+  },
+  使用验证码登录: {
+    "zh-CN": "使用验证码登录",
+    en: "Sign in with email code",
+  },
+  使用密码登录: {
+    "zh-CN": "使用密码登录",
+    en: "Sign in with password",
+  },
   退出登录: {
     "zh-CN": "退出登录",
     en: "Sign Out",
