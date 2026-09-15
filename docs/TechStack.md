@@ -330,11 +330,12 @@ Sentry
 
 ### Account
 
-- Email OTP 注册
-- Email OTP 登录
+- Email OTP 注册（邮箱 + 密码 + 六位验证码，验证通过后设置密码）
+- Email OTP 登录 / 密码登录（双模式）
+- 忘记密码（邮件链接经 /auth/callback 回跳至设置页）
 - Session
 - Logout
-- Profile
+- Profile（默认用户名取邮箱前缀，默认头像内置）
 - 用户数据隔离
 
 ### Task
@@ -1619,31 +1620,29 @@ Weekly Review
 
 ---
 
-# 53. Phase 5 才加入 Resend
+# 53. Resend 已于 Phase 1 提前引入（认证邮件）
 
-如果这一阶段需要：
+Phase 1 的 Supabase OTP 生产环境需要自定义 SMTP，因此 Resend 已在本阶段作为 Supabase 自定义 SMTP 启用（Dashboard → Auth → SMTP Settings 配置，代码无需邮件密钥）：
+
+```text
+Resend → smtp.resend.com → Supabase Auth 发信
+```
+
+当前承担的邮件：
+
+- 注册验证码（Confirm Signup 模板，`{{ .Token }}`）
+- 验证码登录（Magic Link 模板，`{{ .Token }}`）
+- 密码重置链接（Reset Password 模板）
+
+模板维护在 `docs/email-templates/`。
+
+如果后续阶段需要：
 
 - Email Reminder
 - Weekly Summary
 - AI Report
 
-再加入：
-
-```text
-Resend
-```
-
-但：
-
-> 如果 Phase 1 的 Supabase OTP Production 已经需要自定义 SMTP，可以更早引入 Resend。
-
-因此 Resend 属于：
-
-```text
-按实际邮件需求提前
-```
-
-而不是强制某个阶段。
+再扩展这些业务邮件，而不是强制某个阶段。
 
 ---
 
@@ -1744,8 +1743,6 @@ TaskService
 
 ```text
 Inngest
-
-Resend（按需求）
 
 pgvector
 ```
@@ -2038,7 +2035,6 @@ Phase 5
 Automation + Intelligence
 
 Inngest
-Resend
 pgvector
 
         ↓
@@ -2177,7 +2173,7 @@ PostHog 同理。
 | Semantic Search | pgvector |
 | Reminder | Inngest |
 | Recurring Task | Inngest |
-| Email | Resend |
+| Email | Resend（认证邮件已于 Phase 1 经 Supabase SMTP 启用） |
 | Agent | AI SDK + Tools + Inngest |
 
 ---

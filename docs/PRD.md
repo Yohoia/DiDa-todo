@@ -372,6 +372,8 @@ Repeat
 
 ## 页面内容
 
+登录弹窗内含两种模式，可切换：
+
 ```text
 DiDa-todo
 
@@ -380,23 +382,35 @@ Welcome back
 Email
 [                    ]
 
-Continue
+（密码模式）Password          （验证码模式）验证码 + [发送验证码/重发 60s]
+
+Sign In / 登录
+
+使用验证码登录 ⇄ 使用密码登录
 ```
 
 ## 用户操作
 
-1. 输入 Email
-2. 点击 Continue
-3. 系统发送验证码
-4. 进入 Verify 页面
+密码模式：
+
+1. 输入 Email 与密码
+2. 点击 Sign In 登录
+3. 可点忘记密码，邮件链接经 `/auth/callback` 回跳至设置页修改
+
+验证码模式：
+
+1. 输入 Email，点击发送验证码
+2. 输入六位验证码
+3. 点击登录
 
 ## 页面状态
 
 - 默认
 - Email 格式错误
 - Loading
-- Email 不存在
-- 网络错误
+- 密码错误 / Email 不存在
+- 验证码错误或过期（验证码模式）
+- 发送验证码成功（顶部 toast，60 秒重发倒计时）
 
 ---
 
@@ -409,37 +423,40 @@ Continue
 ## 页面内容
 
 ```text
-Create your DiDa account
+Join DiDa-todo
 
 Email
 [                    ]
 
-Continue
+Password（强度五规则：≥8 位、大写、小写、数字、特殊字符）
+[          ] [👁] [!]
+
+验证码 + [发送验证码/重发 60s]
+[ ] [ ] [ ] [ ] [ ] [ ]
+
+Create Account
 ```
 
 流程：
 
 ```text
-Email
+Email + Password
 ↓
-OTP
+发送邮箱六位验证码
 ↓
-Profile Setup
+Verify（弹窗内六格输入）
+↓
+验证通过，自动设置密码并登录
 ↓
 Today
 ```
 
-首次进入可以设置：
+默认值：
 
-- Nickname
-- Timezone
-- 默认 Focus 时间
+- 用户名：取邮箱前缀（异常时随机「用户XXXX」），可事后在资料页修改
+- 头像：内置默认头像（`/avatar-default.svg`）
 
-但建议允许：
-
-```text
-Skip
-```
+无需 Profile Setup 环节。
 
 ---
 
@@ -447,29 +464,27 @@ Skip
 
 ## 页面目标
 
-完成邮箱验证码验证。
+完成邮箱验证码验证（注册与验证码登录共用，嵌于弹窗内而非独立页面）。
 
 ## 页面布局
 
 ```text
-Check your inbox
+验证码
+[ ] [ ] [ ] [ ] [ ] [ ]    （居中六格，输入自动跳格、粘贴分发）
 
-We sent a code to
-hello@example.com
-
-[ ] [ ] [ ] [ ] [ ] [ ]
-
-Verify
-
-Resend in 45s
+发送验证码 / Resend in 60s
 ```
+
+## 交互细节
+
+- 输入一位自动跳下一格，退格回退，整段粘贴自动分发
+- 首格支持系统验证码自动填充（one-time-code）
 
 ## 状态
 
 - 正常
-- 验证码错误
-- 验证码过期
-- 重新发送成功
+- 验证码错误 / 过期（表单下方提示）
+- 重新发送成功（顶部 toast）
 - Loading
 
 ---

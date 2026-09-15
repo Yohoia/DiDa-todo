@@ -5,7 +5,7 @@
 <p align="center">
   一个以任务为核心，串联日程、专注与成长反馈的双语 Web 工作台。
   <br>
-  <sub>Phase 0 · 前端交互原型 · 数据暂存于浏览器会话</sub>
+  <sub>邮箱认证已接入（Supabase Auth）· 任务数据暂存于浏览器会话</sub>
 </p>
 
 <p align="center">
@@ -24,7 +24,7 @@
 从首页进入工作台后，可以在同一套安静、紧凑的视觉语言中完成任务收集、时间安排、深度专注与进度回顾。界面支持简体中文与 English，也支持浅色、暗色和跟随系统外观。
 
 > [!IMPORTANT]
-> 当前仓库是可交互原型。账号与数据库尚未接入；语音待办可选接入真实 AI 服务，其余首页指标、评价、统计与 AI 寄语均为展示内容。
+> 邮箱认证已接入 Supabase：注册（邮箱 + 密码 + 六位验证码）、密码／验证码双模式登录、忘记密码与修改密码均已可用。任务数据仍暂存于浏览器会话；语音待办可选接入真实 AI 服务，其余首页指标、评价、统计与 AI 寄语均为展示内容。
 
 ## 核心体验
 
@@ -53,7 +53,16 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-打开 <http://localhost:3000/today>，即可跳过尚未接入的账号流程，直接体验工作台。
+打开 <http://localhost:3000/today> 可直接体验工作台；也可在首页注册／登录账号（需先配置下述 Supabase 环境变量）。
+
+### 账号（Supabase）
+
+注册与登录依赖两个环境变量（复制 `.env.example` 到 `.env.local` 填写）：
+
+- `NEXT_PUBLIC_SUPABASE_URL`：Supabase 项目 URL。
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`：匿名公钥（配合数据库 RLS 行级安全使用）。
+
+注册流程为邮箱 + 密码 + 邮箱六位验证码（OTP），验证通过自动设置密码并登录；无需填写用户名（默认取邮箱前缀）与头像（内置默认头像）。登录支持密码与验证码两种方式。邮件发送通过 Resend 的自定义 SMTP 在 Supabase Dashboard 配置（代码无需邮件密钥），邮件模板见 [docs/email-templates/](docs/email-templates)；密码重置邮件的回跳地址为 `/auth/callback`，需在 Supabase Auth 的 Redirect URLs 中登记。未配置时其余功能不受影响，工作台以预览模式运行。
 
 ### 语音待办（可选）
 
@@ -76,9 +85,9 @@ Next.js App Router
 └── Semantic design tokens   浅色、暗色与系统主题
 ```
 
-核心栈为 Next.js 16、React 19、TypeScript、Tailwind CSS v4、Radix UI 与 Framer Motion。字体通过 `@fontsource` 本地打包，运行和构建不依赖 Google Fonts。
+核心栈为 Next.js 16、React 19、TypeScript、Tailwind CSS v4、Radix UI 与 Framer Motion；账号、偏好与语音记录接入 Supabase（Auth + Postgres，数据库启用 RLS 行级安全）。字体通过 `@fontsource` 本地打包，运行和构建不依赖 Google Fonts。
 
-任务数据与业务设置目前集中在工作台布局的 React 状态中：路由切换时保留，刷新后恢复示例数据。后续接入 Supabase 时，计划通过 `UI → Service → Repository → Supabase` 保持数据访问边界。
+任务数据目前集中在工作台布局的 React 状态中：路由切换时保留，刷新后恢复示例数据。后续接入 Supabase 时，计划通过 `UI → Service → Repository → Supabase` 保持数据访问边界。
 
 ## 项目结构
 
@@ -86,7 +95,7 @@ Next.js App Router
 src/
 ├── app/              路由、布局与错误边界
 ├── components/       UI、布局、任务与共享组件
-├── features/         landing、tasks、calendar、focus 等业务域
+├── features/         landing、auth、tasks、calendar、focus 等业务域
 ├── i18n/             类型化词典与服务端偏好
 ├── lib/              日期与通用工具
 └── styles/           全局主题与工作台公共样式
@@ -108,10 +117,10 @@ pnpm build
 
 ## 当前边界
 
-- 没有数据库、持久化任务、真实认证或多用户能力。
+- 任务数据不持久化：刷新后恢复示例数据，数据库中目前只有账号资料、偏好与语音记录。
 - 音效、自动休息和通知开关仅保存前端偏好，不会启动系统能力。
 - 任务示例日期以应用当前日期动态生成；统计、经验值和花园仍为示例。
-- 当前使用 Cookie 管理语言与主题，因此根布局按请求渲染，不适用于纯静态导出。
+- 当前使用 Cookie 管理语言、主题与会话，因此根布局按请求渲染，不适用于纯静态导出。
 
 ## 路线与文档
 
@@ -120,4 +129,4 @@ pnpm build
 - [界面设计规范](./docs/style.md)
 - [开发约定](./docs/Development.md)
 
-下一阶段将进入 Todo + Auth：接入 Supabase、RLS、表单校验与数据访问边界，并为真实业务逻辑补充 Vitest、Testing Library 和 Playwright。
+下一阶段将进入 Todo 数据接入：任务、清单与统计写入 Supabase（沿用现有 RLS 与数据访问边界），并为真实业务逻辑补充 Vitest、Testing Library 和 Playwright。账号认证（Supabase Auth + 邮箱 OTP + Resend SMTP）已在本阶段完成。

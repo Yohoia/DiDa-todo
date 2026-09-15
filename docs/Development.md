@@ -2,9 +2,11 @@
 
 ## 当前范围
 
-Phase 0 建立开发基础：Next.js、React、TypeScript、pnpm、Tailwind CSS、shadcn/ui 配置、Lucide、ESLint、Prettier 和 CI。当前首页、登录／注册弹窗及九个工作台页面已按 `docs/reference/` 实现；交互仅使用前端示例状态，尚未接入业务后端。已实现简体中文／英文和浅色／暗色／跟随系统切换，显示偏好用 Cookie 保存。
+Phase 0 建立开发基础：Next.js、React、TypeScript、pnpm、Tailwind CSS、shadcn/ui 配置、Lucide、ESLint、Prettier 和 CI。当前首页、登录／注册弹窗及九个工作台页面已按 `docs/reference/` 实现；已实现简体中文／英文和浅色／暗色／跟随系统切换，显示偏好用 Cookie 保存。
 
-这是单一 Next.js 工程，当前不需要 monorepo、独立后端、数据库、认证、全局状态库或任务队列。原始 `PRD.md` 和 `TechStack.md` 保持原样。
+账号体系已接入 Supabase Auth：注册（邮箱 + 密码 + 六位邮箱验证码）、密码／验证码双模式登录、忘记密码（邮件链接经 `/auth/callback` 回跳至设置页）与设置页修改密码均已可用；用户资料、偏好与语音记录写入 Supabase Postgres（RLS 已启用，见 `supabase/migrations/`）。任务数据仍使用前端示例状态。
+
+这是单一 Next.js 工程，当前不需要 monorepo、独立后端、全局状态库或任务队列。原始 `PRD.md` 和 `TechStack.md` 保持原样。
 
 ## 目录与依赖边界
 
@@ -24,13 +26,13 @@ Phase 0 建立开发基础：Next.js、React、TypeScript、pnpm、Tailwind CSS�
 
 默认使用 Server Components，只有需要状态、事件或浏览器 API 的组件才添加 `"use client"`，尽量缩小客户端边界。服务器密钥和仅服务端依赖不能进入客户端模块。
 
-Phase 1 实际接入数据时，按需求增加 `services/`、`repositories/`、`schemas/`，形成：
+Phase 1 接入任务数据时，按需求增加 `services/`、`repositories/`、`schemas/`，形成：
 
 ```text
 页面 / 功能模块 → Service（业务规则）→ Repository（数据访问）→ Supabase
 ```
 
-UI 不直接调用 `supabase.from(...)`。接入账号数据时同步配置数据库 RLS；不提前生成空的服务、接口、数据库表或 Provider 抽象。
+UI 不直接调用 `supabase.from(...)`。账号数据已按此边界接入（`src/lib/supabase/` 客户端 + RLS 策略，迁移文件见 `supabase/migrations/`）；不提前生成空的服务、接口、数据库表或 Provider 抽象。
 
 ## 国际化与外观
 
@@ -73,6 +75,6 @@ TypeScript 固定在与当前 ESLint 工具链兼容的 5.9 版本。pnpm 的 `s
 
 本地预览同时支持 `localhost` 和 `127.0.0.1`。`next.config.ts` 中的 `allowedDevOrigins` 仅额外允许 `127.0.0.1`，避免默认以 localhost 启动时阻止预览页的客户端脚本和热更新请求。修改此配置后需重启开发服务并刷新页面。
 
-当前基础框架无需 `.env.local`。新增环境变量时同步维护 `.env.example`。不在日志、源码或提交记录中写入实际密钥。
+`.env.local` 当前承载两类配置：账号必需的 `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY`，以及可选的语音服务 Key（见 `.env.example` 注释）。邮件发送不使用环境变量——通过 Resend 自定义 SMTP 在 Supabase Dashboard 配置，模板见 `docs/email-templates/`；`/auth/callback` 需加入 Supabase Auth 的 Redirect URLs。新增环境变量时同步维护 `.env.example`。不在日志、源码或提交记录中写入实际密钥。
 
-本阶段只准备本地开发工程及 CI 配置，不创建远程仓库或部署资源。后续按技术栈文档选择 Vercel / Supabase，并在接入时补充对应配置。
+部署面向 Vercel（`vercel.json` 已就位）；Supabase 侧需依次完成：执行 `supabase/migrations/` 迁移、配置 Resend SMTP、替换邮件模板、登记 Site URL 与 Redirect URLs（含 `/auth/callback`）。
