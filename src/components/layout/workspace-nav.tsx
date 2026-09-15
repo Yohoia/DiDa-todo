@@ -16,7 +16,7 @@ export const workspaceLinks = [
   { href: "/today", label: "Today", description: "今日计划" },
   { href: "/inbox", label: "Inbox", description: "收集想法" },
   { href: "/schedule", label: "Schedule", description: "按日期查看待办" },
-  { href: "/list-detail", label: "Work & Projects", description: "工作清单" },
+  { href: "/list-detail", label: "Lists", description: "管理工作、学习与生活清单" },
   { href: "/completed", label: "Archive", description: "已完成任务" },
   { href: "/insight", label: "Insights", description: "效率统计" },
   { href: "/settings", label: "Settings", description: "偏好设置" },

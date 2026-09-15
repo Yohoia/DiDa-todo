@@ -40,13 +40,9 @@ export const messages = {
     "zh-CN": "已完成",
     en: "Archive",
   },
-  "Work & Projects": {
-    "zh-CN": "工作与项目",
-    en: "Work & Projects",
-  },
-  "All Work": {
-    "zh-CN": "全部工作任务",
-    en: "All Work",
+  Lists: {
+    "zh-CN": "清单",
+    en: "Lists",
   },
   Study: {
     "zh-CN": "学习",
@@ -500,6 +496,10 @@ export const messages = {
     "zh-CN": "下一株植物的培育进度",
     en: "Progress toward the next plant",
   },
+  "profile.weeklyGoalReached": {
+    "zh-CN": "本周花圃已全部长成，做得很好。",
+    en: "Your weekly garden is fully grown. Nicely done.",
+  },
   Unorganized: {
     "zh-CN": "未整理",
     en: "Unorganized",
@@ -864,10 +864,6 @@ export const messages = {
     "zh-CN": "今天的时间轴还空着",
     en: "The timeline is open for today",
   },
-  "Work & Projects →": {
-    "zh-CN": "工作与项目 →",
-    en: "Work & Projects →",
-  },
   回到今天: {
     "zh-CN": "回到今天",
     en: "Back to today",
@@ -1048,6 +1044,18 @@ export const messages = {
     "zh-CN": "示例统计",
     en: "Sample activity",
   },
+  统计来自你的专注与任务记录: {
+    "zh-CN": "统计来自你的专注与任务记录",
+    en: "Statistics from your focus and task history",
+  },
+  "insights.mapLabel": {
+    "zh-CN": "最近 42 天专注热力图，金色越深表示专注越多，当前连续 {count} 天",
+    en: "42-day focus map. Darker gold means more focus. Current streak: {count} days",
+  },
+  "insights.cellDetail": {
+    "zh-CN": "{date}：专注 {count} 分钟",
+    en: "{date}: {count} focus minutes",
+  },
   主导航: {
     "zh-CN": "主导航",
     en: "Main navigation",
@@ -1192,9 +1200,17 @@ export const messages = {
     "zh-CN": "规划接下来的每一天",
     en: "Plan the days ahead",
   },
-  工作与项目清单: {
-    "zh-CN": "工作与项目清单",
-    en: "Your work and project lists",
+  "管理工作、学习与生活清单": {
+    "zh-CN": "管理工作、学习与生活清单",
+    en: "Manage your work, study, and life lists",
+  },
+  "未登录时显示示例数据；登录后任务与专注记录会同步到你的账户。": {
+    "zh-CN": "未登录时显示示例数据；登录后任务与专注记录会同步到你的账户。",
+    en: "Sample data is shown while signed out. Sign in to sync tasks and focus records.",
+  },
+  "等级、花园和统计来自你的任务与专注记录。": {
+    "zh-CN": "等级、花园和统计来自你的任务与专注记录。",
+    en: "Levels, the garden, and statistics come from your task and focus history.",
   },
   回顾已完成的任务: {
     "zh-CN": "回顾已完成的任务",

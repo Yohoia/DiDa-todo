@@ -150,12 +150,7 @@ function TaskEditor({ task }: { task: Task }) {
           <Select
             ariaLabel={t("List")}
             value={task.list}
-            onValueChange={(value) =>
-              updateTask(task.id, {
-                list: value,
-                inWorkList: value === "Work",
-              })
-            }
+            onValueChange={(value) => updateTask(task.id, { list: value })}
             align="end"
             options={(["Inbox", "Work", "Study", "Life"] as TaskList[]).map((value) => ({
               value,

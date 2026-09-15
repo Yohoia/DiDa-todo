@@ -49,6 +49,15 @@ type WorkspaceState = {
     transcript: string;
     parsed: VoiceParsed[];
     taskCount: number;
+    durationSeconds?: number;
+  }) => void;
+  /** 番茄钟退出时记录实际专注时长，供档案花园和统计页聚合。 */
+  recordFocusSession: (input: {
+    taskId: string;
+    startedAt: string;
+    endedAt: string;
+    durationSeconds: number;
+    completed: boolean;
   }) => void;
 };
 const WorkspaceContext = createContext<WorkspaceState | null>(null);
@@ -78,15 +87,34 @@ export function WorkspaceProvider({
   // 保证「先取消旧 One Thing 再置新的」这类有顺序依赖的写入不违反唯一索引。
   const repositoryRef = useRef<Repository | null>(null);
   const queueRef = useRef<Promise<unknown>>(Promise.resolve());
+  const syncRevisionRef = useRef(0);
+  const reconciliationNeededRef = useRef(false);
   function persist(action: (repository: Repository) => Promise<void>) {
     if (!user) return;
     repositoryRef.current ??= createRepository(createClient(), user.id);
     const repository = repositoryRef.current;
+    const revision = ++syncRevisionRef.current;
     queueRef.current = queueRef.current
       .then(() => action(repository))
       .catch((error: unknown) => {
         console.error("sync failed:", error);
+        reconciliationNeededRef.current = true;
         notify({ key: "sync.failed" });
+      })
+      .then(async () => {
+        // 等这批队列的最后一项结束再回读，避免旧请求失败时覆盖后续乐观更新。
+        if (!reconciliationNeededRef.current || revision !== syncRevisionRef.current) return;
+        try {
+          const [serverTasks, serverPreferences] = await Promise.all([
+            repository.loadTasks(),
+            repository.loadPreferences(),
+          ]);
+          setTasks(serverTasks);
+          updatePreferences(serverPreferences);
+          reconciliationNeededRef.current = false;
+        } catch (reloadError) {
+          console.error("sync recovery failed:", reloadError);
+        }
       });
   }
 
@@ -158,7 +186,6 @@ export function WorkspaceProvider({
       estimate: 1,
       reminder: "None",
       completed: false,
-      inWorkList: list === "Work",
       created: Date.now(),
       subtasks: [],
     };
@@ -236,6 +263,8 @@ export function WorkspaceProvider({
         signOut,
         recordVoiceCapture: (input) =>
           persist((repository) => repository.recordVoiceCapture(input)),
+        recordFocusSession: (input) =>
+          persist((repository) => repository.recordFocusSession(input)),
       }}
     >
       {children}

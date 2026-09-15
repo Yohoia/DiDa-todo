@@ -36,6 +36,7 @@ export function useVoiceCapture() {
   const flowRef = useRef(0);
   const requestRef = useRef<AbortController | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const durationSecondsRef = useRef<number | undefined>(undefined);
   const [audioLevel, setAudioLevel] = useState(0);
 
   useEffect(() => {
@@ -62,6 +63,7 @@ export function useVoiceCapture() {
     if (voiceCapture || startingRef.current || busyRef.current) return;
     const flow = ++flowRef.current;
     startingRef.current = true;
+    durationSecondsRef.current = undefined;
     setAudioLevel(0);
     recorderRef.current ??= new WavRecorder();
     // demo 模式不采集音频，跳过 prewarm 以免白开一个 AudioContext 悬挂着
@@ -151,6 +153,8 @@ export function useVoiceCapture() {
         busyRef.current = false;
         return;
       }
+      // 16 kHz / 16-bit / mono PCM：减去 WAV 头后可由字节数准确推算录音时长。
+      durationSecondsRef.current = Math.max(1, Math.round(Math.max(0, blob.size - 44) / 32000));
       try {
         transcript = await transcribeAudio(blob, locale, controller.signal);
       } catch (error) {
@@ -216,6 +220,7 @@ export function useVoiceCapture() {
     busyRef.current = false;
     startingRef.current = false;
     recorderRef.current?.abort();
+    durationSecondsRef.current = undefined;
     setAudioLevel(0);
     setVoiceCapture(null);
   }
@@ -237,7 +242,9 @@ export function useVoiceCapture() {
       transcript: state.transcript,
       parsed: items,
       taskCount: items.length,
+      durationSeconds: durationSecondsRef.current,
     });
+    durationSecondsRef.current = undefined;
     setVoiceCapture(null);
   }
 

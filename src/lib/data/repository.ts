@@ -89,7 +89,6 @@ function rowToTask(row: TaskRow, subtasks: SubtaskRow[]): Task {
     completedAt: row.completed_at ?? undefined,
     frozen: row.frozen,
     featured: row.featured,
-    inWorkList: row.list === "Work",
     created: new Date(row.created_at).getTime(),
     subtasks: subtasks.map((subtask) => ({
       id: subtask.id,
@@ -155,6 +154,14 @@ export type Repository = {
     transcript: string;
     parsed: unknown;
     taskCount: number;
+    durationSeconds?: number;
+  }): Promise<void>;
+  recordFocusSession(input: {
+    taskId: string;
+    startedAt: string;
+    endedAt: string;
+    durationSeconds: number;
+    completed: boolean;
   }): Promise<void>;
 };
 
@@ -268,12 +275,27 @@ export function createRepository(client: SupabaseClient, userId: string): Reposi
       if (error) throw new Error(error.message);
     },
 
-    async recordVoiceCapture({ transcript, parsed, taskCount }) {
+    async recordVoiceCapture({ transcript, parsed, taskCount, durationSeconds }) {
       const { error } = await client.from("voice_captures").insert({
         user_id: userId,
         transcript,
         parsed,
         task_count: taskCount,
+        duration_seconds: durationSeconds ?? null,
+      });
+      if (error) throw new Error(error.message);
+    },
+
+    async recordFocusSession({ taskId, startedAt, endedAt, durationSeconds, completed }) {
+      if (durationSeconds <= 0) return;
+      const { error } = await client.from("focus_sessions").insert({
+        user_id: userId,
+        task_id: taskId,
+        mode: "focus",
+        started_at: startedAt,
+        ended_at: endedAt,
+        duration_seconds: Math.round(durationSeconds),
+        completed,
       });
       if (error) throw new Error(error.message);
     },

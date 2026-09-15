@@ -169,7 +169,7 @@ export function SettingsPage({ profileName }: { profileName: string }) {
               <NumberField
                 label={t("Pomodoro Duration")}
                 value={preferences.duration}
-                min={1}
+                min={5}
                 max={120}
                 onChange={(duration) => save({ duration })}
               />
@@ -197,7 +197,7 @@ export function SettingsPage({ profileName }: { profileName: string }) {
                 label={t("Daily Capacity")}
                 value={preferences.dailyCapacity}
                 min={1}
-                max={30}
+                max={20}
                 onChange={(dailyCapacity) => save({ dailyCapacity })}
               />
             </SettingRow>

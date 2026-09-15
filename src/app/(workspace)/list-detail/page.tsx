@@ -4,7 +4,7 @@ import { ListPage } from "@/features/tasks/list-page";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
-  return { title: t("Work & Projects") };
+  return { title: t("Lists") };
 }
 
 export default function Page() {

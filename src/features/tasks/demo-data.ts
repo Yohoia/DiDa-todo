@@ -27,7 +27,6 @@ const examples: (Partial<Task> & Pick<Task, "id" | "title">)[] = [
     reminder: "10 min before",
     tags: ["development"],
     featured: true,
-    inWorkList: true,
     subtasks: [
       { id: "sub-1", title: "Login UI Layout", completed: true },
       { id: "sub-2", title: "OTP Verification API", completed: false },
@@ -71,7 +70,6 @@ const examples: (Partial<Task> & Pick<Task, "id" | "title">)[] = [
     date: DEMO_TODAY,
     time: "14:00",
     tags: ["Work"],
-    inWorkList: true,
   },
   {
     id: "workout",
@@ -87,7 +85,6 @@ const examples: (Partial<Task> & Pick<Task, "id" | "title">)[] = [
     date: DEMO_TODAY,
     time: "19:30",
     tags: ["development"],
-    inWorkList: true,
   },
   {
     id: "reading",
@@ -110,7 +107,6 @@ const examples: (Partial<Task> & Pick<Task, "id" | "title">)[] = [
     priority: 2,
     frozen: true,
     tags: ["development"],
-    inWorkList: true,
   },
   {
     id: "mom",
@@ -159,16 +155,14 @@ const examples: (Partial<Task> & Pick<Task, "id" | "title">)[] = [
     date: getDemoDate(1),
     priority: 2,
     tags: ["DesignSystem"],
-    inWorkList: true,
   },
-  { id: "slides", title: "撰写季度产品规划演示 PPT", date: getDemoDate(6), inWorkList: true },
+  { id: "slides", title: "撰写季度产品规划演示 PPT", date: getDemoDate(6) },
   {
     id: "archive-1",
     title: "修改登录页面逻辑交互 bug",
     date: getDemoDate(-1),
     completed: true,
     completedAt: `${getDemoDate(-1)}T21:40:00+08:00`,
-    inWorkList: true,
   },
   {
     id: "archive-2",

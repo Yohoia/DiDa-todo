@@ -16,20 +16,8 @@ export function ListPage() {
   const { t, label } = useI18n();
   const { tasks, selectTask, toggleTask, toggleSubtask, updateTask, setQuickAdd } = useWorkspace();
   const [sort, setSort] = useState("priority");
-  const [collection, setCollection] = useState("project");
-  const list: TaskList =
-    collection === "project" || collection === "Work" ? "Work" : (collection as TaskList);
-  const listTasks = tasks.filter((task) =>
-    collection === "project" ? task.inWorkList && task.list === "Work" : task.list === list,
-  );
-  const title =
-    collection === "project"
-      ? t("Work & Projects")
-      : collection === "Work"
-        ? t("All Work")
-        : collection === "Study"
-          ? t("Study & Learning")
-          : t("Life & Personal");
+  const [list, setList] = useState<TaskList>("Work");
+  const listTasks = tasks.filter((task) => task.list === list);
   const active = listTasks
     .filter((task) => !task.completed)
     .sort((a, b) =>
@@ -48,8 +36,9 @@ export function ListPage() {
             <HiBriefcase size={21} />
           </span>
           <div>
-            <h1 className="font-serif text-[2rem]">{title}</h1>
+            <h1 className="font-serif text-[2rem]">{t("Lists")}</h1>
             <p className={styles.muted}>
+              {label(list)} ·{" "}
               {t("tasks.listCount", {
                 count: active.length,
                 percent: listTasks.length ? Math.round((completed / listTasks.length) * 100) : 0,
@@ -72,11 +61,10 @@ export function ListPage() {
           <span className={styles.selectLabel}>{t("List")}</span>
           <Select
             ariaLabel={t("选择清单")}
-            value={collection}
-            onValueChange={setCollection}
+            value={list}
+            onValueChange={setList}
             options={[
-              { value: "project", label: t("Work & Projects") },
-              { value: "Work", label: t("All Work") },
+              { value: "Work", label: label("Work") },
               { value: "Study", label: label("Study") },
               { value: "Life", label: label("Life") },
             ]}
