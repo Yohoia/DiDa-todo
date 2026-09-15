@@ -2,6 +2,7 @@
 import { useI18n } from "@/features/preferences/preferences-provider";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import {
   createContext,
@@ -16,6 +17,7 @@ import {
 import { motion } from "framer-motion";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { createClient } from "@/lib/supabase/client";
 
 import styles from "./auth-dialog.module.css";
 
@@ -101,10 +103,10 @@ export function AuthDialogProvider({ children }: { children: ReactNode }) {
               </DialogDescription>
             </div>
             <TabsContent value="login" className={styles.view}>
-              <AuthForm view="login" />
+              <AuthForm view="login" onAuthed={() => setOpen(false)} />
             </TabsContent>
             <TabsContent value="register" className={styles.view}>
-              <AuthForm view="register" />
+              <AuthForm view="register" onAuthed={() => setOpen(false)} />
             </TabsContent>
           </Tabs>
         </DialogContent>
@@ -113,22 +115,97 @@ export function AuthDialogProvider({ children }: { children: ReactNode }) {
   );
 }
 
-function AuthForm({ view }: { view: AuthView }) {
+function AuthForm({ view, onAuthed }: { view: AuthView; onAuthed: () => void }) {
   const { t, label } = useI18n();
+  const router = useRouter();
+  const formRef = useRef<HTMLFormElement>(null);
   const [notice, setNotice] = useState("");
+  const [pending, setPending] = useState(false);
   const isLogin = view === "login";
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  /** Supabase 英文错误 → 可读文案；未知错误原样展示（label 对非键文本原样返回）。 */
+  function authErrorText(error: { code?: string; message: string }): string {
+    const text = error.message.toLowerCase();
+    if (error.code === "invalid_credentials" || text.includes("invalid login credentials")) {
+      return "邮箱或密码不正确。";
+    }
+    if (error.code === "email_not_confirmed") return "邮箱尚未验证，请先查收确认邮件。";
+    if (error.code === "user_already_exists" || text.includes("already registered")) {
+      return "该邮箱已注册，可以直接登录。";
+    }
+    if (error.code === "weak_password" || text.includes("password should be")) {
+      return "密码强度不足，请更换更复杂的密码。";
+    }
+    if (error.code === "over_request_rate_limit" || text.includes("rate limit")) {
+      return "尝试太频繁，请稍后再试。";
+    }
+    return error.message;
+  }
+
+  function fieldValue(form: HTMLFormElement, name: string): string {
+    const control = form.elements.namedItem(name);
+    return control instanceof HTMLInputElement ? control.value : "";
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setNotice(
-      isLogin
-        ? "当前为界面预览，登录服务尚未接入，您的凭证不会被提交。"
-        : "当前为界面预览，注册服务尚未接入，您的信息不会被提交。",
-    );
+    const form = event.currentTarget;
+    const email = fieldValue(form, "email").trim();
+    const password = fieldValue(form, "password");
+    const supabase = createClient();
+    setPending(true);
+    setNotice("");
+    try {
+      if (isLogin) {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) {
+          setNotice(authErrorText(error));
+          return;
+        }
+      } else {
+        const name = fieldValue(form, "name").trim();
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          // name 进 raw_user_meta_data，注册触发器据此写 profiles.display_name
+          options: { data: { name } },
+        });
+        if (error) {
+          setNotice(authErrorText(error));
+          return;
+        }
+        // 开启邮箱确认时 signUp 不返回会话：提示查收，不跳转
+        if (!data.session) {
+          setNotice("确认邮件已发送，请查收后再登录。");
+          return;
+        }
+      }
+      onAuthed();
+      router.push("/today");
+      router.refresh();
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function handleResetPassword() {
+    const email = formRef.current?.querySelector<HTMLInputElement>('input[name="email"]')?.value;
+    if (!email?.trim()) {
+      setNotice("请先填写邮箱，再找回密码。");
+      return;
+    }
+    setPending(true);
+    setNotice("");
+    try {
+      const { error } = await createClient().auth.resetPasswordForEmail(email.trim());
+      setNotice(error ? authErrorText(error) : "重置密码邮件已发送，请查收。");
+    } finally {
+      setPending(false);
+    }
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} ref={formRef}>
       {!isLogin && (
         <div className={styles.inputGroup}>
           <label htmlFor="register-name">{t("Full Name")}</label>
@@ -175,7 +252,8 @@ function AuthForm({ view }: { view: AuthView }) {
           <button
             className={styles.link}
             type="button"
-            onClick={() => setNotice("密码找回服务尚未开放，请在账号服务上线后使用。")}
+            disabled={pending}
+            onClick={() => void handleResetPassword()}
           >
             {t("忘记密码?")}
           </button>
@@ -184,6 +262,7 @@ function AuthForm({ view }: { view: AuthView }) {
       <motion.button
         className={styles.submit}
         type="submit"
+        disabled={pending}
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
         transition={{ duration: 0.15, ease: "easeOut" }}

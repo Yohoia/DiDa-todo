@@ -62,9 +62,9 @@ pnpm dev
 - `DASHSCOPE_API_KEY`：阿里云百炼，用于语音转写（`qwen-audio-3.0-asr-flash`）。
 - `DEEPSEEK_API_KEY`：DeepSeek 官方，用于待办解析（`deepseek-flash`）；留空时回退用百炼 Key 走 `qwen-flash`。
 
-部署到 Vercel 时，百炼 Key 与接口区域必须一致：北京 Key 使用默认的 `https://dashscope.aliyuncs.com`；新加坡 Key 需设置 `VOICE_ASR_BASE_URL=https://dashscope-intl.aliyuncs.com`。仓库的 `vercel.json` 将函数部署到香港区域以缩短到百炼的网络链路，修改环境变量后需要重新部署。
+部署到 Vercel 时，百炼 Key 与接口区域必须一致。项目默认使用新加坡工作空间专属域名 `https://ws-9mlt2qkeiwpfmr0z.ap-southeast-1.maas.aliyuncs.com`，必须配套该工作空间的 Key；如使用北京 Key，则设置 `VOICE_ASR_BASE_URL=https://dashscope.aliyuncs.com`，并在百炼兜底解析启用时同步设置 `VOICE_LLM_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1`。仓库的 `vercel.json` 将函数部署到香港区域以缩短到新加坡百炼的网络链路，修改环境变量后需要重新部署。
 
-未配置 Key 时其余功能不受影响，语音入口会提示"语音服务未配置"。录音即传即弃：不落盘、不写日志（含转写文本）。带 `?voice-demo` 打开页面可跳过设备与 Key 用固定语料预览完整流程。详见 [docs/voice-todo-plan.md](docs/voice-todo-plan.md)。
+未配置 Key 时其余功能不受影响，语音入口会提示"语音服务未配置"。音频即传即弃：不落盘、不写日志；登录用户确认添加后，转写文本与解析结果会保存到其账户下的 `voice_captures` 表（可随时删除）。带 `?voice-demo` 打开页面可跳过设备与 Key 用固定语料预览完整流程。详见 [docs/voice-todo-plan.md](docs/voice-todo-plan.md)。
 
 ## 技术设计
 

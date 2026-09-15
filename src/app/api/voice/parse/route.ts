@@ -126,7 +126,7 @@ function resolveProvider() {
       process.env.VOICE_LLM_BASE_URL ??
       (hasDeepSeek
         ? "https://api.deepseek.com/v1"
-        : "https://dashscope.aliyuncs.com/compatible-mode/v1"),
+        : "https://ws-9mlt2qkeiwpfmr0z.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1"),
     apiKey:
       process.env.VOICE_LLM_API_KEY ??
       process.env.DEEPSEEK_API_KEY ??

@@ -2,22 +2,22 @@
 import type { MessageKey } from "@/i18n/messages";
 import type { MessageValues } from "@/i18n/translate";
 
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useRef, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import type { Task, TaskList } from "@/types/task";
-import type { VoiceCaptureState } from "@/types/voice";
+import type { VoiceCaptureState, VoiceParsed } from "@/types/voice";
 import { createId } from "@/lib/utils";
-import { initialTasks } from "./demo-data";
+import {
+  createRepository,
+  type Repository,
+  type StoredPreferences as Preferences,
+} from "@/lib/data/repository";
+import { createClient } from "@/lib/supabase/client";
 
-type Preferences = {
-  firstDay: "Monday" | "Sunday";
-  sound: boolean;
-  duration: number;
-  autoBreak: boolean;
-  dailyCapacity: number;
-  reminders: boolean;
-};
 type Notice = { key: MessageKey; values?: MessageValues };
 export type QuickAddPreset = { list: TaskList; date?: string; time?: string; title?: string };
+/** 登录用户摘要：layout 服务端读取会话后注入，游客为 null（预览模式，仅内存态）。 */
+export type WorkspaceUser = { id: string; email: string; displayName: string };
 
 type WorkspaceState = {
   tasks: Task[];
@@ -42,10 +42,29 @@ type WorkspaceState = {
   setPreferences: (patch: Partial<Preferences>) => void;
   notice: Notice | null;
   notify: (message: Notice | null) => void;
+  user: WorkspaceUser | null;
+  signOut: () => Promise<void>;
+  /** 语音确认后留档（voice_captures），游客/失败静默。 */
+  recordVoiceCapture: (input: {
+    transcript: string;
+    parsed: VoiceParsed[];
+    taskCount: number;
+  }) => void;
 };
 const WorkspaceContext = createContext<WorkspaceState | null>(null);
 
-export function WorkspaceProvider({ children }: { children: ReactNode }) {
+export function WorkspaceProvider({
+  children,
+  initialTasks,
+  initialPreferences,
+  user,
+}: {
+  children: ReactNode;
+  initialTasks: Task[];
+  initialPreferences: Preferences;
+  user: WorkspaceUser | null;
+}) {
+  const router = useRouter();
   const [tasks, setTasks] = useState(initialTasks);
   const [selectedId, selectTask] = useState<string | null>(null);
   const [quickAdd, updateQuickAdd] = useState<QuickAddPreset | null>(null);
@@ -53,14 +72,23 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [focusId, setFocusId] = useState<string | null>(null);
   const [notice, notify] = useState<Notice | null>(null);
-  const [preferences, updatePreferences] = useState<Preferences>({
-    firstDay: "Monday",
-    sound: true,
-    duration: 25,
-    autoBreak: false,
-    dailyCapacity: 8,
-    reminders: true,
-  });
+  const [preferences, updatePreferences] = useState(initialPreferences);
+
+  // 登录态的写穿通道：仓库只在浏览器事件里惰性创建；队列串行执行，
+  // 保证「先取消旧 One Thing 再置新的」这类有顺序依赖的写入不违反唯一索引。
+  const repositoryRef = useRef<Repository | null>(null);
+  const queueRef = useRef<Promise<unknown>>(Promise.resolve());
+  function persist(action: (repository: Repository) => Promise<void>) {
+    if (!user) return;
+    repositoryRef.current ??= createRepository(createClient(), user.id);
+    const repository = repositoryRef.current;
+    queueRef.current = queueRef.current
+      .then(() => action(repository))
+      .catch((error: unknown) => {
+        console.error("sync failed:", error);
+        notify({ key: "sync.failed" });
+      });
+  }
 
   function updateTask(id: string, patch: Partial<Task>) {
     setTasks((current) =>
@@ -98,77 +126,80 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
             : undefined;
         }
 
-        // If setting this task as featured, unfeatured all others
-        if (patch.featured === true) {
-          return {
-            ...task,
-            ...patch,
-            schedule,
-          };
-        }
         return { ...task, ...patch, schedule };
       }),
     );
+    // 置新 One Thing 前先排队取消旧的（tasks 里仍 featured 的其他任务）
+    if (patch.featured === true) {
+      for (const other of tasks) {
+        if (other.featured && other.id !== id) {
+          const otherId = other.id;
+          persist((repository) => repository.updateTask(otherId, { featured: false }));
+        }
+      }
+    }
+    persist((repository) => repository.updateTask(id, patch));
   }
   function addTask(title: string, list: TaskList = "Inbox", date = "", time?: string) {
     if (!title.trim()) return;
     const id = createId();
     const [hour, minute] = (time ?? "").split(":").map(Number);
-    setTasks((current) => [
-      ...current,
-      {
-        id,
-        title: title.trim(),
-        description: "",
-        list,
-        tags: [],
-        date,
-        time,
-        schedule:
-          date && time ? { date, hour, minute, duration: 25, label: title.trim() } : undefined,
-        priority: 3,
-        estimate: 1,
-        reminder: "None",
-        completed: false,
-        inWorkList: list === "Work",
-        created: Date.now(),
-        subtasks: [],
-      },
-    ]);
+    const task: Task = {
+      id,
+      title: title.trim(),
+      description: "",
+      list,
+      tags: [],
+      date,
+      time,
+      schedule:
+        date && time ? { date, hour, minute, duration: 25, label: title.trim() } : undefined,
+      priority: 3,
+      estimate: 1,
+      reminder: "None",
+      completed: false,
+      inWorkList: list === "Work",
+      created: Date.now(),
+      subtasks: [],
+    };
+    setTasks((current) => [...current, task]);
+    persist((repository) => repository.createTask(task));
     notify({ key: "tasks.added", values: { list, date: date ? ` · ${date}` : "" } });
     return id;
   }
   function toggleTask(id: string) {
-    setTasks((current) =>
-      current.map((task) =>
-        task.id === id
-          ? {
-              ...task,
-              completed: !task.completed,
-              completedAt: task.completed ? undefined : new Date().toISOString(),
-            }
-          : task,
-      ),
-    );
+    const task = tasks.find((item) => item.id === id);
+    const completed = task ? !task.completed : true;
+    const patch = { completed, completedAt: completed ? new Date().toISOString() : undefined };
+    setTasks((current) => current.map((item) => (item.id === id ? { ...item, ...patch } : item)));
+    persist((repository) => repository.updateTask(id, patch));
   }
   function toggleSubtask(taskId: string, subtaskId: string) {
-    setTasks((current) =>
-      current.map((task) =>
-        task.id === taskId
-          ? {
-              ...task,
-              subtasks: task.subtasks.map((subtask) =>
-                subtask.id === subtaskId ? { ...subtask, completed: !subtask.completed } : subtask,
-              ),
-            }
-          : task,
-      ),
+    const task = tasks.find((item) => item.id === taskId);
+    if (!task) return;
+    const subtasks = task.subtasks.map((subtask) =>
+      subtask.id === subtaskId ? { ...subtask, completed: !subtask.completed } : subtask,
     );
+    setTasks((current) =>
+      current.map((item) => (item.id === taskId ? { ...item, subtasks } : item)),
+    );
+    persist((repository) => repository.updateTask(taskId, { subtasks }));
   }
   function deleteTask(id: string) {
     setTasks((current) => current.filter((task) => task.id !== id));
     selectTask(null);
+    persist((repository) => repository.deleteTask(id));
     notify({ key: "tasks.deleted" });
+  }
+  async function signOut() {
+    try {
+      await createClient().auth.signOut();
+    } catch (error) {
+      console.error("sign out failed:", error);
+    } finally {
+      router.push("/");
+      router.refresh();
+    }
   }
   return (
     <WorkspaceContext.Provider
@@ -195,9 +226,16 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         },
         stopFocus: () => setFocusId(null),
         preferences,
-        setPreferences: (patch) => updatePreferences((current) => ({ ...current, ...patch })),
+        setPreferences: (patch) => {
+          updatePreferences((current) => ({ ...current, ...patch }));
+          persist((repository) => repository.savePreferences(patch));
+        },
         notice,
         notify,
+        user,
+        signOut,
+        recordVoiceCapture: (input) =>
+          persist((repository) => repository.recordVoiceCapture(input)),
       }}
     >
       {children}

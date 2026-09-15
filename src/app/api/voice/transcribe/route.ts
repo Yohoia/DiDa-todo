@@ -8,6 +8,7 @@
  */
 
 import { guardVoiceRequest } from "@/lib/server/voice-request-guard";
+import { request as httpsRequest } from "node:https";
 
 /** 覆盖未启用 Fluid Compute 时较短的 Vercel 默认时限。 */
 export const maxDuration = 60;
@@ -18,6 +19,9 @@ const MAX_SECONDS = 61; // 客户端按 60s 截断，留 1s 舍入余量
 const ASR_TIMEOUT_MS = 45_000;
 
 type WavInfo = { byteRate: number; dataBytes: number };
+type UpstreamResult = { status: number; body: string };
+
+const MAX_UPSTREAM_RESPONSE_BYTES = 4 * 1024 * 1024;
 
 /** 解析 WAV 头：校验 RIFF/WAVE 与 fmt/data 块，算出时长所需的字节率与数据长度。 */
 function inspectWav(bytes: Uint8Array): WavInfo | null {
@@ -47,6 +51,79 @@ function ascii(bytes: Uint8Array, offset: number): string {
     bytes[offset + 2],
     bytes[offset + 3],
   );
+}
+
+/**
+ * 百炼北京共享域名在部分 Vercel 出口上会让 Node fetch/undici 连接超时。
+ * 这里使用 Node 原生 HTTPS 并强制 IPv4，避开地址族选择造成的连接失败。
+ */
+function postJsonOverHttps(url: URL, body: string, apiKey: string): Promise<UpstreamResult> {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    let responseBytes = 0;
+    const chunks: Buffer[] = [];
+    const finish = (callback: () => void) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      callback();
+    };
+    const fail = (error: Error) => finish(() => reject(error));
+
+    const outgoing = httpsRequest(
+      url,
+      {
+        method: "POST",
+        family: 4,
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "Content-Length": Buffer.byteLength(body),
+          "X-DashScope-SSE": "disable",
+        },
+      },
+      (incoming) => {
+        incoming.on("data", (chunk: Buffer) => {
+          responseBytes += chunk.length;
+          if (responseBytes > MAX_UPSTREAM_RESPONSE_BYTES) {
+            outgoing.destroy(new Error("upstream_response_too_large"));
+            return;
+          }
+          chunks.push(chunk);
+        });
+        incoming.on("error", fail);
+        incoming.on("end", () => {
+          finish(() =>
+            resolve({
+              status: incoming.statusCode ?? 502,
+              body: Buffer.concat(chunks).toString("utf8"),
+            }),
+          );
+        });
+      },
+    );
+
+    const timer = setTimeout(() => {
+      const error = new Error("upstream request timed out");
+      error.name = "TimeoutError";
+      outgoing.destroy(error);
+    }, ASR_TIMEOUT_MS);
+    outgoing.on("error", fail);
+    outgoing.end(body);
+  });
+}
+
+/** 接受根域名或误带 /api/v1 的配置，统一生成原生 DashScope 地址。 */
+function buildAsrEndpoint(baseUrl: string): URL {
+  const endpoint = new URL(baseUrl);
+  if (endpoint.protocol !== "https:") throw new Error("asr_endpoint_must_use_https");
+  const basePath = endpoint.pathname
+    .replace(/\/+$/, "")
+    .replace(/\/(?:api|compatible-mode)\/v1$/, "");
+  endpoint.pathname = `${basePath}/api/v1/services/aigc/multimodal-generation/generation`;
+  endpoint.search = "";
+  endpoint.hash = "";
+  return endpoint;
 }
 
 export async function POST(request: Request) {
@@ -87,50 +164,44 @@ export async function POST(request: Request) {
   const language = locale.startsWith("zh") ? "zh" : locale.startsWith("en") ? "en" : null;
   // qwen-audio-3.0-asr-flash 走 DashScope 原生 multimodal-generation 协议：
   // format 在 parameters（OpenAI 兼容模式对新模型不支持，实测报 format is empty）
-  const baseUrl = process.env.VOICE_ASR_BASE_URL ?? "https://dashscope.aliyuncs.com";
+  const baseUrl =
+    process.env.VOICE_ASR_BASE_URL ??
+    "https://ws-9mlt2qkeiwpfmr0z.ap-southeast-1.maas.aliyuncs.com";
   const model = process.env.VOICE_ASR_MODEL ?? "qwen-audio-3.0-asr-flash";
-
-  let upstream: Response;
-  try {
-    upstream = await fetch(`${baseUrl}/api/v1/services/aigc/multimodal-generation/generation`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "X-DashScope-SSE": "disable",
-      },
-      body: JSON.stringify({
-        model,
-        input: {
-          messages: [
+  const requestBody = JSON.stringify({
+    model,
+    input: {
+      messages: [
+        {
+          role: "user",
+          content: [
             {
-              role: "user",
-              content: [
-                {
-                  type: "input_audio",
-                  input_audio: {
-                    data: `data:audio/wav;base64,${Buffer.from(bytes).toString("base64")}`,
-                  },
-                },
-              ],
+              type: "input_audio",
+              input_audio: {
+                data: `data:audio/wav;base64,${Buffer.from(bytes).toString("base64")}`,
+              },
             },
           ],
         },
-        parameters: {
-          format: "wav",
-          sample_rate: "16000",
-          // 热词表（替代旧 system 词表用法）：提升清单专名识别
-          vocabulary: { Inbox: 1, Work: 1, Study: 1, Life: 1 },
-          ...(language ? { language_hints: [language] } : {}),
-        },
-      }),
-      signal: AbortSignal.timeout(ASR_TIMEOUT_MS),
-    });
+      ],
+    },
+    parameters: {
+      format: "wav",
+      sample_rate: "16000",
+      // 热词表（替代旧 system 词表用法）：提升清单专名识别
+      vocabulary: { Inbox: 1, Work: 1, Study: 1, Life: 1 },
+      ...(language ? { language_hints: [language] } : {}),
+    },
+  });
+
+  let upstream: UpstreamResult;
+  try {
+    upstream = await postJsonOverHttps(buildAsrEndpoint(baseUrl), requestBody, apiKey);
   } catch (error) {
     const timedOut = error instanceof Error && error.name === "TimeoutError";
     // 只记错误元数据（超时/网络异常名），不含音频与转写内容
     console.error(
-      `[voice/transcribe] upstream fetch failed: ${
+      `[voice/transcribe] upstream request failed: ${
         timedOut
           ? "timeout"
           : error instanceof Error
@@ -147,7 +218,7 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!upstream.ok) {
+  if (upstream.status < 200 || upstream.status >= 300) {
     if (upstream.status === 408 || upstream.status === 504) {
       return Response.json({ error: "asr_timeout", detail: "upstream_timeout" }, { status: 504 });
     }
@@ -156,7 +227,7 @@ export async function POST(request: Request) {
     }
     // 401/403/400 等上游错误：状态码与错误 code 记入服务端日志与响应 detail，
     // 用于区分 key 无效 / 地域限制 / 参数问题（同样是只记错误元数据）
-    const body = await upstream.text().catch(() => "");
+    const body = upstream.body;
     let upstreamCode = "";
     try {
       upstreamCode = String(JSON.parse(body)?.error?.code ?? "") || "";
@@ -173,9 +244,16 @@ export async function POST(request: Request) {
     );
   }
   // 原生协议返回 output.text（实测响应还内嵌了一层 output.output.text，做防御性取值）
-  const payload = (await upstream.json()) as {
-    output?: { text?: unknown; output?: { text?: unknown } };
-  };
+  let payload: { output?: { text?: unknown; output?: { text?: unknown } } };
+  try {
+    payload = JSON.parse(upstream.body) as typeof payload;
+  } catch {
+    console.error("[voice/transcribe] upstream returned invalid JSON");
+    return Response.json(
+      { error: "asr_failed", detail: "upstream_invalid_response" },
+      { status: 502 },
+    );
+  }
   const text = payload.output?.text ?? payload.output?.output?.text;
   const transcript = typeof text === "string" ? text.trim() : "";
   return Response.json({ transcript }, { headers: { "Cache-Control": "no-store" } });

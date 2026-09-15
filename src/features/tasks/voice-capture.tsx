@@ -28,7 +28,8 @@ const DEMO_TRANSCRIPT = "明天下午三点提醒我交房租，后天上午去�
  */
 export function useVoiceCapture() {
   const { locale } = useI18n();
-  const { voiceCapture, setVoiceCapture, addTask, setQuickAdd, notify } = useWorkspace();
+  const { voiceCapture, setVoiceCapture, addTask, setQuickAdd, notify, recordVoiceCapture } =
+    useWorkspace();
   const recorderRef = useRef<WavRecorder | null>(null);
   const busyRef = useRef(false);
   const startingRef = useRef(false);
@@ -231,6 +232,12 @@ export function useVoiceCapture() {
         item.time ?? undefined,
       );
     }
+    // 登录态留档原文与解析结果（voice_captures），失败静默不影响添加
+    recordVoiceCapture({
+      transcript: state.transcript,
+      parsed: items,
+      taskCount: items.length,
+    });
     setVoiceCapture(null);
   }
 

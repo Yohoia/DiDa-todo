@@ -101,11 +101,11 @@ function NumberField({
 }
 export function SettingsPage({ profileName }: { profileName: string }) {
   const { t, label } = useI18n();
-  const { preferences, setPreferences, notify } = useWorkspace();
+  const { preferences, setPreferences, notify, user, signOut } = useWorkspace();
   const [section, setSection] = useState("General");
   function save(patch: Parameters<typeof setPreferences>[0]) {
     setPreferences(patch);
-    notify({ key: "已更新本次预览的偏好设置" });
+    notify({ key: user ? "已保存到你的账户" : "已更新本次预览的偏好设置" });
   }
   return (
     <div className={styles.page}>
@@ -236,14 +236,36 @@ export function SettingsPage({ profileName }: { profileName: string }) {
         {section === "Account & Sync" && (
           <section className={styles.section}>
             <h2>{t("Account & Sync")}</h2>
-            <SettingRow title={profileName} description={t("Preview account")}>
-              <Link href="/profile" className={shared.button}>
-                {t("View Profile")}
-              </Link>
-            </SettingRow>
-            <p className={shared.muted}>
-              {t("当前使用前端示例数据。账号、同步与云端保存尚未接入。")}
-            </p>
+            {user ? (
+              <>
+                <SettingRow title={user.displayName || profileName} description={user.email}>
+                  <div className={styles.accountActions}>
+                    <Link href="/profile" className={shared.button}>
+                      {t("View Profile")}
+                    </Link>
+                    <button
+                      type="button"
+                      className={shared.textButton}
+                      onClick={() => void signOut()}
+                    >
+                      {t("退出登录")}
+                    </button>
+                  </div>
+                </SettingRow>
+                <p className={shared.muted}>{t("任务、偏好与语音记录已同步到你的账户。")}</p>
+              </>
+            ) : (
+              <>
+                <SettingRow title={profileName} description={t("Preview account")}>
+                  <Link href="/profile" className={shared.button}>
+                    {t("View Profile")}
+                  </Link>
+                </SettingRow>
+                <p className={shared.muted}>
+                  {t("当前使用前端示例数据。账号、同步与云端保存尚未接入。")}
+                </p>
+              </>
+            )}
           </section>
         )}
       </div>

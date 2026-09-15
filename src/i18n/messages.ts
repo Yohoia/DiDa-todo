@@ -1570,6 +1570,50 @@ export const messages = {
     "zh-CN": "返回首页",
     en: "Back to home",
   },
+  "sync.failed": {
+    "zh-CN": "同步失败，更改仅保留在本页。",
+    en: "Sync failed — changes are kept on this page only.",
+  },
+  "邮箱或密码不正确。": {
+    "zh-CN": "邮箱或密码不正确。",
+    en: "Incorrect email or password.",
+  },
+  "邮箱尚未验证，请先查收确认邮件。": {
+    "zh-CN": "邮箱尚未验证，请先查收确认邮件。",
+    en: "Please confirm your email first — check your inbox.",
+  },
+  "该邮箱已注册，可以直接登录。": {
+    "zh-CN": "该邮箱已注册，可以直接登录。",
+    en: "That email is already registered — try signing in.",
+  },
+  "密码强度不足，请更换更复杂的密码。": {
+    "zh-CN": "密码强度不足，请更换更复杂的密码。",
+    en: "Password is too weak — please choose a stronger one.",
+  },
+  "确认邮件已发送，请查收后再登录。": {
+    "zh-CN": "确认邮件已发送，请查收后再登录。",
+    en: "Confirmation email sent — please check your inbox, then sign in.",
+  },
+  "请先填写邮箱，再找回密码。": {
+    "zh-CN": "请先填写邮箱，再找回密码。",
+    en: "Enter your email first, then reset your password.",
+  },
+  "重置密码邮件已发送，请查收。": {
+    "zh-CN": "重置密码邮件已发送，请查收。",
+    en: "Password reset email sent — please check your inbox.",
+  },
+  退出登录: {
+    "zh-CN": "退出登录",
+    en: "Sign Out",
+  },
+  "任务、偏好与语音记录已同步到你的账户。": {
+    "zh-CN": "任务、偏好与语音记录已同步到你的账户。",
+    en: "Tasks, preferences, and voice notes are synced to your account.",
+  },
+  已保存到你的账户: {
+    "zh-CN": "已保存到你的账户",
+    en: "Saved to your account",
+  },
 } as const;
 
 export type MessageKey = keyof typeof messages;
