@@ -28,3 +28,8 @@ yarn-error.log*
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
+
+# Supabase CLI 本地链接产物与迁移临时文件
+supabase/.temp/
+.db-tokyo-password
+.tokyo-migration.sql
