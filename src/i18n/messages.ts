@@ -152,6 +152,22 @@ export const messages = {
     "zh-CN": "返回",
     en: "Back",
   },
+  "notifications.taskDueBody": {
+    "zh-CN": "{title} · {time} 开始",
+    en: "{title} · due at {time}",
+  },
+  全部已读: {
+    "zh-CN": "全部已读",
+    en: "Mark all read",
+  },
+  暂无提醒: {
+    "zh-CN": "暂无提醒",
+    en: "No reminders yet",
+  },
+  "notifications.inAppHint": {
+    "zh-CN": "提醒会在应用内通知中心显示；关闭页面期间错过的提醒，回来后可在右上角铃铛中查看。",
+    en: "Reminders appear in the in-app notification center; ones missed while away will be waiting under the bell when you return.",
+  },
   Join: {
     "zh-CN": "加入",
     en: "Join",

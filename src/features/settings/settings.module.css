@@ -232,3 +232,15 @@
   color: var(--foreground);
   background: var(--secondary);
 }
+
+.notificationPanel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding-top: 12px;
+  flex-wrap: wrap;
+}
+.notificationPanel p {
+  margin: 0;
+}

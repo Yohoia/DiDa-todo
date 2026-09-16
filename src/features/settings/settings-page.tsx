@@ -366,7 +366,7 @@ export function SettingsPage({
                   onChange={(value) => save({ reminders: value })}
                 />
               </SettingRow>
-              <p className={shared.muted}>{t("提醒偏好仅用于页面预览，通知服务尚未接入。")}</p>
+              <p className={shared.muted}>{t("notifications.inAppHint")}</p>
             </section>
           )}
           {section === "Appearance" && (

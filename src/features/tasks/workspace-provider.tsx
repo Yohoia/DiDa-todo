@@ -2,9 +2,10 @@
 import type { MessageKey } from "@/i18n/messages";
 import type { MessageValues } from "@/i18n/translate";
 
-import { createContext, useContext, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import type { Task, TaskList } from "@/types/task";
+import type { AppNotification } from "@/types/notification";
 import type { VoiceCaptureState, VoiceParsed } from "@/types/voice";
 import { createId } from "@/lib/utils";
 import {
@@ -40,6 +41,15 @@ type WorkspaceState = {
   stopFocus: () => void;
   preferences: Preferences;
   setPreferences: (patch: Partial<Preferences>) => void;
+  /** 站内通知中心（任务到期提醒），登录后持久化、游客为内存态 */
+  notifications: AppNotification[];
+  recordTaskDueNotification: (input: {
+    taskId: string;
+    title: string;
+    remindAt: string;
+  }) => boolean;
+  markNotificationRead: (id: string) => void;
+  markAllNotificationsRead: () => void;
   notice: Notice | null;
   notify: (message: Notice | null) => void;
   user: WorkspaceUser | null;
@@ -66,11 +76,13 @@ export function WorkspaceProvider({
   children,
   initialTasks,
   initialPreferences,
+  initialNotifications,
   user,
 }: {
   children: ReactNode;
   initialTasks: Task[];
   initialPreferences: Preferences;
+  initialNotifications: AppNotification[];
   user: WorkspaceUser | null;
 }) {
   const router = useRouter();
@@ -82,6 +94,12 @@ export function WorkspaceProvider({
   const [focusId, setFocusId] = useState<string | null>(null);
   const [notice, notify] = useState<Notice | null>(null);
   const [preferences, updatePreferences] = useState(initialPreferences);
+  const [notifications, updateNotifications] = useState(initialNotifications);
+  // 调度器在 interval 回调里写通知：用 ref 镜像最新列表做同步去重，避免闭包过期
+  const notificationsRef = useRef(initialNotifications);
+  useEffect(() => {
+    notificationsRef.current = notifications;
+  }, [notifications]);
 
   // 登录态的写穿通道：仓库只在浏览器事件里惰性创建；队列串行执行，
   // 保证「先取消旧 One Thing 再置新的」这类有顺序依赖的写入不违反唯一索引。
@@ -218,6 +236,42 @@ export function WorkspaceProvider({
     persist((repository) => repository.deleteTask(id));
     notify({ key: "tasks.deleted" });
   }
+  /** 生成任务到期通知；已存在（本地去重 + 数据库唯一索引）返回 false 不重复提示 */
+  function recordTaskDueNotification({
+    taskId,
+    title,
+    remindAt,
+  }: {
+    taskId: string;
+    title: string;
+    remindAt: string;
+  }) {
+    if (notificationsRef.current.some((item) => item.taskId === taskId)) return false;
+    const notification: AppNotification = {
+      id: createId(),
+      type: "task_due",
+      taskId,
+      title,
+      remindAt,
+      read: false,
+      createdAt: new Date().toISOString(),
+    };
+    notificationsRef.current = [notification, ...notificationsRef.current];
+    updateNotifications(notificationsRef.current);
+    persist((repository) => repository.createTaskDueNotification(notification));
+    return true;
+  }
+  function markNotificationRead(id: string) {
+    updateNotifications((current) =>
+      current.map((item) => (item.id === id ? { ...item, read: true } : item)),
+    );
+    persist((repository) => repository.markNotificationRead(id));
+  }
+  function markAllNotificationsRead() {
+    updateNotifications((current) => current.map((item) => ({ ...item, read: true })));
+    persist((repository) => repository.markAllNotificationsRead());
+  }
+
   async function signOut() {
     try {
       await createClient().auth.signOut();
@@ -253,6 +307,10 @@ export function WorkspaceProvider({
         },
         stopFocus: () => setFocusId(null),
         preferences,
+        notifications,
+        recordTaskDueNotification,
+        markNotificationRead,
+        markAllNotificationsRead,
         setPreferences: (patch) => {
           updatePreferences((current) => ({ ...current, ...patch }));
           persist((repository) => repository.savePreferences(patch));

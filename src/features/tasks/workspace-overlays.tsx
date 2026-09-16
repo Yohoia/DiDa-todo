@@ -8,11 +8,14 @@ import { TaskDetail } from "./task-detail";
 import { QuickAdd } from "./quick-add";
 import { CommandPalette } from "@/components/ui/command-palette";
 import { FocusSession } from "@/features/focus/focus-session";
+import { useTaskReminders } from "@/features/notifications/use-task-reminders";
 import styles from "@/styles/workspace.module.css";
 
 export function WorkspaceOverlays() {
   const { t, label } = useI18n();
   const { notice, notify } = useWorkspace();
+  // 任务到期提醒：全局挂载一次，随工作台生命周期启停
+  useTaskReminders();
   useEffect(() => {
     if (!notice) return;
     const timer = setTimeout(() => notify(null), 4000);

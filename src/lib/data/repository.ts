@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Task, TaskList } from "@/types/task";
+import type { AppNotification } from "@/types/notification";
 
 /**
  * Supabase 数据仓库：组件不直接 supabase.from()，统一经此层读写（TechStack §14）。
@@ -198,6 +199,10 @@ export type Repository = {
     durationSeconds: number;
     completed: boolean;
   }): Promise<void>;
+  listNotifications(): Promise<AppNotification[]>;
+  createTaskDueNotification(notification: AppNotification): Promise<void>;
+  markNotificationRead(id: string): Promise<void>;
+  markAllNotificationsRead(): Promise<void>;
 };
 
 /**
@@ -325,6 +330,56 @@ export function createRepository(client: SupabaseClient, userId: string): Reposi
         duration_seconds: Math.round(durationSeconds),
         completed,
       });
+      if (error) throw new Error(error.message);
+    },
+
+    async listNotifications() {
+      const { data, error } = await client
+        .from("notifications")
+        .select("id, task_id, title, remind_at, read, created_at")
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw new Error(error.message);
+      type Row = {
+        id: string;
+        task_id: string;
+        title: string;
+        remind_at: string;
+        read: boolean;
+        created_at: string;
+      };
+      return (data as Row[]).map((row) => ({
+        id: row.id,
+        type: "task_due",
+        taskId: row.task_id,
+        title: row.title,
+        remindAt: row.remind_at,
+        read: row.read,
+        createdAt: row.created_at,
+      }));
+    },
+
+    async createTaskDueNotification(notification) {
+      const { error } = await client.from("notifications").insert({
+        id: notification.id,
+        user_id: userId,
+        type: notification.type,
+        task_id: notification.taskId,
+        title: notification.title,
+        remind_at: notification.remindAt,
+        read: notification.read,
+      });
+      // 23505 = 唯一索引冲突：该任务已生成过通知（多标签页并发/回访补扫），视为成功
+      if (error && error.code !== "23505") throw new Error(error.message);
+    },
+
+    async markNotificationRead(id) {
+      const { error } = await client.from("notifications").update({ read: true }).eq("id", id);
+      if (error) throw new Error(error.message);
+    },
+
+    async markAllNotificationsRead() {
+      const { error } = await client.from("notifications").update({ read: true }).eq("read", false);
       if (error) throw new Error(error.message);
     },
   };
