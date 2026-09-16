@@ -5,7 +5,7 @@
 <p align="center">
   一个以任务为核心，串联日程、专注与成长反馈的双语 Web 工作台。
   <br>
-  <sub>邮箱认证已接入（Supabase Auth）· 任务数据暂存于浏览器会话</sub>
+  <sub>邮箱认证 · 云端任务同步 · AI 当日整理 · 专注计时 · 站内提醒</sub>
 </p>
 
 <p align="center">
@@ -21,25 +21,49 @@
   <img src="./assets/readme/showcase.webp" width="100%" alt="DiDa-todo 的首页、周日历和统计洞察界面">
 </p>
 
-从首页进入工作台后，可以在同一套安静、紧凑的视觉语言中完成任务收集、时间安排、深度专注与进度回顾。界面支持简体中文与 English，也支持浅色、暗色和跟随系统外观。
+登录后，可以在同一套安静、紧凑的视觉语言中完成任务收集、时间安排、AI 整理、深度专注与进度回顾。界面支持简体中文与 English，也支持浅色、暗色和跟随系统外观。
 
 > [!IMPORTANT]
-> 邮箱认证已上线（Supabase 东京区域）；任务数据暂存浏览器会话，首页指标与 AI 寄语为展示内容。
+> 工作区仅对已登录用户开放，不再提供游客直达或个人页面演示模式。任务、账户资料、工作台偏好、通知、语音确认记录和专注记录保存到 Supabase，并通过数据库 RLS 隔离。首页宣传指标与部分装饰性文案为展示内容，不代表实际用户统计或实时 AI 生成结果。
 
 ## 核心体验
 
-| 工作流     | 可以体验什么                          | 入口                                 |
-| ---------- | ------------------------------------- | ------------------------------------ |
-| 规划今天   | One Thing、容量提示、冻结任务与时间线 | `/today`                             |
-| 收集与整理 | 捕获即进 Inbox、清单归类与标签整理    | `/inbox`                             |
-| 安排时间   | 月历选日、日期切换、任务时段          | `/schedule`                          |
-| 保持专注   | 可暂停、继续与退出的专注计时          | `/today`                             |
-| 回顾成长   | 已完成任务、专注热力图、等级与花园    | `/completed`、`/insight`、`/profile` |
+| 工作流     | 可以体验什么                                   | 入口                                 |
+| ---------- | ---------------------------------------------- | ------------------------------------ |
+| 规划今天   | One Thing、容量提示、冻结任务与时间线          | `/today`                             |
+| 收集与整理 | 随手记录、按日查看、清单与标签、AI 当日整理    | `/inbox`                             |
+| 安排时间   | 日历选日、日期切换、任务时间编辑，无独立日程页 | `/inbox`、任务详情                   |
+| 保持专注   | 可暂停、继续与退出的番茄钟，保存实际专注时长   | 今日页与任务详情                     |
+| 回顾成长   | 已完成任务、专注热力图、等级与花园             | `/completed`、`/insight`、`/profile` |
+| 管理账户   | 修改昵称与头像、重置密码、换绑邮箱、退出登录   | `/settings`                          |
+| 接收提醒   | 任务到期通知、全部已读、确认后清空             | 工作区底部 Dock 的通知入口           |
 
-- 使用 Dock 或 `⌘K / Ctrl+K` 快速添加任务；输入 `/` 可搜索页面并跳转。
+- 使用 Dock 添加任务；`⌘K / Ctrl+K` 打开任务搜索，匹配标题、描述和标签。在收件箱按 `/` 打开「记一笔」，新条目记到今天。
 - 在任务详情中编辑标题、描述、日期、优先级、清单、标签、预估、提醒与子任务。
-- 任务完成／恢复状态会同步到相关视图；语言和主题偏好通过 Cookie 跨刷新保留。
+- 任务创建、编辑、完成／恢复与删除会同步到云端；语言和主题偏好通过 Cookie 跨刷新保留。
 - 键盘焦点、Esc 关闭、弹层焦点约束和减少动态效果均有对应处理。
+
+### AI 当日整理
+
+收件箱中的 AI 整理以**当前日历选中的日期**为边界，默认是今天。只整理这一天尚未完成的任务，不扫描整个收件箱，也不修改其他日期或已完成任务。
+
+- **时间**：保留已设置的时间；未设置时，仅从标题或描述中提取明确的具体时刻，否则保持「随时」，不自动编排日程。
+- **清单**：按内容选择现有的工作、学习或生活清单，不创建新清单或独立清单页面。
+- **标签**：生成或复用 1–3 个相关短标签。
+- **优先级**：建议 P1／P2／P3，不把所有任务都判为紧急。
+- **预估**：根据当前番茄钟时长估算工作量，以 1–16 个番茄钟表示。
+
+结果先显示在弹窗中，用户可以取消勾选不想应用的任务，再确认保存；取消弹窗不会修改任务。当前弹窗不支持直接编辑字段，细节调整仍在任务详情中完成。每轮接口最多支持 40 项任务。
+
+### 通知生命周期
+
+站内提醒在页面打开期间每 60 秒扫描一次；回访时，会补扫提醒时间已过但不足 24 小时的未完成任务。通知声音跟随全局音效偏好。
+
+- 通知**不会自动过期**；点击通知打开任务时标记已读，「全部已读」只消除未读标记。
+- 「清空通知」需要二次确认，隐藏现有已读与未读通知，不删除待办。
+- 清空状态保存到云端，同时保留任务的已提醒记录，避免刷新或补扫时重新弹出同一条旧提醒。
+- 删除任务时，其对应通知随之删除。
+- 当前是一任务至多一条到期通知，不是按每次改期重新生成的提醒系统；不申请系统通知权限，也不在关闭页面后后台推送。
 
 ## 快速开始
 
@@ -48,32 +72,61 @@
 ```bash
 git clone https://github.com/Yohoia/DiDa-todo.git
 cd DiDa-todo
-corepack enable
 pnpm install --frozen-lockfile
+cp .env.example .env.local
+```
+
+启动前，完成下面的 Supabase 环境变量、数据库迁移和邮件认证配置。`.env.example` 中的示例变量默认被注释，填写时需取消对应行的 `#`。不要提交 `.env.local`。
+
+配置完成后运行：
+
+```bash
 pnpm dev
 ```
 
-打开 <http://localhost:3000/today> 可直接体验工作台；也可在首页注册／登录账号（需先配置下述 Supabase 环境变量）。
+打开 <http://localhost:3000>，通过首页注册／登录进入工作区。未登录直接访问 `/today`、`/inbox`、`/completed`、`/insight`、`/profile` 或 `/settings` 时，会返回首页并打开登录框。
 
 ### 账号（Supabase）
 
-注册与登录依赖两个环境变量（复制 `.env.example` 到 `.env.local` 填写）：
+应用运行与账号认证依赖两个环境变量：
 
 - `NEXT_PUBLIC_SUPABASE_URL`：Supabase 项目 URL。
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`：匿名公钥（配合数据库 RLS 行级安全使用）。
 
-注册流程为邮箱 + 密码 + 邮箱六位验证码（OTP），验证通过自动设置密码并登录；无需填写用户名（默认取邮箱前缀）与头像（自动生成占位头像）。登录支持密码与验证码两种方式。当前生产项目已启用 Resend 自定义 SMTP（代码无需邮件密钥），邮件模板见 [docs/email-templates/](docs/email-templates)；密码重置邮件的回跳地址为 `/auth/callback`，并已加入 Supabase Auth 的 Redirect URLs。
+先按顺序应用 [supabase/migrations/](./supabase/migrations) 中的迁移（目前为 `0001`–`0006`）。最新迁移包含通知归属校验与 `dismissed_at` 清空标记，必须在使用新版通知功能前执行。数据库部署约定见 [Supabase 说明](./supabase/README.md)。
+
+注册流程为邮箱 + 密码 + 邮箱六位验证码（OTP），验证通过后设置密码并登录；昵称默认为邮箱前缀或随机名称，头像自动生成，之后可在设置中修改。登录支持密码与验证码两种方式，密码重置使用邮箱验证码验证；邮箱换绑需按确认邮件完成验证，实际验证范围取决于 Supabase Auth 配置。
+
+邮件由 Supabase Auth 发送，无需向应用配置邮件服务密钥。请在 Supabase Dashboard 配置 SMTP（可使用 Resend），按 [邮件模板](./docs/email-templates) 设置对应模板，并配置 Site URL 与允许的 `/auth/callback` 回跳地址，覆盖本地开发和实际部署域名。
+
+页面代理、工作区页面与服务端数据入口会验证会话；个人档案 API 与付费 AI／语音接口也独立要求登录。工作区监听会话变更，在退出登录、会话失效或切换账户时离开当前工作区。
+
+### AI 配置（可选）
+
+AI 当日整理默认复用语音待办的 LLM 配置，优先使用 `DEEPSEEK_API_KEY`，没有时回退到 `DASHSCOPE_API_KEY`。也可独立配置：
+
+```dotenv
+TASK_ORGANIZE_LLM_BASE_URL=https://api.deepseek.com/v1
+TASK_ORGANIZE_LLM_API_KEY=your-server-side-key
+TASK_ORGANIZE_LLM_MODEL=deepseek-flash
+```
+
+如需统一覆盖整理与语音解析，可设置 `VOICE_LLM_BASE_URL`、`VOICE_LLM_API_KEY`、`VOICE_LLM_MODEL`。接口地址、模型和 Key 应匹配实际供应商配置。所有 AI Key 都只用于服务端，不要加 `NEXT_PUBLIC_` 前缀。
+
+未配置 AI Key 时，手动管理任务仍可使用；点击 AI 整理会提示服务未配置。整理会将所选任务的标题、描述与整理字段发送给配置的 LLM 服务，请按部署环境的数据要求选择供应商。
 
 ### 语音待办（可选）
 
-底部导航的麦克风把整条导航栏变形为听写胶囊：录音 → 云端转写 → LLM 解析 → 确认卡一键添加。需要两把服务端 Key（复制 `.env.example` 到 `.env.local` 填写）：
+底部导航的麦克风把整条导航栏变形为听写胶囊：录音 → 云端转写 → LLM 解析 → 确认卡一键添加。转写与解析的默认服务端配置如下（在 `.env.local` 填写）：
 
 - `DASHSCOPE_API_KEY`：阿里云百炼，用于语音转写（`qwen-audio-3.0-asr-flash`）。
 - `DEEPSEEK_API_KEY`：DeepSeek 官方，用于待办解析（`deepseek-flash`）；留空时回退用百炼 Key 走 `qwen-flash`。
 
 部署到 Vercel 时，百炼 Key 与接口区域必须一致。项目默认使用新加坡工作空间专属域名 `https://ws-9mlt2qkeiwpfmr0z.ap-southeast-1.maas.aliyuncs.com`，必须配套该工作空间的 Key；如使用北京 Key，则设置 `VOICE_ASR_BASE_URL=https://dashscope.aliyuncs.com`，并在百炼兜底解析启用时同步设置 `VOICE_LLM_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1`。仓库的 `vercel.json` 将函数部署到香港区域以缩短到新加坡百炼的网络链路，修改环境变量后需要重新部署。
 
-未配置 Key 时其余功能不受影响，语音入口会提示"语音服务未配置"。音频即传即弃：不落盘、不写日志；登录用户确认添加后，转写文本与解析结果会保存到其账户下的 `voice_captures` 表（可随时删除）。带 `?voice-demo` 打开页面可跳过设备与 Key 用固定语料预览完整流程。详见 [docs/voice-todo-plan.md](docs/voice-todo-plan.md)。
+未配置 Key 时其余手动功能不受影响，语音入口会提示服务未配置。应用不将音频落盘或写入数据库；音频会发送至转写供应商，转写文本会发送至解析 LLM。用户确认添加后，转写文本与解析结果保存到本人账户的 `voice_captures` 表；当前没有独立的语音历史清理页面。
+
+登录后带 `?voice-demo` 打开工作区页面，可用固定语料预览语音流程，跳过设备检测与真实云端识别；它不会绕过登录限制，确认添加仍会写入当前账户。详见 [语音待办设计](./docs/voice-todo-plan.md)。
 
 ## 技术设计
 
@@ -81,23 +134,30 @@ pnpm dev
   <img src="./assets/readme/architecture.svg" width="100%" alt="DiDa-todo 系统地图：Next.js 客户端经数据访问边界连接 Supabase 云端，Resend 负责验证码邮件，语音 AI 为可选服务">
 </p>
 
-核心栈为 Next.js 16、React 19、TypeScript、Tailwind CSS v4、Radix UI 与 Framer Motion；账号、偏好与语音记录接入 Supabase（Auth + Postgres，数据库启用 RLS 行级安全）。字体通过 `@fontsource` 本地打包，运行和构建不依赖 Google Fonts。
+核心栈为 Next.js 16、React 19、TypeScript、Tailwind CSS v4、Radix UI 与 Framer Motion；Supabase 提供 Auth 与 Postgres，数据库启用 RLS 行级安全。AI 与语音输入由服务端 Route Handler 对接供应商，使用 Zod 校验请求和解析结果，并通过 Supabase 原子函数消费用户配额。字体通过 `@fontsource` 本地打包，运行和构建不依赖 Google Fonts。
 
-任务数据目前集中在工作台布局的 React 状态中：路由切换时保留，刷新后恢复示例数据。后续接入 Supabase 时，计划通过 `UI → Service → Repository → Supabase` 保持数据访问边界。
+工作区布局在服务端预取已登录用户的数据，`WorkspaceProvider` 维护客户端状态与乐观更新，再通过 Repository 串行同步到 Supabase；刷新后读取云端数据，不恢复示例任务。个人统计在数据库侧聚合真实的任务与专注记录，避免查询行数上限造成漏算。
+
+`src/proxy.ts` 负责刷新页面会话与访问拦截；页面和数据层继续独立校验，数据库 RLS 与关联任务归属约束作为数据隔离边界。
 
 ## 项目结构
 
 ```text
 src/
-├── app/              路由、布局与错误边界
+├── app/              工作区路由、API、认证回调、布局与错误边界
 ├── components/       UI、布局、任务与共享组件
-├── features/         landing、auth、tasks、calendar、focus 等业务域
+├── features/         首页、账号、任务、专注、统计、通知、设置等业务域
 ├── i18n/             类型化词典与服务端偏好
-├── lib/              日期与通用工具
-└── styles/           全局主题与工作台公共样式
+├── lib/              Supabase 客户端、Repository、会话与接口权限、通用工具
+├── styles/           全局主题与工作台公共样式
+├── types/            任务、通知、语音与 AI 整理类型
+└── proxy.ts          页面会话刷新与工作区访问拦截
 
 docs/                 PRD、技术规划、设计规范与开发约定
-public/               品牌与错误状态资源
+supabase/migrations/  有序数据库迁移与 RLS 策略
+scripts/              国际化、认证安全与持久化回归测试
+public/               品牌、空状态与错误状态资源
+assets/readme/        README 展示图片与架构示意图
 ```
 
 更完整的职责边界见 [开发约定](./docs/Development.md)，视觉变量与组件配方见 [界面设计规范](./docs/style.md)。
@@ -109,13 +169,32 @@ pnpm check
 pnpm build
 ```
 
-`pnpm check` 会依次运行 ESLint、TypeScript 路由类型检查、国际化测试与 Prettier 检查。GitHub Actions 会在 push 和 pull request 时执行同样的检查并创建生产构建。
+`pnpm check` 会依次运行 ESLint、Next.js 路由类型生成与 TypeScript 检查、国际化测试、认证安全测试、任务与通知持久化回归测试，以及 Prettier 检查。持久化测试使用内存数据库替身，不替代真实 Supabase 权限验收。
+
+启动开发服务后，可额外验证未登录的普通页面访问、RSC 请求与个人／AI 接口权限：
+
+```bash
+WORKSPACE_TEST_ORIGIN=http://localhost:3000 pnpm test:auth-security
+```
+
+没有设置 `WORKSPACE_TEST_ORIGIN` 时，该 HTTP 集成测试会跳过，其他认证测试仍运行。
+
+## 部署与数据库迁移
+
+- 应用需要支持 Next.js 服务端运行的环境；本地生产运行可使用 `pnpm build` 后执行 `pnpm start`。
+- Vercel 部署需配置对应的 Supabase 与可选 AI 环境变量，仓库的 `vercel.json` 将函数区域设为 `hkg1`。邮件回跳域名也需在 Supabase Auth 中配置。
+- GitHub Actions 在 push 与 pull request 时执行质量检查与生产构建；推送到 `main` 后，仅在检查成功时继续执行数据库迁移任务。
+- 数据库迁移任务绑定 GitHub `Production` environment，需要 `SUPABASE_ACCESS_TOKEN`、`SUPABASE_PROJECT_ID`、`SUPABASE_DB_PASSWORD` 三项 secrets；不会使用匿名公钥执行迁移。
+- 已执行的迁移不要修改，应新增有序迁移文件。不要仅凭推送成功就认定数据库已更新，请检查 Actions 的迁移结果；完整说明见 [supabase/README.md](./supabase/README.md)。
 
 ## 当前边界
 
-- 未登录时使用预览数据；登录后任务、偏好、语音记录和专注记录均通过 RLS 隔离并保存到 Supabase。
-- 音效、自动休息和通知开关会保存为账户偏好；通知开关目前不会主动申请系统通知权限。
-- 预览任务日期以应用当前日期动态生成；登录后的统计、经验值和花园从真实任务与专注记录聚合。
+- 首页可以公开访问，个人页面必须登录；不存在游客个人工作区。
+- 清单使用任务上的 `list` 字段，目前为 Inbox、Work、Study、Life，不提供自定义清单或独立清单管理页。
+- AI 只提供当前选中日期的整理建议，不自动拆分任务、修改标题、跨日期调度或保存未经确认的结果。
+- 音效、自动休息和通知开关会保存为账户偏好；计时结束目前提示休息，不自动开启休息计时。
+- 站内通知没有自动过期策略、后台推送或系统通知；清空是持久隐藏，不物理删除去重记录。
+- 统计、经验值和花园从本人真实任务与专注记录聚合；首页宣传内容与静态展示资源不代表实时业务数据。
 - 当前使用 Cookie 管理语言、主题与会话，因此根布局按请求渲染，不适用于纯静态导出。
 
 ## 路线与文档
@@ -125,4 +204,4 @@ pnpm build
 - [界面设计规范](./docs/style.md)
 - [开发约定](./docs/Development.md)
 
-任务、清单与统计已经接入 Supabase，并沿用 RLS 与统一数据访问边界。账号认证代码、生产邮箱 OTP、自定义 SMTP 与邮件模板均已完成配置。
+这些文档包含设计稿与阶段规划，可能与当前实现存在差异；实际功能、路由和环境配置以仓库代码及本 README 的当前说明为准。
