@@ -155,7 +155,7 @@ function taskToRow(task: Task) {
   };
 }
 
-/** updateTask 的 patch → 待更新列；undefined 字段不进 row（不覆盖库中现值）。 */
+/** 未传字段不覆盖现值；显式传入 time/schedule: undefined 表示清空。 */
 function updateColumns(patch: Partial<Task>): Record<string, unknown> {
   const row: Record<string, unknown> = {};
   if (patch.title !== undefined) row.title = patch.title;
@@ -163,8 +163,15 @@ function updateColumns(patch: Partial<Task>): Record<string, unknown> {
   if (patch.list !== undefined) row.list = patch.list;
   if (patch.tags !== undefined) row.tags = patch.tags;
   if (patch.date !== undefined) row.date = patch.date || null;
-  if (patch.time !== undefined) row.time = patch.time || null;
-  if (patch.schedule !== undefined) row.duration_minutes = patch.schedule?.duration ?? null;
+  if (Object.hasOwn(patch, "time")) {
+    row.time = patch.time || null;
+    if (!patch.time) row.duration_minutes = null;
+  }
+  if (Object.hasOwn(patch, "schedule")) row.duration_minutes = patch.schedule?.duration ?? null;
+  if (patch.date === "") {
+    row.time = null;
+    row.duration_minutes = null;
+  }
   if (patch.priority !== undefined) row.priority = patch.priority;
   if (patch.estimate !== undefined) row.estimate = patch.estimate;
   if (patch.reminder !== undefined) row.reminder = patch.reminder;
@@ -203,6 +210,7 @@ export type Repository = {
   createTaskDueNotification(notification: AppNotification): Promise<void>;
   markNotificationRead(id: string): Promise<void>;
   markAllNotificationsRead(): Promise<void>;
+  dismissNotifications(ids: string[]): Promise<void>;
 };
 
 /**
@@ -334,29 +342,42 @@ export function createRepository(client: SupabaseClient, userId: string): Reposi
     },
 
     async listNotifications() {
-      const { data, error } = await client
-        .from("notifications")
-        .select("id, task_id, title, remind_at, read, created_at")
-        .order("created_at", { ascending: false })
-        .limit(50);
-      if (error) throw new Error(error.message);
       type Row = {
         id: string;
-        task_id: string;
+        task_id: string | null;
         title: string;
         remind_at: string;
         read: boolean;
         created_at: string;
+        dismissed_at: string | null;
       };
-      return (data as Row[]).map((row) => ({
-        id: row.id,
-        type: "task_due",
-        taskId: row.task_id,
-        title: row.title,
-        remindAt: row.remind_at,
-        read: row.read,
-        createdAt: row.created_at,
-      }));
+      // 隐藏记录也参与去重；分页读全，避免旧提醒被 50 条上限截断后重新出现。
+      const rows: Row[] = [];
+      for (let from = 0; ; from += READ_PAGE_SIZE) {
+        const { data, error } = await client
+          .from("notifications")
+          .select("id, task_id, title, remind_at, read, created_at, dismissed_at")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, from + READ_PAGE_SIZE - 1);
+        if (error) throw new Error(error.message);
+        const page = (data ?? []) as Row[];
+        rows.push(...page);
+        if (page.length < READ_PAGE_SIZE) break;
+      }
+      return rows
+        .filter((row) => row.task_id !== null)
+        .map((row) => ({
+          id: row.id,
+          type: "task_due",
+          taskId: row.task_id!,
+          title: row.title,
+          remindAt: row.remind_at,
+          read: row.read,
+          createdAt: row.created_at,
+          dismissedAt: row.dismissed_at ?? undefined,
+        }));
     },
 
     async createTaskDueNotification(notification) {
@@ -374,13 +395,33 @@ export function createRepository(client: SupabaseClient, userId: string): Reposi
     },
 
     async markNotificationRead(id) {
-      const { error } = await client.from("notifications").update({ read: true }).eq("id", id);
+      const { error } = await client
+        .from("notifications")
+        .update({ read: true })
+        .eq("user_id", userId)
+        .eq("id", id);
       if (error) throw new Error(error.message);
     },
 
     async markAllNotificationsRead() {
-      const { error } = await client.from("notifications").update({ read: true }).eq("read", false);
+      const { error } = await client
+        .from("notifications")
+        .update({ read: true })
+        .eq("user_id", userId)
+        .eq("read", false);
       if (error) throw new Error(error.message);
+    },
+
+    async dismissNotifications(ids) {
+      // 只隐藏确认时已有的通知，不影响清空期间刚到达的新提醒。
+      for (let from = 0; from < ids.length; from += READ_PAGE_SIZE) {
+        const { error } = await client
+          .from("notifications")
+          .update({ dismissed_at: new Date().toISOString(), read: true })
+          .eq("user_id", userId)
+          .in("id", ids.slice(from, from + READ_PAGE_SIZE));
+        if (error) throw new Error(error.message);
+      }
     },
   };
   return repository;

@@ -3,6 +3,15 @@
 Database schema changes live in `supabase/migrations`. Never edit a migration that has already
 been deployed. Add a new, ordered `*.sql` migration instead.
 
+## Notification lifecycle
+
+Notifications do not expire automatically. Reading only marks a notification as read. Clearing
+the notification center persists `dismissed_at`, hides both read and unread notifications, and
+keeps the original task reminder record for deduplication after refresh or catch-up scanning.
+Deleting a task cascades to its notification. Notification inserts and task reassignments must
+reference a task owned by the authenticated user (migration `0006`). Deploy this migration before
+releasing the updated notification UI.
+
 ## Automatic production deployment
 
 The `deploy-supabase-migrations` job in `.github/workflows/ci.yml` runs after the application check

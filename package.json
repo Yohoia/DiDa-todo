@@ -16,9 +16,10 @@
     "typecheck": "next typegen && tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "pnpm lint && pnpm typecheck && pnpm test:i18n && pnpm test:auth-security && pnpm format:check",
+    "check": "pnpm lint && pnpm typecheck && pnpm test:i18n && pnpm test:auth-security && pnpm test:task-persistence && pnpm format:check",
     "test:i18n": "node scripts/test-i18n.mjs",
-    "test:auth-security": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test scripts/test-auth-security.mts"
+    "test:auth-security": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test scripts/test-auth-security.mts",
+    "test:task-persistence": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test scripts/test-task-persistence.mts"
   },
   "dependencies": {
     "@fontsource/inter": "5.3.0",

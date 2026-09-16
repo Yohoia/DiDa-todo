@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
+import { requireWorkspaceSession } from "@/lib/server/workspace-session";
 import { loadFocusStats, recentDateKeys } from "@/lib/data/focus-stats";
 
 export type ProfilePlant = {
@@ -30,49 +30,12 @@ export type ProfileData = {
   };
 };
 
-/** 未登录（预览模式）的演示档案；level/xp/专注花园为演示数据。 */
-const demoProfile: ProfileData = {
-  isDemo: true,
-  displayName: "Alex",
-  email: null,
-  userId: null,
-  avatarUrl: null,
-  joinedAt: "2026-09-01",
-  level: 5,
-  levelTitle: "Architect",
-  xp: 3450,
-  nextLevelXp: 5000,
-  focusGarden: {
-    weeklyMinutes: 680,
-    streakDays: 4,
-    weeklyGoal: 8,
-    minutesPerPlant: 120,
-    currentPlantMinutes: 80,
-    plants: [
-      { id: "pine-1", symbol: "🌲", plantedAt: "2026-09-02" },
-      { id: "oak-1", symbol: "🌳", plantedAt: "2026-09-03" },
-      { id: "plant-1", symbol: "🪴", plantedAt: "2026-09-05" },
-      { id: "pine-2", symbol: "🌲", plantedAt: "2026-09-07" },
-      { id: "sprout-1", symbol: "🌿", plantedAt: "2026-09-09" },
-    ],
-  },
-};
-
 /**
  * 服务端档案边界：登录用户返回 profiles 表真实数据，并从任务与专注事实表
- * 派生等级和花园；未登录时才使用明确标注的演示数据。
+ * 派生等级和花园；未登录时拒绝访问，不回退到演示档案。
  */
 export async function getProfile(): Promise<ProfileData> {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
-  const user = data.user;
-  if (!user) {
-    return {
-      ...demoProfile,
-      displayName: process.env.DIDA_PROFILE_NAME?.trim() || demoProfile.displayName,
-      avatarUrl: process.env.DIDA_PROFILE_AVATAR_URL?.trim() || demoProfile.avatarUrl,
-    };
-  }
+  const { supabase, user } = await requireWorkspaceSession();
   const [{ data: row }, stats] = await Promise.all([
     supabase
       .from("profiles")
@@ -100,7 +63,7 @@ export async function getProfile(): Promise<ProfileData> {
     email: user.email ?? null,
     userId: user.id,
     avatarUrl: row?.avatar_url ?? null,
-    joinedAt: (row?.created_at ?? user.created_at ?? demoProfile.joinedAt).slice(0, 10),
+    joinedAt: (row?.created_at ?? user.created_at).slice(0, 10),
     level,
     levelTitle: "Architect",
     xp: totalXp,

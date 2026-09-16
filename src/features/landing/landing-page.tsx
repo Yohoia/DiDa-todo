@@ -14,7 +14,7 @@ import { features, reviews } from "./landing-content";
 import styles from "./landing.module.css";
 import { TaskPreview } from "./task-preview";
 
-export async function LandingPage() {
+export async function LandingPage({ loginRequired = false }: { loginRequired?: boolean }) {
   const { t, label } = await getI18n();
   // 登录用户头部显示头像+名字直达工作台；访客保持登录按钮
   const supabase = await createClient();
@@ -33,7 +33,7 @@ export async function LandingPage() {
     (user?.user_metadata?.name as string | undefined)?.trim() || user?.email?.split("@")[0] || "";
   const seed = user ? avatarSeed(avatarUrl, user.email) : null;
   return (
-    <AuthDialogProvider>
+    <AuthDialogProvider key={String(loginRequired)} initialOpen={loginRequired && !user}>
       <div className={styles.page} id="home">
         <a href="#main-content" className={styles.skipLink}>
           {t("跳转到主要内容")}

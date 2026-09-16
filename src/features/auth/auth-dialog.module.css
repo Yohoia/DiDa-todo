@@ -171,17 +171,6 @@
   }
 }
 
-.previewLink {
-  display: block;
-  margin-top: 16px;
-  text-align: center;
-  font-size: 12px;
-  color: var(--muted-foreground);
-}
-.previewLink:hover {
-  color: var(--brand-gold);
-}
-
 .codeHeader {
   display: flex;
   justify-content: space-between;

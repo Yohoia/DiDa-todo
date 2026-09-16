@@ -156,6 +156,22 @@ export const messages = {
     "zh-CN": "{title} · {time} 开始",
     en: "{title} · due at {time}",
   },
+  "notifications.clear": {
+    "zh-CN": "清空通知",
+    en: "Clear notifications",
+  },
+  "notifications.clearConfirm": {
+    "zh-CN": "清空所有通知？不会删除待办，已清空的旧提醒不会再次出现。",
+    en: "Clear all notifications? Tasks will stay, and cleared reminders will not appear again.",
+  },
+  "notifications.confirmClear": {
+    "zh-CN": "确认清空",
+    en: "Confirm clear",
+  },
+  "notifications.retentionHint": {
+    "zh-CN": "通知不会自动过期；已读仍保留，可手动清空。",
+    en: "Notifications do not expire. Read notifications stay until you clear them.",
+  },
   全部已读: {
     "zh-CN": "全部已读",
     en: "Mark all read",

@@ -176,7 +176,6 @@ export async function POST(request: Request) {
   const rejected = await guardVoiceRequest(request, {
     scope: "parse",
     maxBodyBytes: 64 * 1024,
-    allowLocalDevelopmentGuest: true,
   });
   if (rejected) return rejected;
 

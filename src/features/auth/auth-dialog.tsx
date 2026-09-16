@@ -1,7 +1,6 @@
 "use client";
 import { useI18n } from "@/features/preferences/preferences-provider";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import {
@@ -186,10 +185,16 @@ export function AuthTrigger({
   );
 }
 
-export function AuthDialogProvider({ children }: { children: ReactNode }) {
+export function AuthDialogProvider({
+  children,
+  initialOpen = false,
+}: {
+  children: ReactNode;
+  initialOpen?: boolean;
+}) {
   const { t, label } = useI18n();
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(initialOpen);
   const [view, setView] = useState<AuthView>("login");
   const [resetEmail, setResetEmail] = useState("");
   const [toast, setToast] = useState<{ id: number; text: string } | null>(null);
@@ -547,9 +552,6 @@ function AuthForm({
           {loginMode === "password" ? t("使用验证码登录") : t("使用密码登录")}
         </button>
       )}
-      <Link href="/today" className={styles.previewLink}>
-        {t("直接预览工作台 →")}
-      </Link>
     </form>
   );
 }

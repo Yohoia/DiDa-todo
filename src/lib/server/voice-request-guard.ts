@@ -5,8 +5,6 @@ import { createClient } from "@/lib/supabase/server";
 type GuardOptions = {
   scope: "transcribe" | "parse";
   maxBodyBytes: number;
-  /** 仅供 localhost 开发预览付费 AI；生产环境仍强制登录并消费共享配额。 */
-  allowLocalDevelopmentGuest?: boolean;
 };
 
 type QuotaResult = {
@@ -48,11 +46,6 @@ export async function guardVoiceRequest(
   const supabase = await createClient();
   const { data: authData, error: authError } = await supabase.auth.getUser();
   if (authError || !authData.user) {
-    const hostname = new URL(request.url).hostname;
-    const isLocalDevelopment =
-      process.env.NODE_ENV === "development" &&
-      (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]");
-    if (options.allowLocalDevelopmentGuest && isLocalDevelopment) return null;
     return error("authentication_required", 401);
   }
 

@@ -9,4 +9,6 @@ export type AppNotification = {
   remindAt: string;
   read: boolean;
   createdAt: string;
+  /** 手动清空后隐藏，但保留任务去重记录，避免再次补扫生成。 */
+  dismissedAt?: string;
 };

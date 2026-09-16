@@ -85,6 +85,42 @@
   letter-spacing: 1px;
   text-transform: uppercase;
 }
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.confirmClear {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--separator);
+  background: var(--task-accent-light);
+}
+.confirmClear p {
+  margin: 0 0 10px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--foreground);
+}
+.confirmClear .headerActions {
+  justify-content: flex-end;
+}
+.clearButton {
+  padding: 5px 9px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--card);
+  font-size: 11px;
+  color: var(--destructive);
+  cursor: pointer;
+}
+.retentionHint {
+  margin: 0;
+  padding: 9px 14px;
+  border-top: 1px solid var(--separator);
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
 .markAll {
   border: none;
   background: none;

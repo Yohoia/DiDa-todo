@@ -3,7 +3,6 @@ import type { MessageKey } from "@/i18n/messages";
 import type { MessageValues } from "@/i18n/translate";
 
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
 import type { Task, TaskList } from "@/types/task";
 import type { AppNotification } from "@/types/notification";
 import type { VoiceCaptureState, VoiceParsed } from "@/types/voice";
@@ -14,10 +13,11 @@ import {
   type StoredPreferences as Preferences,
 } from "@/lib/data/repository";
 import { createClient } from "@/lib/supabase/client";
+import { LOGIN_REQUIRED_URL } from "@/lib/workspace-access";
 
 type Notice = { key: MessageKey; values?: MessageValues };
 export type QuickAddPreset = { list: TaskList; date?: string; time?: string; title?: string };
-/** 登录用户摘要：layout 服务端读取会话后注入，游客为 null（预览模式，仅内存态）。 */
+/** 登录用户摘要：服务端验证会话后注入。 */
 export type WorkspaceUser = { id: string; email: string; displayName: string };
 
 type WorkspaceState = {
@@ -41,7 +41,7 @@ type WorkspaceState = {
   stopFocus: () => void;
   preferences: Preferences;
   setPreferences: (patch: Partial<Preferences>) => void;
-  /** 站内通知中心（任务到期提醒），登录后持久化、游客为内存态 */
+  /** 站内通知中心（任务到期提醒），登录后持久化 */
   notifications: AppNotification[];
   recordTaskDueNotification: (input: {
     taskId: string;
@@ -50,11 +50,12 @@ type WorkspaceState = {
   }) => boolean;
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
+  clearNotifications: () => void;
   notice: Notice | null;
   notify: (message: Notice | null) => void;
-  user: WorkspaceUser | null;
+  user: WorkspaceUser;
   signOut: () => Promise<void>;
-  /** 语音确认后留档（voice_captures），游客/失败静默。 */
+  /** 语音确认后留档（voice_captures）。 */
   recordVoiceCapture: (input: {
     transcript: string;
     parsed: VoiceParsed[];
@@ -83,9 +84,8 @@ export function WorkspaceProvider({
   initialTasks: Task[];
   initialPreferences: Preferences;
   initialNotifications: AppNotification[];
-  user: WorkspaceUser | null;
+  user: WorkspaceUser;
 }) {
-  const router = useRouter();
   const [tasks, setTasks] = useState(initialTasks);
   const [selectedId, selectTask] = useState<string | null>(null);
   const [quickAdd, updateQuickAdd] = useState<QuickAddPreset | null>(null);
@@ -95,6 +95,19 @@ export function WorkspaceProvider({
   const [notice, notify] = useState<Notice | null>(null);
   const [preferences, updatePreferences] = useState(initialPreferences);
   const [notifications, updateNotifications] = useState(initialNotifications);
+  const [sessionValid, setSessionValid] = useState(true);
+  const sessionValidRef = useRef(true);
+  useEffect(() => {
+    const { data } = createClient().auth.onAuthStateChange((_event, session) => {
+      if (!session || session.user.id !== user.id) {
+        sessionValidRef.current = false;
+        setSessionValid(false);
+        // 完整导航清理当前用户的任务、弹窗和浏览器内存，跨标签页退出同样生效。
+        window.location.replace(LOGIN_REQUIRED_URL);
+      }
+    });
+    return () => data.subscription.unsubscribe();
+  }, [user.id]);
   // 调度器在 interval 回调里写通知：用 ref 镜像最新列表做同步去重，避免闭包过期
   const notificationsRef = useRef(initialNotifications);
   useEffect(() => {
@@ -108,12 +121,14 @@ export function WorkspaceProvider({
   const syncRevisionRef = useRef(0);
   const reconciliationNeededRef = useRef(false);
   function persist(action: (repository: Repository) => Promise<void>) {
-    if (!user) return;
+    if (!sessionValidRef.current) return;
     repositoryRef.current ??= createRepository(createClient(), user.id);
     const repository = repositoryRef.current;
     const revision = ++syncRevisionRef.current;
     queueRef.current = queueRef.current
-      .then(() => action(repository))
+      .then(() => {
+        if (sessionValidRef.current) return action(repository);
+      })
       .catch((error: unknown) => {
         console.error("sync failed:", error);
         reconciliationNeededRef.current = true;
@@ -121,14 +136,22 @@ export function WorkspaceProvider({
       })
       .then(async () => {
         // 等这批队列的最后一项结束再回读，避免旧请求失败时覆盖后续乐观更新。
-        if (!reconciliationNeededRef.current || revision !== syncRevisionRef.current) return;
+        if (
+          !sessionValidRef.current ||
+          !reconciliationNeededRef.current ||
+          revision !== syncRevisionRef.current
+        )
+          return;
         try {
-          const [serverTasks, serverPreferences] = await Promise.all([
+          const [serverTasks, serverPreferences, serverNotifications] = await Promise.all([
             repository.loadTasks(),
             repository.loadPreferences(),
+            repository.listNotifications(),
           ]);
           setTasks(serverTasks);
           updatePreferences(serverPreferences);
+          notificationsRef.current = serverNotifications;
+          updateNotifications(serverNotifications);
           reconciliationNeededRef.current = false;
         } catch (reloadError) {
           console.error("sync recovery failed:", reloadError);
@@ -146,7 +169,7 @@ export function WorkspaceProvider({
 
         const nextDate = patch.date !== undefined ? patch.date : task.date;
         const timeChanged = Object.hasOwn(patch, "time");
-        const nextTime = timeChanged ? patch.time : task.time;
+        const nextTime = nextDate ? (timeChanged ? patch.time : task.time) : undefined;
         let schedule = task.schedule;
 
         if (timeChanged) {
@@ -172,7 +195,7 @@ export function WorkspaceProvider({
             : undefined;
         }
 
-        return { ...task, ...patch, schedule };
+        return { ...task, ...patch, time: nextTime, schedule };
       }),
     );
     // 置新 One Thing 前先排队取消旧的（tasks 里仍 featured 的其他任务）
@@ -232,6 +255,8 @@ export function WorkspaceProvider({
   }
   function deleteTask(id: string) {
     setTasks((current) => current.filter((task) => task.id !== id));
+    notificationsRef.current = notificationsRef.current.filter((item) => item.taskId !== id);
+    updateNotifications(notificationsRef.current);
     selectTask(null);
     persist((repository) => repository.deleteTask(id));
     notify({ key: "tasks.deleted" });
@@ -272,19 +297,32 @@ export function WorkspaceProvider({
     persist((repository) => repository.markAllNotificationsRead());
   }
 
+  function clearNotifications() {
+    const ids = notificationsRef.current.filter((item) => !item.dismissedAt).map((item) => item.id);
+    if (!ids.length) return;
+    const dismissedAt = new Date().toISOString();
+    notificationsRef.current = notificationsRef.current.map((item) =>
+      item.dismissedAt ? item : { ...item, dismissedAt, read: true },
+    );
+    updateNotifications(notificationsRef.current);
+    persist((repository) => repository.dismissNotifications(ids));
+  }
+
   async function signOut() {
     try {
       // local：仅注销当前设备会话（默认 global 会把所有设备一起踢下线）
-      await createClient().auth.signOut({ scope: "local" });
+      const { error } = await createClient().auth.signOut({ scope: "local" });
+      if (error) throw error;
     } catch (error) {
       console.error("sign out failed:", error);
       // 失败时留在当前页并提示，避免用户误以为已退出
       notify({ key: "退出登录失败，请重试" });
       return;
     }
-    router.push("/");
-    router.refresh();
+    window.location.replace(LOGIN_REQUIRED_URL);
   }
+  if (!sessionValid) return null;
+
   return (
     <WorkspaceContext.Provider
       value={{
@@ -310,10 +348,11 @@ export function WorkspaceProvider({
         },
         stopFocus: () => setFocusId(null),
         preferences,
-        notifications,
+        notifications: notifications.filter((item) => !item.dismissedAt),
         recordTaskDueNotification,
         markNotificationRead,
         markAllNotificationsRead,
+        clearNotifications,
         setPreferences: (patch) => {
           updatePreferences((current) => ({ ...current, ...patch }));
           persist((repository) => repository.savePreferences(patch));

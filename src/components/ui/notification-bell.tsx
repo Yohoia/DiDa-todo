@@ -26,9 +26,15 @@ function relativeTime(value: string, locale: string): string {
 /** 通知中心入口：作为底部导航 dock 的一个常规项，面板向上弹出。 */
 export function NotificationBell() {
   const { t, locale } = useI18n();
-  const { notifications, markNotificationRead, markAllNotificationsRead, selectTask } =
-    useWorkspace();
+  const {
+    notifications,
+    markNotificationRead,
+    markAllNotificationsRead,
+    clearNotifications,
+    selectTask,
+  } = useWorkspace();
   const [open, setOpen] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
   const unread = notifications.filter((item) => !item.read).length;
 
   function openTask(notification: AppNotification) {
@@ -38,7 +44,13 @@ export function NotificationBell() {
   }
 
   return (
-    <Popover.Root open={open} onOpenChange={setOpen}>
+    <Popover.Root
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen);
+        if (!nextOpen) setConfirmClear(false);
+      }}
+    >
       <Popover.Trigger
         className={cn(styles.dockTrigger, open && styles.dockTriggerActive)}
         aria-label={t("Notifications")}
@@ -57,17 +69,53 @@ export function NotificationBell() {
         <Popover.Content className={styles.panel} side="top" align="center" sideOffset={16}>
           <div className={styles.header}>
             <strong>{t("Notifications")}</strong>
-            <button
-              type="button"
-              className={styles.markAll}
-              onClick={markAllNotificationsRead}
-              disabled={unread === 0}
-            >
-              {t("全部已读")}
-            </button>
+            <div className={styles.headerActions}>
+              <button
+                type="button"
+                className={styles.markAll}
+                onClick={markAllNotificationsRead}
+                disabled={unread === 0}
+              >
+                {t("全部已读")}
+              </button>
+              <button
+                type="button"
+                className={styles.markAll}
+                disabled={notifications.length === 0}
+                onClick={() => setConfirmClear(true)}
+              >
+                {t("notifications.clear")}
+              </button>
+            </div>
           </div>
+          {confirmClear && notifications.length > 0 && (
+            <div className={styles.confirmClear} role="group" aria-label={t("notifications.clear")}>
+              <p>{t("notifications.clearConfirm")}</p>
+              <div className={styles.headerActions}>
+                <button
+                  type="button"
+                  className={styles.markAll}
+                  onClick={() => setConfirmClear(false)}
+                >
+                  {t("取消")}
+                </button>
+                <button
+                  type="button"
+                  className={styles.clearButton}
+                  onClick={() => {
+                    clearNotifications();
+                    setConfirmClear(false);
+                  }}
+                >
+                  {t("notifications.confirmClear")}
+                </button>
+              </div>
+            </div>
+          )}
           {notifications.length === 0 ? (
-            <p className={styles.empty}>{t("暂无提醒")}</p>
+            <p className={styles.empty} role="status">
+              {t("暂无提醒")}
+            </p>
           ) : (
             <ul className={styles.list}>
               {notifications.map((notification) => (
@@ -89,6 +137,7 @@ export function NotificationBell() {
               ))}
             </ul>
           )}
+          <p className={styles.retentionHint}>{t("notifications.retentionHint")}</p>
           <Popover.Arrow className={styles.arrow} height={7} width={12} />
         </Popover.Content>
       </Popover.Portal>
