@@ -23,7 +23,8 @@ function relativeTime(value: string, locale: string): string {
   return formatter.format(-Math.round(hours / 24), "day");
 }
 
-export function NotificationBell({ className }: { className?: string }) {
+/** 通知中心入口：作为底部导航 dock 的一个常规项，面板向上弹出。 */
+export function NotificationBell() {
   const { t, locale } = useI18n();
   const { notifications, markNotificationRead, markAllNotificationsRead, selectTask } =
     useWorkspace();
@@ -39,19 +40,21 @@ export function NotificationBell({ className }: { className?: string }) {
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger
-        className={cn(styles.trigger, className)}
+        className={cn(styles.dockTrigger, open && styles.dockTriggerActive)}
         aria-label={t("Notifications")}
-        title={t("Notifications")}
       >
-        <HiBell size={17} aria-hidden="true" />
+        <span className={styles.dockLabel} aria-hidden="true">
+          {t("Notifications")}
+        </span>
+        <HiBell size={22} aria-hidden="true" />
         {unread > 0 && (
-          <span className={styles.badge} aria-hidden="true">
+          <span className={styles.dockBadge} aria-hidden="true">
             {unread > 9 ? "9+" : unread}
           </span>
         )}
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Content className={styles.panel} align="end" sideOffset={10}>
+        <Popover.Content className={styles.panel} side="top" align="center" sideOffset={16}>
           <div className={styles.header}>
             <strong>{t("Notifications")}</strong>
             <button

@@ -21,11 +21,14 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { randomAvatarSeed } from "@/lib/avatar";
 import { meetsPasswordPolicy, PASSWORD_RULES } from "@/lib/password-policy";
+import { authErrorText, isValidEmail } from "./auth-errors";
+import { ResetPasswordPanel } from "./reset-password-panel";
+import { CodeField } from "@/components/ui/code-field";
 import { createClient } from "@/lib/supabase/client";
 
 import styles from "./auth-dialog.module.css";
 
-type AuthView = "login" | "register";
+type AuthView = "login" | "register" | "reset";
 type LoginMode = "password" | "code";
 
 /** 验证码注册的默认用户名：取邮箱前缀，异常时随机生成，用户可事后在资料页修改。 */
@@ -33,11 +36,6 @@ function defaultName(email: string): string {
   const local = email.split("@")[0]?.trim() ?? "";
   if (local.length >= 2 && local.length <= 30) return local;
   return `用户${Math.floor(1000 + Math.random() * 9000)}`;
-}
-
-/** 常见邮箱格式的宽松校验（最终能否收信以验证码为准） */
-function isValidEmail(email: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
 }
 
 /**
@@ -160,86 +158,6 @@ function PasswordField({
   );
 }
 
-/**
- * 六格验证码输入：输入自动跳下一格、退格回退、整段粘贴自动分发、
- * 首格标记 one-time-code 以支持浏览器/系统的验证码自动填充。
- */
-function CodeField({
-  id,
-  value,
-  onChange,
-  disabled,
-}: {
-  id: string;
-  value: string;
-  onChange: (value: string) => void;
-  disabled: boolean;
-}) {
-  const { t } = useI18n();
-  const refs = useRef<(HTMLInputElement | null)[]>([]);
-
-  function focusAt(index: number) {
-    const target = refs.current[Math.max(0, Math.min(5, index))];
-    target?.focus();
-    target?.select();
-  }
-
-  /** 从第 start 格起写入 text 中的数字（支持一次多位/粘贴），写完跳到其后一格 */
-  function write(start: number, text: string) {
-    const digits = text.replace(/\D/g, "");
-    if (!digits) return;
-    const chars = Array.from({ length: 6 }, (_, i) => value[i] ?? "");
-    for (let i = 0; i < digits.length && start + i < 6; i++) chars[start + i] = digits[i];
-    onChange(chars.join(""));
-    focusAt(start + digits.length);
-  }
-
-  return (
-    <div className={styles.otpRow}>
-      {Array.from({ length: 6 }, (_, index) => (
-        <input
-          key={index}
-          id={index === 0 ? id : undefined}
-          ref={(element) => {
-            refs.current[index] = element;
-          }}
-          className={styles.otpBox}
-          type="text"
-          inputMode="numeric"
-          autoComplete={index === 0 ? "one-time-code" : "off"}
-          maxLength={1}
-          disabled={disabled}
-          value={value[index] ?? ""}
-          aria-label={t("验证码第 {index} 位", { index: index + 1 })}
-          onChange={(event) => write(index, event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Backspace") {
-              event.preventDefault();
-              const chars = Array.from({ length: 6 }, (_, i) => value[i] ?? "");
-              if (chars[index]) {
-                chars[index] = "";
-                onChange(chars.join(""));
-              } else if (index > 0) {
-                chars[index - 1] = "";
-                onChange(chars.join(""));
-                focusAt(index - 1);
-              }
-            } else if (event.key === "ArrowLeft") {
-              focusAt(index - 1);
-            } else if (event.key === "ArrowRight") {
-              focusAt(index + 1);
-            }
-          }}
-          onPaste={(event) => {
-            event.preventDefault();
-            write(index, event.clipboardData.getData("text"));
-          }}
-          onFocus={(event) => event.currentTarget.select()}
-        />
-      ))}
-    </div>
-  );
-}
 const AuthContext = createContext<((view: AuthView, trigger: HTMLButtonElement) => void) | null>(
   null,
 );
@@ -270,17 +188,19 @@ export function AuthTrigger({
 
 export function AuthDialogProvider({ children }: { children: ReactNode }) {
   const { t, label } = useI18n();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<AuthView>("login");
+  const [resetEmail, setResetEmail] = useState("");
   const [toast, setToast] = useState<{ id: number; text: string } | null>(null);
   const toastTimer = useRef<number | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
 
-  /** 顶部轻提示：验证码发送结果等即时反馈，3 秒自动消失 */
-  function showToast(text: string) {
+  /** 顶部轻提示：成功反馈 3 秒、错误提示 5 秒自动消失 */
+  function showToast(text: string, duration = 3000) {
     if (toastTimer.current !== null) window.clearTimeout(toastTimer.current);
     setToast({ id: Date.now(), text });
-    toastTimer.current = window.setTimeout(() => setToast(null), 3000);
+    toastTimer.current = window.setTimeout(() => setToast(null), duration);
   }
 
   useEffect(
@@ -309,40 +229,77 @@ export function AuthDialogProvider({ children }: { children: ReactNode }) {
             triggerRef.current?.focus();
           }}
         >
-          <Tabs value={view} onValueChange={(value) => setView(value as AuthView)}>
-            <TabsList className={styles.tabs} aria-label={t("登录或注册")}>
-              <TabsTrigger className={styles.tab} value="login">
-                {t("Log In")}
-              </TabsTrigger>
-              <TabsTrigger className={styles.tab} value="register">
-                {t("Sign Up")}
-              </TabsTrigger>
-            </TabsList>
-            <div className={styles.heading}>
-              <DialogTitle className={styles.title}>
-                {view === "login" ? (
-                  <>
-                    {t("Welcome")} <span>{t("Back")}</span>
-                  </>
-                ) : (
-                  <>
-                    {t("Join")} <span>DiDa-todo</span>
-                  </>
-                )}
-              </DialogTitle>
-              <DialogDescription className={styles.description}>
-                {view === "login"
-                  ? t("请输入您的凭证以进入工作台。")
-                  : t("注册账号，开启优雅的效率之旅。")}
-              </DialogDescription>
+          {view === "reset" ? (
+            <div className={styles.view}>
+              <div className={styles.heading}>
+                <DialogTitle className={styles.title}>{t("重置密码")}</DialogTitle>
+                <DialogDescription className={styles.description}>
+                  {t("输入注册邮箱接收验证码，验证后即可设置新密码。")}
+                </DialogDescription>
+              </div>
+              <ResetPasswordPanel
+                initialEmail={resetEmail}
+                onToast={showToast}
+                onBack={() => setView("login")}
+                onDone={() => {
+                  setOpen(false);
+                  router.push("/today");
+                  router.refresh();
+                }}
+              />
             </div>
-            <TabsContent value="login" className={styles.view}>
-              <AuthForm view="login" onAuthed={() => setOpen(false)} onToast={showToast} />
-            </TabsContent>
-            <TabsContent value="register" className={styles.view}>
-              <AuthForm view="register" onAuthed={() => setOpen(false)} onToast={showToast} />
-            </TabsContent>
-          </Tabs>
+          ) : (
+            <Tabs value={view} onValueChange={(value) => setView(value as AuthView)}>
+              <TabsList className={styles.tabs} aria-label={t("登录或注册")}>
+                <TabsTrigger className={styles.tab} value="login">
+                  {t("Log In")}
+                </TabsTrigger>
+                <TabsTrigger className={styles.tab} value="register">
+                  {t("Sign Up")}
+                </TabsTrigger>
+              </TabsList>
+              <div className={styles.heading}>
+                <DialogTitle className={styles.title}>
+                  {view === "login" ? (
+                    <>
+                      {t("Welcome")} <span>{t("Back")}</span>
+                    </>
+                  ) : (
+                    <>
+                      {t("Join")} <span>DiDa-todo</span>
+                    </>
+                  )}
+                </DialogTitle>
+                <DialogDescription className={styles.description}>
+                  {view === "login"
+                    ? t("请输入您的凭证以进入工作台。")
+                    : t("注册账号，开启优雅的效率之旅。")}
+                </DialogDescription>
+              </div>
+              <TabsContent value="login" className={styles.view}>
+                <AuthForm
+                  view="login"
+                  onAuthed={() => setOpen(false)}
+                  onToast={showToast}
+                  onForgotPassword={(email) => {
+                    setResetEmail(email);
+                    setView("reset");
+                  }}
+                />
+              </TabsContent>
+              <TabsContent value="register" className={styles.view}>
+                <AuthForm
+                  view="register"
+                  onAuthed={() => setOpen(false)}
+                  onToast={showToast}
+                  onForgotPassword={(email) => {
+                    setResetEmail(email);
+                    setView("reset");
+                  }}
+                />
+              </TabsContent>
+            </Tabs>
+          )}
         </DialogContent>
       </Dialog>
       <AnimatePresence>
@@ -369,15 +326,16 @@ function AuthForm({
   view,
   onAuthed,
   onToast,
+  onForgotPassword,
 }: {
-  view: AuthView;
+  view: "login" | "register";
   onAuthed: () => void;
-  onToast: (text: string) => void;
+  onToast: (text: string, duration?: number) => void;
+  onForgotPassword: (email: string) => void;
 }) {
-  const { t, label } = useI18n();
+  const { t } = useI18n();
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
-  const [notice, setNotice] = useState("");
   const [pending, setPending] = useState(false);
   const [loginMode, setLoginMode] = useState<LoginMode>("password");
   const [cooldown, setCooldown] = useState(0);
@@ -399,37 +357,6 @@ function AuthForm({
     const timer = setInterval(() => setCooldown((value) => value - 1), 1000);
     return () => clearInterval(timer);
   }, [cooldown]);
-
-  // 切换视图/登录方式时清掉旧提示（渲染期间调整状态，避免 effect 级联渲染）
-  const modeKey = `${view}:${loginMode}`;
-  const [prevModeKey, setPrevModeKey] = useState(modeKey);
-  if (prevModeKey !== modeKey) {
-    setPrevModeKey(modeKey);
-    setNotice("");
-  }
-
-  /** Supabase 英文错误 → 可读文案；未知错误原样展示（label 对非键文本原样返回）。 */
-  function authErrorText(error: { code?: string; message: string }): string {
-    const text = error.message.toLowerCase();
-    if (error.code === "invalid_credentials" || text.includes("invalid login credentials")) {
-      return "邮箱或密码不正确。";
-    }
-    if (error.code === "email_not_confirmed") return "邮箱尚未验证，请先查收确认邮件。";
-    if (error.code === "otp_expired" || text.includes("otp") || text.includes("expired")) {
-      return "验证码错误或已过期。";
-    }
-    if (text.includes("not found")) return "该邮箱尚未注册，请先注册。";
-    if (error.code === "user_already_exists" || text.includes("already registered")) {
-      return "该邮箱已注册，可以直接登录。";
-    }
-    if (error.code === "weak_password" || text.includes("password should be")) {
-      return "密码强度不足，请更换更复杂的密码。";
-    }
-    if (error.code === "over_request_rate_limit" || text.includes("rate limit")) {
-      return "尝试太频繁，请稍后再试。";
-    }
-    return error.message;
-  }
 
   function fieldValue(form: HTMLFormElement, name: string): string {
     const control = form.elements.namedItem(name);
@@ -487,39 +414,38 @@ function AuthForm({
     const password = fieldValue(form, "password");
     // 邮箱格式 + 注册密码规则在发起请求前拦截（native 校验之外的双保险）
     if (!isValidEmail(email)) {
-      setNotice("邮箱格式不正确，请检查后重试。");
+      onToast("邮箱格式不正确，请检查后重试。", 5000);
       return;
     }
     if (view === "register" && !meetsPasswordPolicy(password)) {
-      setNotice("密码不满足要求，请对照下方规则修改。");
+      onToast("密码不满足要求，请对照下方规则修改。", 5000);
       return;
     }
     const supabase = createClient();
     setPending(true);
-    setNotice("");
     try {
       if (isLogin && loginMode === "password") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) {
-          setNotice(authErrorText(error));
+          onToast(authErrorText(error), 5000);
           return;
         }
       } else {
         if (code.length !== 6) {
-          setNotice("请输入完整的 6 位验证码。");
+          onToast("请输入完整的 6 位验证码。", 5000);
           return;
         }
         // signInWithOtp 发送的是邮箱 OTP；注册和登录均使用 email 类型验证。
         const { error } = await supabase.auth.verifyOtp({ email, token: code, type: "email" });
         if (error) {
-          setNotice(authErrorText(error));
+          onToast(authErrorText(error), 5000);
           return;
         }
         // OTP 建号默认无密码：注册流程验证通过后立即写入用户设置的密码
         if (view === "register" && password) {
           const { error } = await supabase.auth.updateUser({ password });
           if (error) {
-            setNotice(authErrorText(error));
+            onToast(authErrorText(error), 5000);
             return;
           }
         }
@@ -527,29 +453,6 @@ function AuthForm({
       onAuthed();
       router.push("/today");
       router.refresh();
-    } finally {
-      setPending(false);
-    }
-  }
-
-  async function handleResetPassword() {
-    const email = currentEmail();
-    if (!email) {
-      setNotice("请先填写邮箱，再找回密码。");
-      return;
-    }
-    if (!isValidEmail(email)) {
-      setNotice("邮箱格式不正确，请检查后重试。");
-      return;
-    }
-    setPending(true);
-    setNotice("");
-    try {
-      // 重置链接经 /auth/callback 换会话后直达设置页改密码
-      const { error } = await createClient().auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent("/settings?recovery=1")}`,
-      });
-      setNotice(error ? authErrorText(error) : "重置密码邮件已发送，请查收。");
     } finally {
       setPending(false);
     }
@@ -618,7 +521,7 @@ function AuthForm({
             className={styles.link}
             type="button"
             disabled={pending}
-            onClick={() => void handleResetPassword()}
+            onClick={() => onForgotPassword(currentEmail())}
           >
             {t("忘记密码?")}
           </button>
@@ -647,9 +550,6 @@ function AuthForm({
       <Link href="/today" className={styles.previewLink}>
         {t("直接预览工作台 →")}
       </Link>
-      <p className={styles.notice} role="status" aria-live="polite">
-        {label(notice)}
-      </p>
     </form>
   );
 }

@@ -1894,6 +1894,134 @@ export const messages = {
     "zh-CN": "退出登录",
     en: "Sign Out",
   },
+  "退出登录失败，请重试": {
+    "zh-CN": "退出登录失败，请重试",
+    en: "Sign out failed. Please try again.",
+  },
+  发送重置邮件: {
+    "zh-CN": "发送重置邮件",
+    en: "Send reset email",
+  },
+  "正在发送…": {
+    "zh-CN": "正在发送…",
+    en: "Sending…",
+  },
+  "重新发送（{seconds} 秒）": {
+    "zh-CN": "重新发送（{seconds} 秒）",
+    en: "Resend in {seconds}s",
+  },
+  "重置邮件已发送，请查收邮箱。": {
+    "zh-CN": "重置邮件已发送，请查收邮箱。",
+    en: "Reset email sent. Please check your inbox.",
+  },
+  "重置邮件发送失败，请稍后重试。": {
+    "zh-CN": "重置邮件发送失败，请稍后重试。",
+    en: "Failed to send the reset email. Please try again later.",
+  },
+  "为确保是你本人操作，我们将向你的邮箱发送一条包含重置链接的邮件。": {
+    "zh-CN": "为确保是你本人操作，我们将向你的邮箱发送一条包含重置链接的邮件。",
+    en: "To protect your account, we'll email you a password reset link.",
+  },
+  重置密码: {
+    "zh-CN": "重置密码",
+    en: "Reset password",
+  },
+  "输入注册邮箱接收验证码，验证后即可设置新密码。": {
+    "zh-CN": "输入注册邮箱接收验证码，验证后即可设置新密码。",
+    en: "Enter your email to receive a code, then set a new password.",
+  },
+  "重置验证码已发送，请查收邮箱。": {
+    "zh-CN": "重置验证码已发送，请查收邮箱。",
+    en: "Reset code sent. Please check your inbox.",
+  },
+  "重置验证码已发送至 {email}": {
+    "zh-CN": "重置验证码已发送至 {email}",
+    en: "Reset code sent to {email}",
+  },
+  "正在验证…": {
+    "zh-CN": "正在验证…",
+    en: "Verifying…",
+  },
+  验证并继续: {
+    "zh-CN": "验证并继续",
+    en: "Verify and continue",
+  },
+  重新发送验证码: {
+    "zh-CN": "重新发送验证码",
+    en: "Resend code",
+  },
+  更换邮箱: {
+    "zh-CN": "更换邮箱",
+    en: "Change email",
+  },
+  设置新密码: {
+    "zh-CN": "设置新密码",
+    en: "Set new password",
+  },
+  返回登录: {
+    "zh-CN": "返回登录",
+    en: "Back to sign in",
+  },
+  "操作失败，请稍后重试。": {
+    "zh-CN": "操作失败，请稍后重试。",
+    en: "Something went wrong. Please try again later.",
+  },
+  昵称: {
+    "zh-CN": "昵称",
+    en: "Display name",
+  },
+  在个人主页与工作台中展示: {
+    "zh-CN": "在个人主页与工作台中展示",
+    en: "Shown on your profile and workspace",
+  },
+  保存昵称: {
+    "zh-CN": "保存昵称",
+    en: "Save display name",
+  },
+  编辑昵称: {
+    "zh-CN": "编辑昵称",
+    en: "Edit display name",
+  },
+  邮箱: {
+    "zh-CN": "邮箱",
+    en: "Email",
+  },
+  换绑邮箱: {
+    "zh-CN": "换绑邮箱",
+    en: "Change email",
+  },
+  用于登录与接收通知: {
+    "zh-CN": "用于登录与接收通知",
+    en: "Used for sign-in and notifications",
+  },
+  新的邮箱地址: {
+    "zh-CN": "新的邮箱地址",
+    en: "New email address",
+  },
+  "当前邮箱：{email}": {
+    "zh-CN": "当前邮箱：{email}",
+    en: "Current email: {email}",
+  },
+  "换绑需验证新邮箱：确认邮件将发送至新邮箱，点击邮件中的链接后生效。": {
+    "zh-CN": "换绑需验证新邮箱：确认邮件将发送至新邮箱，点击邮件中的链接后生效。",
+    en: "Changing email verifies the new address: a confirmation email will be sent, and the change takes effect after clicking the link.",
+  },
+  发送确认邮件: {
+    "zh-CN": "发送确认邮件",
+    en: "Send confirmation email",
+  },
+  "确认邮件已发送至新邮箱，请查收并点击确认完成换绑。": {
+    "zh-CN": "确认邮件已发送至新邮箱，请查收并点击确认完成换绑。",
+    en: "Confirmation email sent to the new address. Open it and click the link to finish.",
+  },
+  "新邮箱不能与当前邮箱相同。": {
+    "zh-CN": "新邮箱不能与当前邮箱相同。",
+    en: "The new email must be different from the current one.",
+  },
+  "为确保是你本人操作，需通过邮箱验证码验证后才能设置新密码。": {
+    "zh-CN": "为确保是你本人操作，需通过邮箱验证码验证后才能设置新密码。",
+    en: "To protect your account, verify a code from your email before setting a new password.",
+  },
   "任务、偏好与语音记录已同步到你的账户。": {
     "zh-CN": "任务、偏好与语音记录已同步到你的账户。",
     en: "Tasks, preferences, and voice notes are synced to your account.",

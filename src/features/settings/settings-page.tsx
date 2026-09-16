@@ -7,11 +7,16 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useWorkspace } from "@/features/tasks/workspace-provider";
 import { Select } from "@/components/ui/select";
-import { HiArrowLeft } from "react-icons/hi2";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { HiArrowLeft, HiCheck, HiPencil, HiPower } from "react-icons/hi2";
 import { SiGithub } from "react-icons/si";
 import { AvatarView } from "@/components/shared/avatar-view";
 import { avatarImageSrc, avatarSeed, randomAvatarSeed } from "@/lib/avatar";
 import { meetsPasswordPolicy, PASSWORD_RULES } from "@/lib/password-policy";
+import { ResetPasswordPanel } from "@/features/auth/reset-password-panel";
+import { authErrorText, isValidEmail } from "@/features/auth/auth-errors";
+import resetStyles from "@/features/auth/reset-password-panel.module.css";
+import { messages, type MessageKey } from "@/i18n/messages";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import shared from "@/styles/workspace.module.css";
@@ -100,11 +105,12 @@ function NumberField({
   );
 }
 /**
- * 登录后修改密码：updateUser 不要求旧密码，前端校验两次一致后提交。
- * 错误文案键与 auth-dialog 共用，label() 对未知文本原样返回。
+ * Recovery 会话（邮件重置链接回跳）中设置新密码：
+ * 邮箱所有权已由链接验证，此处两次一致 + 策略校验后直接 updateUser 提交。
  */
 function PasswordForm() {
   const { t, label } = useI18n();
+  const router = useRouter();
   const { notify } = useWorkspace();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -137,6 +143,8 @@ function PasswordForm() {
       setPassword("");
       setConfirm("");
       notify({ key: "密码已更新。" });
+      // 改密完成即结束 recovery 任务，清掉 ?recovery=1 回到常规账户区块
+      router.replace("/settings");
     } finally {
       setPending(false);
     }
@@ -182,6 +190,175 @@ function PasswordForm() {
     </form>
   );
 }
+/** 邮箱换绑：独立一行 + 弹窗输入新邮箱，确认邮件发送至新地址后生效 */
+function EmailBindingRow({
+  email,
+  onToast,
+}: {
+  email: string;
+  onToast: (text: string, duration?: number) => void;
+}) {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  const [next, setNext] = useState("");
+  const [pending, setPending] = useState(false);
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    const value = next.trim();
+    if (!isValidEmail(value)) {
+      onToast("邮箱格式不正确，请检查后重试。", 5000);
+      return;
+    }
+    if (value === email) {
+      onToast("新邮箱不能与当前邮箱相同。", 5000);
+      return;
+    }
+    setPending(true);
+    try {
+      const { error } = await createClient().auth.updateUser(
+        { email: value },
+        { emailRedirectTo: `${window.location.origin}/settings` },
+      );
+      if (error) {
+        onToast(authErrorText(error), 5000);
+        return;
+      }
+      onToast("确认邮件已发送至新邮箱，请查收并点击确认完成换绑。");
+      setOpen(false);
+      setNext("");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <>
+      <SettingRow title={t("邮箱")} description={t("用于登录与接收通知")}>
+        <button type="button" className={shared.button} onClick={() => setOpen(true)}>
+          {t("换绑邮箱")}
+        </button>
+      </SettingRow>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent
+          className={resetStyles.dialogCard}
+          overlayClassName={resetStyles.dialogOverlay}
+          closeButtonClassName={resetStyles.dialogClose}
+        >
+          <div className={resetStyles.dialogHeading}>
+            <DialogTitle className={resetStyles.dialogTitle}>{t("换绑邮箱")}</DialogTitle>
+            <DialogDescription className={resetStyles.dialogDescription}>
+              <span>{t("当前邮箱：{email}", { email })}</span>{" "}
+              <span>{t("换绑需验证新邮箱：确认邮件将发送至新邮箱，点击邮件中的链接后生效。")}</span>
+            </DialogDescription>
+          </div>
+          <form className={styles.emailForm} onSubmit={(event) => void submit(event)}>
+            <label htmlFor="new-email">{t("新的邮箱地址")}</label>
+            <input
+              id="new-email"
+              type="email"
+              autoComplete="email"
+              placeholder="name@example.com"
+              value={next}
+              onChange={(event) => setNext(event.target.value)}
+              required
+            />
+            <button type="submit" className={shared.button} disabled={pending}>
+              {pending ? t("正在发送…") : t("发送确认邮件")}
+            </button>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+/** 昵称编辑：行内输入 + 保存后 router.refresh 全局同步展示 */
+function DisplayNameRow({ userId, initialName }: { userId: string; initialName: string }) {
+  const { t } = useI18n();
+  const router = useRouter();
+  const { notify } = useWorkspace();
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(initialName);
+  const [pending, setPending] = useState(false);
+
+  function cancel() {
+    setEditing(false);
+    setName(initialName);
+  }
+
+  async function save() {
+    const value = name.trim();
+    if (!value || value === initialName) {
+      cancel();
+      return;
+    }
+    setPending(true);
+    try {
+      const { error } = await createClient()
+        .from("profiles")
+        .update({ display_name: value.slice(0, 30) })
+        .eq("id", userId);
+      if (error) throw error;
+      notify({ key: "已保存到你的账户" });
+      setEditing(false);
+      router.refresh();
+    } catch {
+      notify({ key: "操作失败，请稍后重试。" });
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <SettingRow title={t("昵称")} description={t("在个人主页与工作台中展示")}>
+      {editing ? (
+        <div className={styles.nameEdit}>
+          <input
+            className={styles.nameInput}
+            value={name}
+            aria-label={t("昵称")}
+            maxLength={30}
+            autoFocus
+            onFocus={(event) => event.currentTarget.select()}
+            onChange={(event) => setName(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                void save();
+              } else if (event.key === "Escape") {
+                event.stopPropagation();
+                cancel();
+              }
+            }}
+            disabled={pending}
+          />
+          <button
+            type="button"
+            className={styles.nameSave}
+            aria-label={t("保存昵称")}
+            disabled={pending || !name.trim()}
+            onClick={() => void save()}
+          >
+            <HiCheck size={15} aria-hidden="true" />
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          className={styles.nameEditTrigger}
+          onClick={() => setEditing(true)}
+          aria-label={t("编辑昵称")}
+          title={t("编辑昵称")}
+        >
+          <span className={styles.nameValue}>{initialName}</span>
+          <HiPencil size={14} aria-hidden="true" />
+        </button>
+      )}
+    </SettingRow>
+  );
+}
+
 /** 账户头像：按种子（邮箱/随机）客户端生成 nice-avatar，「换一个」写入新随机种子 */
 function AvatarRow({
   avatarUrl,
@@ -245,6 +422,13 @@ export function SettingsPage({
   // 密码重置链接经 /auth/callback 换会话后落到 ?recovery=1：直达账户区改密码
   const isRecovery = useSearchParams().get("recovery") === "1";
   const [section, setSection] = useState(isRecovery ? "Account & Sync" : "General");
+  const [resetOpen, setResetOpen] = useState(false);
+  /** 认证面板的错误文案可能是 i18n 键或原始英文；键直接翻译，否则给通用提示 */
+  function notifyAuthText(text: string) {
+    notify({
+      key: (Object.hasOwn(messages, text) ? text : "操作失败，请稍后重试。") as MessageKey,
+    });
+  }
   function save(patch: Parameters<typeof setPreferences>[0]) {
     setPreferences(patch);
     notify({ key: user ? "已保存到你的账户" : "已更新本次预览的偏好设置" });
@@ -393,32 +577,55 @@ export function SettingsPage({
                       {t("你已通过密码重置链接登录，请设置新密码并保存。")}
                     </p>
                   )}
-                  <SettingRow title={user.displayName || profileName} description={user.email}>
-                    <div className={styles.accountActions}>
-                      <Link href="/profile" className={shared.button}>
-                        {t("View Profile")}
-                      </Link>
-                      <button
-                        type="button"
-                        className={shared.textButton}
-                        onClick={() => void signOut()}
-                      >
-                        {t("退出登录")}
-                      </button>
-                    </div>
-                  </SettingRow>
+                  <DisplayNameRow userId={user.id} initialName={user.displayName || profileName} />
+                  {user.email && <EmailBindingRow email={user.email} onToast={notifyAuthText} />}
                   {user.email && (
                     <AvatarRow avatarUrl={avatarUrl} email={user.email} userId={user.id} />
                   )}
-                  <div className={styles.passwordBlock}>
-                    <div>
-                      <div className={styles.title}>{t("修改密码")}</div>
-                      <div className={styles.description}>
-                        {t("设置新密码后，其他设备需使用新密码重新登录。")}
+                  <SettingRow
+                    title={t("修改密码")}
+                    description={
+                      isRecovery
+                        ? t("设置新密码后，其他设备需使用新密码重新登录。")
+                        : t("为确保是你本人操作，需通过邮箱验证码验证后才能设置新密码。")
+                    }
+                  >
+                    <button
+                      type="button"
+                      className={shared.button}
+                      onClick={() => setResetOpen(true)}
+                    >
+                      {t("修改密码")}
+                    </button>
+                  </SettingRow>
+                  <Dialog open={resetOpen} onOpenChange={setResetOpen}>
+                    <DialogContent
+                      className={resetStyles.dialogCard}
+                      overlayClassName={resetStyles.dialogOverlay}
+                      closeButtonClassName={resetStyles.dialogClose}
+                    >
+                      <div className={resetStyles.dialogHeading}>
+                        <DialogTitle className={resetStyles.dialogTitle}>
+                          {t("修改密码")}
+                        </DialogTitle>
+                        <DialogDescription className={resetStyles.dialogDescription}>
+                          {t("为确保是你本人操作，需通过邮箱验证码验证后才能设置新密码。")}
+                        </DialogDescription>
                       </div>
-                    </div>
-                    <PasswordForm />
-                  </div>
+                      {isRecovery ? (
+                        <PasswordForm />
+                      ) : (
+                        user.email && (
+                          <ResetPasswordPanel
+                            lockedEmail={user.email}
+                            autoSend
+                            onToast={notifyAuthText}
+                            onDone={() => setResetOpen(false)}
+                          />
+                        )
+                      )}
+                    </DialogContent>
+                  </Dialog>
                   <p className={shared.muted}>{t("任务、偏好与语音记录已同步到你的账户。")}</p>
                 </>
               ) : (
@@ -433,11 +640,23 @@ export function SettingsPage({
                   </p>
                 </>
               )}
-              <div className={styles.githubRow}>
+              <div className={styles.accountFooter}>
+                {user && (
+                  <button
+                    type="button"
+                    className={styles.signOutIcon}
+                    aria-label={t("退出登录")}
+                    title={t("退出登录")}
+                    onClick={() => void signOut()}
+                  >
+                    <HiPower size={17} aria-hidden="true" />
+                  </button>
+                )}
                 <a
                   href="https://github.com/Yohoia/DiDa-todo"
                   target="_blank"
                   rel="noopener noreferrer"
+                  className={styles.githubLink}
                   aria-label={t("View source on GitHub")}
                   title={t("View source on GitHub")}
                 >

@@ -274,13 +274,16 @@ export function WorkspaceProvider({
 
   async function signOut() {
     try {
-      await createClient().auth.signOut();
+      // local：仅注销当前设备会话（默认 global 会把所有设备一起踢下线）
+      await createClient().auth.signOut({ scope: "local" });
     } catch (error) {
       console.error("sign out failed:", error);
-    } finally {
-      router.push("/");
-      router.refresh();
+      // 失败时留在当前页并提示，避免用户误以为已退出
+      notify({ key: "退出登录失败，请重试" });
+      return;
     }
+    router.push("/");
+    router.refresh();
   }
   return (
     <WorkspaceContext.Provider

@@ -162,14 +162,6 @@
   background: var(--brand-gold);
   border-color: var(--brand-gold);
 }
-.notice {
-  font-size: 12px;
-  line-height: 1.7;
-  color: var(--muted-foreground);
-}
-.notice:not(:empty) {
-  margin-top: 16px;
-}
 @media (max-width: 480px) {
   .card.card {
     padding: 36px 24px;

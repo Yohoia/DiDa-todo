@@ -1,5 +1,4 @@
 import { Brand } from "@/components/shared/brand";
-import { NotificationBell } from "@/components/ui/notification-bell";
 import { getI18n } from "@/i18n/server";
 import type { ReactNode } from "react";
 import { WorkspaceProvider, type WorkspaceUser } from "@/features/tasks/workspace-provider";
@@ -62,9 +61,6 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
         </a>
         <div className={styles.utilityBar}>
           <Brand className={styles.utilityBrand} compact />
-          <div className={styles.utilityRight}>
-            <NotificationBell />
-          </div>
         </div>
         <main id="workspace-main">
           <PageTransition>{children}</PageTransition>

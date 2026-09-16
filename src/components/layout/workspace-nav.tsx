@@ -3,9 +3,10 @@ import { useI18n } from "@/features/preferences/preferences-provider";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useLayoutEffect, useRef, useState } from "react";
 import { motion, type Variants } from "framer-motion";
 import {
+  HiArchiveBox,
   HiChartBar,
   HiClock,
   HiInbox,
@@ -17,6 +18,7 @@ import { useWorkspace } from "@/features/tasks/workspace-provider";
 import { VoiceCaptureBar, useVoiceCapture } from "@/features/tasks/voice-capture";
 import { VoiceConfirmCard } from "@/features/tasks/voice-confirm-card";
 import { cn } from "@/lib/utils";
+import { NotificationBell } from "@/components/ui/notification-bell";
 import styles from "./workspace-nav.module.css";
 
 export const workspaceLinks = [
@@ -36,7 +38,7 @@ const rowVariants: Variants = {
   voice: { transition: { staggerChildren: 0.02 } },
 };
 /* 各 slot 收向 dock 正中所需的位移，按当前图标布局标定 */
-const CONVERGE_X = [100, 51, -25, -100];
+const CONVERGE_X = [180, 120, 60, 0, -60, -120, -180];
 const itemVariants: Variants = {
   nav: {
     opacity: 1,
@@ -96,17 +98,42 @@ export function WorkspaceNav() {
     setNavSize((prev) => (prev?.w === w && prev?.h === h ? prev : { w, h }));
   }, [capsuleMode]);
   const size = capsuleMode ? capsuleSize : navSize;
-  const items = [
+  /* 3 + 中 + 3 的对称布局：已完成提升为可见导航项，主按钮独占正中槽位 */
+  const leftItems = [
     { href: "/today", label: "今日待办", Icon: HiClock, active: pathname === "/today" },
     { href: "/inbox", label: "Inbox", Icon: HiInbox, active: pathname === "/inbox" },
+    {
+      href: "/completed",
+      label: "Archive",
+      Icon: HiArchiveBox,
+      active: pathname === "/completed",
+    },
+  ];
+  const rightItems = [
     { href: "/insight", label: "Insights", Icon: HiChartBar, active: pathname === "/insight" },
     {
       href: "/profile",
       label: "个人中心",
       Icon: HiUser,
-      active: ["/profile", "/settings", "/completed"].includes(pathname),
+      active: ["/profile", "/settings"].includes(pathname),
     },
   ];
+  const renderItem = ({ href, label, Icon, active }: (typeof leftItems)[number], index: number) => (
+    <motion.span className={styles.slot} key={href} variants={itemVariants} custom={index}>
+      <Link
+        href={href}
+        aria-label={translateLabel(label)}
+        aria-current={active ? "page" : undefined}
+        className={cn(styles.item, active && styles.active)}
+      >
+        <span className={styles.label}>{translateLabel(label)}</span>
+        <Icon size={22} />
+        {href === "/inbox" && tasks.some((task) => task.list === "Inbox" && !task.completed) && (
+          <span className={styles.dot} />
+        )}
+      </Link>
+    </motion.span>
+  );
   return (
     <motion.nav
       ref={navRef}
@@ -139,45 +166,42 @@ export function WorkspaceNav() {
         animate={voiceCapture ? "voice" : "nav"}
         inert={voiceCapture ? true : undefined}
       >
-        {items.map(({ href, label, Icon, active }, index) => (
-          <motion.span className={styles.slot} key={href} variants={itemVariants} custom={index}>
-            {index === 2 &&
-              (pathname === "/inbox" ? (
-                <button
-                  type="button"
-                  className={styles.add}
-                  data-quick-add
-                  aria-label={t("语音输入")}
-                  title={t("语音输入")}
-                  onClick={startVoice}
-                >
-                  <HiMicrophone size={19} />
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className={styles.add}
-                  aria-label={t("搜索")}
-                  title={t("搜索")}
-                  onClick={() => setSearchOpen(true)}
-                >
-                  <HiMagnifyingGlass size={18} />
-                </button>
-              ))}
-            <Link
-              href={href}
-              aria-label={translateLabel(label)}
-              aria-current={active ? "page" : undefined}
-              className={cn(styles.item, active && styles.active)}
+        {leftItems.map((item, index) => renderItem(item, index))}
+        {/* 主按钮独立槽位：两侧各 3 项，语音/搜索按页面切换 */}
+        <motion.span className={styles.slot} variants={itemVariants} custom={3}>
+          {pathname === "/inbox" ? (
+            <button
+              type="button"
+              className={styles.add}
+              data-quick-add
+              aria-label={t("语音输入")}
+              title={t("语音输入")}
+              onClick={startVoice}
             >
-              <span className={styles.label}>{translateLabel(label)}</span>
-              <Icon size={22} />
-              {href === "/inbox" &&
-                tasks.some((task) => task.list === "Inbox" && !task.completed) && (
-                  <span className={styles.dot} />
-                )}
-            </Link>
-          </motion.span>
+              <HiMicrophone size={19} />
+            </button>
+          ) : (
+            <button
+              type="button"
+              className={styles.add}
+              aria-label={t("搜索")}
+              title={t("搜索")}
+              onClick={() => setSearchOpen(true)}
+            >
+              <HiMagnifyingGlass size={18} />
+            </button>
+          )}
+        </motion.span>
+        {rightItems.map((item, arrayIndex) => (
+          <Fragment key={item.href}>
+            {/* 通知中心插在统计与个人中心之间，构成右侧 3 项 */}
+            {arrayIndex === 1 && (
+              <motion.span className={styles.slot} variants={itemVariants} custom={5}>
+                <NotificationBell />
+              </motion.span>
+            )}
+            {renderItem(item, arrayIndex === 0 ? 4 : 6)}
+          </Fragment>
         ))}
       </motion.div>
       <VoiceCaptureBar

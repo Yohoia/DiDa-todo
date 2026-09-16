@@ -319,11 +319,6 @@
 .utilityBrand {
   color: var(--foreground);
 }
-.utilityRight {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
 @media (max-width: 600px) {
   .utilityBar {
     margin: -10px auto 24px;

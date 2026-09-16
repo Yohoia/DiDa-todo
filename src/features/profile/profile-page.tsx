@@ -1,7 +1,7 @@
 import { getI18n } from "@/i18n/server";
 import Link from "next/link";
 import type { CSSProperties } from "react";
-import { HiClock, HiCog, HiFire, HiSparkles } from "react-icons/hi2";
+import { HiAdjustmentsHorizontal, HiClock, HiFire, HiSparkles } from "react-icons/hi2";
 import { SectionLabel } from "@/components/shared/workspace-ui";
 import { AvatarView } from "@/components/shared/avatar-view";
 import { avatarImageSrc, avatarSeed } from "@/lib/avatar";
@@ -79,7 +79,7 @@ export async function ProfilePage() {
           aria-label={t("Settings")}
           title={t("Settings")}
         >
-          <HiCog size={18} aria-hidden="true" />
+          <HiAdjustmentsHorizontal size={19} aria-hidden="true" />
         </Link>
       </header>
       <div className={styles.xp}>
