@@ -904,6 +904,74 @@ export const messages = {
     "zh-CN": "AI 整理",
     en: "AI Organize",
   },
+  "AI 整理当天待办": {
+    "zh-CN": "AI 整理当天待办",
+    en: "AI Organize This Day",
+  },
+  "正在整理 {date} 的 {count} 项未完成待办": {
+    "zh-CN": "正在整理 {date} 的 {count} 项未完成待办",
+    en: "Organizing {count} unfinished tasks for {date}",
+  },
+  "正在理解这一天要做的事…": {
+    "zh-CN": "正在理解这一天要做的事…",
+    en: "Understanding what needs to be done…",
+  },
+  "保留明确时间，其余任务保持随时": {
+    "zh-CN": "保留明确时间，其余任务保持随时",
+    en: "Keeping explicit times; everything else stays anytime",
+  },
+  "已生成 {count} 项整理建议": {
+    "zh-CN": "已生成 {count} 项整理建议",
+    en: "Generated {count} organization suggestions",
+  },
+  可取消勾选不想应用的项目: {
+    "zh-CN": "可取消勾选不想应用的项目",
+    en: "Uncheck anything you do not want to apply",
+  },
+  "应用任务整理：{title}": {
+    "zh-CN": "应用任务整理：{title}",
+    en: "Apply organization for task: {title}",
+  },
+  随时: {
+    "zh-CN": "随时",
+    en: "Anytime",
+  },
+  "{count} 个番茄钟": {
+    "zh-CN": "{count} 个番茄钟",
+    en: { one: "{count} Pomodoro", other: "{count} Pomodoros" },
+  },
+  "应用 {count} 项整理": {
+    "zh-CN": "应用 {count} 项整理",
+    en: "Apply to {count} tasks",
+  },
+  "AI 整理已应用": {
+    "zh-CN": "已应用 {count} 项 AI 整理",
+    en: "AI organization applied to {count} tasks",
+  },
+  这一天没有需要整理的待办: {
+    "zh-CN": "这一天没有需要整理的待办",
+    en: "There are no unfinished tasks to organize for this day",
+  },
+  "请先登录后再使用 AI 整理": {
+    "zh-CN": "请先登录后再使用 AI 整理",
+    en: "Sign in to use AI Organize",
+  },
+  "AI 整理服务未配置": {
+    "zh-CN": "AI 整理服务未配置",
+    en: "AI Organize is not configured",
+  },
+  "AI 整理失败，请重试": {
+    "zh-CN": "AI 整理失败，请重试",
+    en: "AI organization failed. Please try again",
+  },
+  你的任务没有被修改: {
+    "zh-CN": "你的任务没有被修改",
+    en: "Your tasks were not changed",
+  },
+  重试: {
+    "zh-CN": "重试",
+    en: "Try again",
+  },
   "AI 整理功能开发中": {
     "zh-CN": "AI 整理功能开发中，敬请期待",
     en: "AI Organize is coming soon",

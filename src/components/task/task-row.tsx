@@ -2,7 +2,6 @@
 import { useI18n } from "@/features/preferences/preferences-provider";
 import { getTodayKey, isOverdue } from "@/lib/date-utils";
 
-import { useState } from "react";
 import { HiCheck, HiClock, HiLockClosed, HiOutlineTrash } from "react-icons/hi2";
 import { motion } from "framer-motion";
 import type { Task } from "@/types/task";
@@ -37,8 +36,6 @@ export function TaskRow({
   whenMode = "contextual",
 }: Props) {
   const { t, date: formatDate } = useI18n();
-  // 删除分两拍：先播放「后坐 + 右滑淡出」，动画结束再真正移除（popLayout 接管补位）
-  const [removing, setRemoving] = useState(false);
   const isInbox = variant === "inbox";
   const hasSubtasks = task.subtasks.length > 0;
   const hasMeta = task.priority === 1 || task.tags.length > 0 || hasSubtasks;
@@ -53,28 +50,18 @@ export function TaskRow({
     ? `${formatDate(task.date, { year: "numeric", month: "short", day: "numeric" })} · ${formatDate(task.date, { weekday: "short" })}`
     : t("No due date");
   const detailedTime = task.date ? task.time || t("All day") : undefined;
-  const groupTime = task.time || t("All day");
+  // 当日整理页中未指定具体时刻的任务属于“随时”，而不是占据全天的日程块。
+  const groupTime = task.time || t("随时");
   // 「随时」没有时间锚点，时间槽用弱化样式与真实时间区分
   const isAnytime = when === t("Any");
   return (
     <motion.div
       layout
       initial={{ opacity: 0, y: -10 }}
-      animate={
-        removing
-          ? // 删除退场：轻微后坐 → 加速右滑淡出
-            { x: [0, -6, 56], opacity: [1, 1, 0], scale: [1, 1, 0.98] }
-          : { opacity: 1, y: 0 }
-      }
-      exit={{ opacity: 0, x: -20 }}
-      transition={
-        removing
-          ? { duration: 0.36, ease: "easeIn", times: [0, 0.28, 1] }
-          : { duration: 0.2, ease: "easeOut" }
-      }
-      onAnimationComplete={() => {
-        if (removing) onDelete?.();
-      }}
+      animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
+      // 数据立即移除，AnimatePresence 保留 DOM 完成唯一一次退场，避免二次删除与二段动画。
+      exit={{ opacity: 0, x: 46, scale: 0.98 }}
+      transition={{ duration: 0.24, ease: [0.4, 0, 0.2, 1] }}
       className={cn(
         taskStyles.row,
         isInbox && taskStyles.inboxRow,
@@ -154,10 +141,8 @@ export function TaskRow({
           type="button"
           className={taskStyles.deleteButton}
           aria-label={t("Delete Task")}
-          onClick={() => setRemoving(true)}
+          onClick={onDelete}
           whileTap={{ scale: 0.86 }}
-          animate={removing ? { opacity: 0 } : undefined}
-          initial={false}
         >
           <HiOutlineTrash size={15} aria-hidden="true" />
         </motion.button>

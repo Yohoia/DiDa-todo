@@ -44,13 +44,32 @@
   font-weight: 600;
   line-height: 1;
 }
+.contentStage {
+  position: relative;
+  min-height: 368px;
+}
+.emptyLayer {
+  position: absolute;
+  inset: 0;
+  min-height: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 20px;
+  pointer-events: none;
+}
 .list {
+  position: relative;
+  z-index: 1;
   margin-top: 14px;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 @media (max-width: 600px) {
+  .contentStage {
+    min-height: 320px;
+  }
   .headerActions {
     justify-content: flex-start;
   }

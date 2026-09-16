@@ -3,6 +3,7 @@ import { useI18n } from "@/features/preferences/preferences-provider";
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import noScheduleImage from "../../../public/noschedule.png";
 import { AnimatePresence, motion } from "framer-motion";
 import { HiArrowUturnLeft, HiSparkles } from "react-icons/hi2";
 import { PageHeader, SectionLabel } from "@/components/shared/workspace-ui";
@@ -11,19 +12,32 @@ import { useTodayKey } from "@/hooks/use-today-key";
 import { useWorkspace } from "./workspace-provider";
 import { DayCalendar } from "./day-calendar";
 import { CaptureDialog } from "./capture-dialog";
+import { AiOrganizeDialog } from "./ai-organize-dialog";
+import type { TaskOrganizationSuggestion } from "@/types/task-organization";
 import shared from "@/styles/workspace.module.css";
 import styles from "./schedule.module.css";
 
 /** 收件箱 = 日程页：日历按天查看当天任务；「/」捕获直接记到今天，AI 整理入口在头部 */
 export function InboxPage() {
   const { t, date: formatDate } = useI18n();
-  const { tasks, addTask, toggleTask, toggleSubtask, deleteTask, selectTask, preferences, notify } =
-    useWorkspace();
+  const {
+    tasks,
+    addTask,
+    updateTask,
+    toggleTask,
+    toggleSubtask,
+    deleteTask,
+    selectTask,
+    preferences,
+    notify,
+  } = useWorkspace();
   const todayKey = useTodayKey();
   const [selected, setSelected] = useState(todayKey);
   const [justAddedId, setJustAddedId] = useState<string | null>(null);
   // 「记一笔」捕获弹窗：按 / 或点头部 / 图标呼出，条目按今天日期保存
   const [captureOpen, setCaptureOpen] = useState(false);
+  const [organizeOpen, setOrganizeOpen] = useState(false);
+  const [organizeCandidates, setOrganizeCandidates] = useState<typeof tasks>([]);
 
   // 「/」随手呼出捕获弹窗（不打断正在输入的其它控件）
   useEffect(() => {
@@ -45,24 +59,52 @@ export function InboxPage() {
   );
   const dayTasks = tasks
     .filter((task) => task.date === selected)
-    .sort(
-      (a, b) =>
-        Number(a.completed) - Number(b.completed) ||
-        (a.time || "24:00").localeCompare(b.time || "24:00") ||
-        a.created - b.created,
-    );
+    .sort((a, b) => {
+      const completionOrder = Number(a.completed) - Number(b.completed);
+      if (completionOrder) return completionOrder;
+      if (a.time && b.time) return a.time.localeCompare(b.time) || a.priority - b.priority;
+      if (a.time) return -1;
+      if (b.time) return 1;
+      return a.priority - b.priority || a.created - b.created;
+    });
 
   const dayLabel = `${formatDate(selected, {
     year: "numeric",
     month: "long",
     day: "numeric",
   })} · ${formatDate(selected, { weekday: "long" })}`;
+  const hasDayTasks = dayTasks.length > 0;
 
   // 捕获直接记到今天（收件箱清单）：跳回今天，让新条目带高亮立即可见
   const handleCapture = (title: string) => {
     const id = addTask(title, "Inbox", todayKey);
     if (id) setJustAddedId(id);
     setSelected(todayKey);
+  };
+
+  const startOrganizing = () => {
+    const candidates = dayTasks.filter((task) => !task.completed);
+    if (!candidates.length) {
+      notify({ key: "这一天没有需要整理的待办" });
+      return;
+    }
+    // 固定本轮快照：AI 返回前用户切换日期，也不会误改另一天的任务。
+    setOrganizeCandidates(candidates);
+    setOrganizeOpen(true);
+  };
+
+  const applyOrganization = (suggestions: TaskOrganizationSuggestion[]) => {
+    for (const suggestion of suggestions) {
+      updateTask(suggestion.id, {
+        list: suggestion.list,
+        tags: suggestion.tags,
+        priority: suggestion.priority,
+        estimate: suggestion.estimate,
+        ...(suggestion.time ? { time: suggestion.time } : {}),
+      });
+    }
+    setOrganizeOpen(false);
+    notify({ key: "AI 整理已应用", values: { count: String(suggestions.length) } });
   };
 
   return (
@@ -95,7 +137,7 @@ export function InboxPage() {
             <motion.button
               type="button"
               className={styles.iconTrigger}
-              onClick={() => notify({ key: "AI 整理功能开发中" })}
+              onClick={startOrganizing}
               aria-label={t("AI 整理")}
               title={t("AI 整理")}
               whileTap={{ scale: 0.94 }}
@@ -122,38 +164,72 @@ export function InboxPage() {
             transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
           >
             <SectionLabel gold>{dayLabel}</SectionLabel>
-            <div className={styles.list}>
-              <AnimatePresence mode="popLayout" initial={false}>
-                {dayTasks.map((task) => (
-                  <TaskRow
-                    key={task.id}
-                    task={task}
-                    highlight={task.id === justAddedId}
-                    onOpen={() => selectTask(task.id)}
-                    onToggle={() => toggleTask(task.id)}
-                    onToggleSubtask={(subtaskId) => toggleSubtask(task.id, subtaskId)}
-                    onDelete={() => deleteTask(task.id)}
-                    whenMode="time"
-                  />
-                ))}
-              </AnimatePresence>
-            </div>
-            {!dayTasks.length && (
-              <div className={shared.inboxEmpty}>
+            <div className={styles.contentStage}>
+              {/* 空状态始终在背景中预加载；最后一行退场后再延迟淡入，避免图片解码与布局跳变撞帧。 */}
+              <motion.div
+                className={styles.emptyLayer}
+                aria-hidden={hasDayTasks || undefined}
+                initial={false}
+                animate={
+                  hasDayTasks ? { opacity: 0, y: 8, scale: 0.985 } : { opacity: 1, y: 0, scale: 1 }
+                }
+                transition={
+                  hasDayTasks
+                    ? { duration: 0.14, ease: "easeOut" }
+                    : { duration: 0.28, delay: 0.16, ease: [0.22, 1, 0.36, 1] }
+                }
+              >
                 <Image
                   className={shared.inboxEmptyImage}
-                  src="/noschedule.png"
+                  src={noScheduleImage}
                   alt={t("schedule.emptyDay")}
-                  width={1312}
-                  height={1199}
+                  placeholder="blur"
+                  loading="eager"
                   sizes="(max-width: 640px) 64vw, 340px"
                 />
-              </div>
-            )}
+              </motion.div>
+              <AnimatePresence initial={false}>
+                {hasDayTasks && (
+                  <motion.div
+                    key="task-list"
+                    className={styles.list}
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -7 }}
+                    transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+                  >
+                    <AnimatePresence mode="popLayout" initial={false}>
+                      {dayTasks.map((task) => (
+                        <TaskRow
+                          key={task.id}
+                          task={task}
+                          highlight={task.id === justAddedId}
+                          onOpen={() => selectTask(task.id)}
+                          onToggle={() => toggleTask(task.id)}
+                          onToggleSubtask={(subtaskId) => toggleSubtask(task.id, subtaskId)}
+                          onDelete={() => deleteTask(task.id)}
+                          whenMode="time"
+                        />
+                      ))}
+                    </AnimatePresence>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </motion.div>
         </AnimatePresence>
       </section>
       <CaptureDialog open={captureOpen} onOpenChange={setCaptureOpen} onCapture={handleCapture} />
+      {organizeOpen && (
+        <AiOrganizeDialog
+          open
+          onOpenChange={setOrganizeOpen}
+          date={selected}
+          tasks={organizeCandidates}
+          pomodoroMinutes={preferences.duration}
+          onApply={applyOrganization}
+        />
+      )}
     </div>
   );
 }
