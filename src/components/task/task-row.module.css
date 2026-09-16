@@ -141,6 +141,23 @@
 }
 /* 标题后的锁定状态小图标（仅展示，切换在详情页）；
    显式 inline-block 覆盖 Tailwind preflight 的 svg{display:block}，保证与标题同行 */
+/* 标题后的 One Thing 金色小胶囊（仅展示，切换在详情页） */
+.oneMark {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 7px;
+  padding: 2px 7px;
+  border: 1px solid color-mix(in srgb, var(--brand-gold) 45%, transparent);
+  border-radius: 999px;
+  background: var(--task-accent-light);
+  color: var(--brand-gold);
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.8px;
+  text-transform: lowercase;
+  vertical-align: 1px;
+}
 .lockMark {
   display: inline-block;
   margin-left: 7px;

@@ -148,6 +148,10 @@ export const messages = {
     "zh-CN": "回来",
     en: "Back",
   },
+  返回: {
+    "zh-CN": "返回",
+    en: "Back",
+  },
   Join: {
     "zh-CN": "加入",
     en: "Join",
@@ -1127,6 +1131,42 @@ export const messages = {
   "insights.cellDetail": {
     "zh-CN": "{date}：专注 {count} 分钟",
     en: "{date}: {count} focus minutes",
+  },
+  "Focus Rhythm": {
+    "zh-CN": "专注节奏",
+    en: "Focus Rhythm",
+  },
+  "insights.focusMinutes": {
+    "zh-CN": "{count} 分钟",
+    en: "{count} min",
+  },
+  "Best Day": {
+    "zh-CN": "单日最高",
+    en: "Best Day",
+  },
+  "Active Days": {
+    "zh-CN": "活跃天数",
+    en: "Active Days",
+  },
+  "Daily Average": {
+    "zh-CN": "活跃日均",
+    en: "Daily Average",
+  },
+  Less: {
+    "zh-CN": "少",
+    en: "Less",
+  },
+  More: {
+    "zh-CN": "多",
+    en: "More",
+  },
+  "Last 42 days": {
+    "zh-CN": "近 42 天",
+    en: "Last 42 days",
+  },
+  "Current Streak": {
+    "zh-CN": "当前连续",
+    en: "Current Streak",
   },
   主导航: {
     "zh-CN": "主导航",

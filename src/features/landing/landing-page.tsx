@@ -1,4 +1,3 @@
-import { PreferenceControls } from "@/features/preferences/preference-controls";
 import { getI18n } from "@/i18n/server";
 import Link from "next/link";
 import { HiArrowRight, HiClock, HiSparkles } from "react-icons/hi2";
@@ -48,7 +47,6 @@ export async function LandingPage() {
             <a href="#about">{t("About")}</a>
           </nav>
           <div className={styles.navActions}>
-            <PreferenceControls />
             {user && seed ? (
               <Link href="/today" className={styles.userChip} title={displayName}>
                 <AvatarView seed={seed} className={styles.userAvatar} />

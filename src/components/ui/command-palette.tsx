@@ -3,7 +3,7 @@
 import { useI18n } from "@/features/preferences/preferences-provider";
 import { useDialogFocus } from "@/hooks/use-dialog-focus";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import { Command } from "cmdk";
 import { HiClock, HiMagnifyingGlass } from "react-icons/hi2";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -13,38 +13,7 @@ import { cn } from "@/lib/utils";
 import type { TaskList } from "@/types/task";
 import styles from "./command-palette.module.css";
 
-const emptySubscribe = () => () => {};
-
-function useIsMac() {
-  // Client-only value: SSR/hydration assumes Mac, then re-renders if needed.
-  return useSyncExternalStore(
-    emptySubscribe,
-    () => /Mac|iPhone|iPad|iPod/.test(navigator.userAgent),
-    () => true,
-  );
-}
-
 const LISTS: TaskList[] = ["Inbox", "Work", "Study", "Life"];
-
-/** Inline trigger styled like a search field with the platform shortcut badge. */
-export function SearchTrigger({ className }: { className?: string }) {
-  const { t } = useI18n();
-  const { setSearchOpen } = useWorkspace();
-  const isMac = useIsMac();
-  const hint = isMac ? "⌘ K" : "Ctrl K";
-  return (
-    <button
-      type="button"
-      className={className ? cn(styles.trigger, className) : styles.trigger}
-      onClick={() => setSearchOpen(true)}
-      aria-label={`${t("搜索")} (${hint})`}
-    >
-      <HiMagnifyingGlass size={14} aria-hidden="true" />
-      <span className={styles.triggerText}>{t("搜索")}</span>
-      <kbd className={styles.kbd}>{hint}</kbd>
-    </button>
-  );
-}
 
 /** DocSearch-style task search palette, opened with Cmd/Ctrl+K. */
 export function CommandPalette() {

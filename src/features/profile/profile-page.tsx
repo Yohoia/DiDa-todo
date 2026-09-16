@@ -1,36 +1,13 @@
 import { getI18n } from "@/i18n/server";
 import Link from "next/link";
 import type { CSSProperties } from "react";
-import {
-  HiArrowUpRight,
-  HiChartBar,
-  HiBriefcase,
-  HiCheckCircle,
-  HiCog,
-  HiHome,
-  HiClock,
-  HiFire,
-  HiSparkles,
-} from "react-icons/hi2";
+import { HiClock, HiCog, HiFire, HiSparkles } from "react-icons/hi2";
 import { SectionLabel } from "@/components/shared/workspace-ui";
 import { AvatarView } from "@/components/shared/avatar-view";
 import { avatarImageSrc, avatarSeed } from "@/lib/avatar";
 import { getProfile } from "./profile-service";
 import shared from "@/styles/workspace.module.css";
 import styles from "./profile.module.css";
-
-const links = [
-  {
-    href: "/inbox",
-    title: "Inbox",
-    subtitle: "收集想法，规划每一天",
-    Icon: HiBriefcase,
-  },
-  { href: "/completed", title: "Archive", subtitle: "回顾已完成的任务", Icon: HiCheckCircle },
-  { href: "/insight", title: "Insights", subtitle: "看见专注与成长", Icon: HiChartBar },
-  { href: "/settings", title: "Settings", subtitle: "让节奏适合自己", Icon: HiCog },
-  { href: "/", title: "DiDa-todo", subtitle: "返回首页", Icon: HiHome },
-];
 
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -96,6 +73,14 @@ export async function ProfilePage() {
             </span>
           </div>
         </div>
+        <Link
+          href="/settings"
+          className={styles.settingsLink}
+          aria-label={t("Settings")}
+          title={t("Settings")}
+        >
+          <HiCog size={18} aria-hidden="true" />
+        </Link>
       </header>
       <div className={styles.xp}>
         <div className={styles.xpHeader}>
@@ -193,23 +178,6 @@ export async function ProfilePage() {
           )}
         </article>
       </section>
-      <nav className={styles.links} aria-label={t("更多工作台页面")}>
-        {links.map(({ href, title, subtitle, Icon }) => (
-          <Link href={href} key={href}>
-            <Icon size={19} strokeWidth={1.5} />
-            <span>
-              <strong>{label(title)}</strong>
-              <small>{label(subtitle)}</small>
-            </span>
-            <HiArrowUpRight size={15} />
-          </Link>
-        ))}
-      </nav>
-      <p className={shared.muted}>
-        {profile.isDemo
-          ? t("未登录时显示示例数据；登录后任务与专注记录会同步到你的账户。")
-          : t("等级、花园和统计来自你的任务与专注记录。")}
-      </p>
     </div>
   );
 }

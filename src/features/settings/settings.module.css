@@ -1,7 +1,33 @@
-.page {
+.wrapper {
   width: 100%;
   max-width: 900px;
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+/* 简约返回按钮：无边框、左对齐、弱化文字 + 左箭头 */
+.backButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  align-self: flex-start;
+  padding: 4px 8px;
+  margin-left: -8px;
+  border: none;
+  background: none;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.backButton:hover,
+.backButton:focus-visible {
+  color: var(--brand-gold);
+}
+.page {
+  width: 100%;
   display: flex;
   align-items: flex-start;
   gap: 40px;
@@ -182,4 +208,27 @@
 }
 .passwordRules li[data-valid="true"] {
   color: #3e9b57;
+}
+
+.githubRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+.githubRow a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: var(--muted-foreground);
+  transition:
+    color 0.2s,
+    background-color 0.2s;
+}
+.githubRow a:hover,
+.githubRow a:focus-visible {
+  color: var(--foreground);
+  background: var(--secondary);
 }

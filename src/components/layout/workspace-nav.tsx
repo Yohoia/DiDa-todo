@@ -5,7 +5,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { motion, type Variants } from "framer-motion";
-import { HiChartBar, HiClock, HiInbox, HiMicrophone, HiUser } from "react-icons/hi2";
+import {
+  HiChartBar,
+  HiClock,
+  HiInbox,
+  HiMagnifyingGlass,
+  HiMicrophone,
+  HiUser,
+} from "react-icons/hi2";
 import { useWorkspace } from "@/features/tasks/workspace-provider";
 import { VoiceCaptureBar, useVoiceCapture } from "@/features/tasks/voice-capture";
 import { VoiceConfirmCard } from "@/features/tasks/voice-confirm-card";
@@ -60,7 +67,7 @@ const DOCK_CHROME_Y = 22;
 export function WorkspaceNav() {
   const { t, label: translateLabel } = useI18n();
   const pathname = usePathname();
-  const { tasks, voiceCapture } = useWorkspace();
+  const { tasks, voiceCapture, setSearchOpen } = useWorkspace();
   const { startVoice, confirmVoice, cancelVoice, addConfirmed, editConfirmed, audioLevel } =
     useVoiceCapture();
   const navRef = useRef<HTMLElement>(null);
@@ -134,18 +141,29 @@ export function WorkspaceNav() {
       >
         {items.map(({ href, label, Icon, active }, index) => (
           <motion.span className={styles.slot} key={href} variants={itemVariants} custom={index}>
-            {index === 2 && (
-              <button
-                type="button"
-                className={styles.add}
-                data-quick-add
-                aria-label={t("语音输入")}
-                title={t("语音输入")}
-                onClick={startVoice}
-              >
-                <HiMicrophone size={19} />
-              </button>
-            )}
+            {index === 2 &&
+              (pathname === "/inbox" ? (
+                <button
+                  type="button"
+                  className={styles.add}
+                  data-quick-add
+                  aria-label={t("语音输入")}
+                  title={t("语音输入")}
+                  onClick={startVoice}
+                >
+                  <HiMicrophone size={19} />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className={styles.add}
+                  aria-label={t("搜索")}
+                  title={t("搜索")}
+                  onClick={() => setSearchOpen(true)}
+                >
+                  <HiMagnifyingGlass size={18} />
+                </button>
+              ))}
             <Link
               href={href}
               aria-label={translateLabel(label)}

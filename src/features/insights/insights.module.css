@@ -1,74 +1,367 @@
-.stats {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-}
-.stat {
-  background: var(--card);
+/* ============ 英雄汇总卡 ============ */
+.hero {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  gap: 28px;
+  padding: 30px 34px;
+  background: linear-gradient(
+    135deg,
+    var(--card) 55%,
+    color-mix(in srgb, var(--brand-gold) 7%, var(--card))
+  );
   border: 1px solid var(--border);
-  padding: 30px;
-  text-align: center;
+  border-radius: 6px;
+  overflow: hidden;
 }
-.number {
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: linear-gradient(90deg, var(--brand-gold), transparent 72%);
+}
+.heroMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+}
+.heroNumber {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
   font-family: var(--font-serif);
-  font-size: 3rem;
+  font-size: 4rem;
+  line-height: 1;
   color: var(--brand-gold);
-  margin-bottom: 5px;
 }
-.number span {
-  font-size: 1.2rem;
+.heroUnit {
+  font-size: 1.1rem;
+  letter-spacing: 2px;
+  color: var(--muted-foreground);
 }
-.description {
-  font-size: 12px;
+.heroLabel {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--muted-foreground);
+}
+.heroDivider {
+  width: 1px;
+  flex: none;
+  background: var(--separator);
+}
+.heroStats {
+  flex: none;
+  min-width: 185px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 18px;
+}
+.heroStat {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.heroIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--task-accent-light);
+  color: var(--brand-gold);
+}
+.heroCopy strong {
+  display: block;
+  font-family: var(--font-serif);
+  font-size: 1.3rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+.heroCopy span {
+  display: block;
+  font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 1px;
   color: var(--muted-foreground);
 }
-.map {
+
+/* ============ 近 7 天节奏 ============ */
+.rhythm {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  padding: 30px 18px 14px;
   background: var(--card);
   border: 1px solid var(--border);
-  padding: 25px;
+  border-radius: 6px;
+}
+.rhythmColumn {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 10px;
+  cursor: default;
+}
+.rhythmTrack {
+  position: relative;
+  width: 100%;
+  max-width: 34px;
+  height: 118px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.rhythmBar {
+  position: relative;
+  width: 100%;
+  border-radius: 4px 4px 2px 2px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--brand-gold) 88%, transparent),
+    color-mix(in srgb, var(--brand-gold) 28%, transparent)
+  );
+}
+.rhythmBar[data-level="1"] {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--brand-gold) 50%, transparent),
+    color-mix(in srgb, var(--brand-gold) 14%, transparent)
+  );
+}
+.rhythmBar[data-level="2"] {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--brand-gold) 68%, transparent),
+    color-mix(in srgb, var(--brand-gold) 22%, transparent)
+  );
+}
+.rhythmBar[data-empty] {
+  background: color-mix(in srgb, var(--muted-foreground) 10%, transparent);
+}
+.rhythmColumn[data-today] .rhythmBar {
+  background: linear-gradient(
+    180deg,
+    var(--brand-gold),
+    color-mix(in srgb, var(--brand-gold) 45%, transparent)
+  );
+}
+.rhythmValue {
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  white-space: nowrap;
+  color: var(--muted-foreground);
+}
+.rhythmColumn[data-today] .rhythmValue {
+  color: var(--brand-gold);
+  font-weight: 600;
+}
+.rhythmDay {
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.rhythmColumn[data-today] .rhythmDay {
+  color: var(--brand-gold);
+  font-weight: 600;
+}
+
+/* ============ 专注热力图 ============ */
+.mapCard {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 22px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.mapToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.mapRange {
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  color: var(--muted-foreground);
+}
+.legend .cell {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+.mapBody {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+.weekdays {
+  display: grid;
+  grid-template-rows: repeat(7, 14px);
+  gap: 5px;
+  flex: none;
+}
+.weekdays span {
+  display: flex;
+  align-items: center;
+  font-size: 9px;
+  color: var(--muted-foreground);
 }
 .grid {
   display: grid;
-  grid-template-columns: repeat(14, 1fr);
-  gap: 6px;
+  grid-template-rows: repeat(7, 14px);
+  grid-auto-flow: column;
+  grid-auto-columns: 14px;
+  gap: 5px;
 }
 .cell {
-  aspect-ratio: 1;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
   background: var(--background);
-  border-radius: 2px;
   border: 1px solid var(--separator);
+  transition: transform 0.15s ease;
+}
+.mapBody .cell:hover {
+  transform: scale(1.18);
 }
 .cell[data-level="1"] {
-  background: rgb(184 142 87 / 20%);
+  background: color-mix(in srgb, var(--brand-gold) 22%, var(--background));
 }
 .cell[data-level="2"] {
-  background: rgb(184 142 87 / 50%);
+  background: color-mix(in srgb, var(--brand-gold) 50%, var(--background));
 }
 .cell[data-level="3"] {
   background: var(--brand-gold);
+  border-color: var(--brand-gold);
 }
-.map p {
+.cell[data-today] {
+  box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--brand-gold) 70%, transparent);
+}
+.cellPlaceholder {
+  width: 14px;
+  height: 14px;
+}
+.mapFooter {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--separator);
   font-size: 11px;
   color: var(--muted-foreground);
-  text-align: right;
-  margin-top: 10px;
 }
+.mapFooter strong {
+  color: var(--foreground);
+}
+.mapFooter svg {
+  color: var(--brand-gold);
+}
+
+/* ============ 亮点卡片 ============ */
+.highlights {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+.highlight {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 20px 14px;
+  text-align: center;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  transition:
+    border-color 0.2s,
+    transform 0.2s,
+    box-shadow 0.2s;
+}
+.highlight:hover {
+  border-color: color-mix(in srgb, var(--brand-gold) 45%, var(--border));
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgb(0 0 0 / 6%);
+}
+.highlightIcon {
+  color: var(--brand-gold);
+}
+.highlightNumber {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+.highlightLabel {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted-foreground);
+}
+.highlightMeta {
+  font-size: 10px;
+  color: var(--muted-foreground);
+}
+
+/* ============ 响应式 ============ */
 @media (max-width: 600px) {
-  .stat {
-    padding: 24px 12px;
+  .hero {
+    flex-direction: column;
+    gap: 20px;
+    padding: 24px 20px;
   }
-  .description {
-    font-size: 10px;
+  .heroDivider {
+    width: auto;
+    height: 1px;
   }
-  .map {
-    padding: 16px;
+  .heroNumber {
+    font-size: 3.2rem;
   }
-  .grid {
+  .heroStats {
+    min-width: 0;
+    flex-direction: row;
+    gap: 14px;
+  }
+  .heroStat {
+    flex: 1;
+    min-width: 0;
+  }
+  .rhythm {
+    padding: 28px 8px 12px;
     gap: 4px;
+  }
+  .rhythmTrack {
+    max-width: 28px;
+  }
+  .rhythmValue {
+    font-size: 9px;
+  }
+  .highlights {
+    grid-template-columns: 1fr;
   }
 }

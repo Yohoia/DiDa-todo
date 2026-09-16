@@ -111,6 +111,12 @@ export function TaskRow({
           aria-label={t("tasks.open", { title: task.title })}
         >
           <span className={taskStyles.title}>{task.title}</span>
+          {/* One Thing 仅为状态展示，跟在标题后；切换请进详情 */}
+          {task.featured && (
+            <span className={taskStyles.oneMark} title={t("One Thing")}>
+              one
+            </span>
+          )}
           {/* 锁定仅为状态展示，跟在标题后；切换请进详情 */}
           {task.frozen && (
             <HiLockClosed size={13} className={taskStyles.lockMark} aria-hidden="true" />

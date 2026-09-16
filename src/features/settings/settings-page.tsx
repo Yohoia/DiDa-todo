@@ -7,6 +7,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useWorkspace } from "@/features/tasks/workspace-provider";
 import { Select } from "@/components/ui/select";
+import { HiArrowLeft } from "react-icons/hi2";
+import { SiGithub } from "react-icons/si";
 import { AvatarView } from "@/components/shared/avatar-view";
 import { avatarImageSrc, avatarSeed, randomAvatarSeed } from "@/lib/avatar";
 import { meetsPasswordPolicy, PASSWORD_RULES } from "@/lib/password-policy";
@@ -15,14 +17,7 @@ import { cn } from "@/lib/utils";
 import shared from "@/styles/workspace.module.css";
 import styles from "./settings.module.css";
 
-const sections = [
-  "General",
-  "Tasks & Rules",
-  "Focus (Pomodoro)",
-  "Notifications",
-  "Appearance",
-  "Account & Sync",
-];
+const sections = ["General", "Tasks & Rules", "Notifications", "Appearance", "Account & Sync"];
 function SettingRow({
   title,
   description,
@@ -245,6 +240,7 @@ export function SettingsPage({
   avatarUrl: string | null;
 }) {
   const { t, label } = useI18n();
+  const router = useRouter();
   const { preferences, setPreferences, notify, user, signOut } = useWorkspace();
   // 密码重置链接经 /auth/callback 换会话后落到 ?recovery=1：直达账户区改密码
   const isRecovery = useSearchParams().get("recovery") === "1";
@@ -254,183 +250,203 @@ export function SettingsPage({
     notify({ key: user ? "已保存到你的账户" : "已更新本次预览的偏好设置" });
   }
   return (
-    <div className={styles.page}>
-      <h1 className="sr-only">{t("Settings")}</h1>
-      <nav className={styles.sidebar} aria-label={t("设置分类")}>
-        {sections.map((item) => (
-          <button
-            className={cn(styles.sidebarItem, section === item && styles.active)}
-            aria-current={section === item ? "page" : undefined}
-            onClick={() => setSection(item)}
-            key={item}
-          >
-            {label(item)}
-          </button>
-        ))}
-      </nav>
-      <div className={styles.content}>
-        {section === "General" && (
-          <section className={styles.section}>
-            <h2>{t("General Preferences")}</h2>
-            <SettingRow
-              title={t("Language")}
-              description={t("Select your preferred interface language.")}
+    <div className={styles.wrapper}>
+      <button type="button" className={styles.backButton} onClick={() => router.back()}>
+        <HiArrowLeft size={14} aria-hidden="true" />
+        {t("返回")}
+      </button>
+      <div className={styles.page}>
+        <h1 className="sr-only">{t("Settings")}</h1>
+        <nav className={styles.sidebar} aria-label={t("设置分类")}>
+          {sections.map((item) => (
+            <button
+              className={cn(styles.sidebarItem, section === item && styles.active)}
+              aria-current={section === item ? "page" : undefined}
+              onClick={() => setSection(item)}
+              key={item}
             >
-              <LanguageSelect />
-            </SettingRow>
-            <SettingRow
-              title={t("First Day of Week")}
-              description={t("Set the starting day for calendar and weekly views.")}
-            >
-              <Select
-                ariaLabel={t("First Day of Week")}
-                value={preferences.firstDay}
-                onValueChange={(firstDay) => save({ firstDay })}
-                align="end"
-                options={[
-                  { value: "Monday", label: t("Monday") },
-                  { value: "Sunday", label: t("Sunday") },
-                ]}
-              />
-            </SettingRow>
-            <SettingRow
-              title={t("Sound Effects")}
-              description={t("Play gentle chime upon completing a task.")}
-            >
-              <Switch
-                label={t("Sound Effects")}
-                checked={preferences.sound}
-                onChange={(value) => save({ sound: value })}
-              />
-            </SettingRow>
-          </section>
-        )}
-        {["General", "Focus (Pomodoro)"].includes(section) && (
-          <section className={styles.section}>
-            <h2>{t("Focus (Pomodoro) Settings")}</h2>
-            <SettingRow
-              title={t("Pomodoro Duration")}
-              description={t("Standard deep work session length in minutes.")}
-            >
-              <NumberField
-                label={t("Pomodoro Duration")}
-                value={preferences.duration}
-                min={5}
-                max={120}
-                onChange={(duration) => save({ duration })}
-              />
-            </SettingRow>
-            <SettingRow
-              title={t("Auto-start Breaks")}
-              description={t("Automatically start break timer when focus session finishes.")}
-            >
-              <Switch
-                label={t("Auto-start Breaks")}
-                checked={preferences.autoBreak}
-                onChange={(value) => save({ autoBreak: value })}
-              />
-            </SettingRow>
-          </section>
-        )}
-        {section === "Tasks & Rules" && (
-          <section className={styles.section}>
-            <h2>{t("Tasks & Rules")}</h2>
-            <SettingRow
-              title={t("Daily Capacity")}
-              description={t("Choose a comfortable number of tasks for your day.")}
-            >
-              <NumberField
-                label={t("Daily Capacity")}
-                value={preferences.dailyCapacity}
-                min={1}
-                max={20}
-                onChange={(dailyCapacity) => save({ dailyCapacity })}
-              />
-            </SettingRow>
-            <Link href="/today" className={shared.textButton}>
-              {t("View today's capacity →")}
-            </Link>
-          </section>
-        )}
-        {section === "Notifications" && (
-          <section className={styles.section}>
-            <h2>{t("Notifications")}</h2>
-            <SettingRow
-              title={t("Task Reminders")}
-              description={t("Keep track of upcoming tasks and focus sessions.")}
-            >
-              <Switch
-                label={t("Task Reminders")}
-                checked={preferences.reminders}
-                onChange={(value) => save({ reminders: value })}
-              />
-            </SettingRow>
-            <p className={shared.muted}>{t("提醒偏好仅用于页面预览，通知服务尚未接入。")}</p>
-          </section>
-        )}
-        {section === "Appearance" && (
-          <section className={styles.section}>
-            <h2>{t("Appearance")}</h2>
-            <SettingRow title={t("Theme")} description={t("A quiet, warm space for focused work.")}>
-              <ThemeToggle />
-            </SettingRow>
-            <p className={shared.muted}>
-              {t("Your display preferences are saved on this device.")}
-            </p>
-          </section>
-        )}
-        {section === "Account & Sync" && (
-          <section className={styles.section}>
-            <h2>{t("Account & Sync")}</h2>
-            {user ? (
-              <>
-                {isRecovery && (
-                  <p className={shared.muted}>
-                    {t("你已通过密码重置链接登录，请设置新密码并保存。")}
-                  </p>
-                )}
-                <SettingRow title={user.displayName || profileName} description={user.email}>
-                  <div className={styles.accountActions}>
+              {label(item)}
+            </button>
+          ))}
+        </nav>
+        <div className={styles.content}>
+          {section === "General" && (
+            <section className={styles.section}>
+              <h2>{t("General Preferences")}</h2>
+              <SettingRow
+                title={t("Language")}
+                description={t("Select your preferred interface language.")}
+              >
+                <LanguageSelect />
+              </SettingRow>
+              <SettingRow
+                title={t("First Day of Week")}
+                description={t("Set the starting day for calendar and weekly views.")}
+              >
+                <Select
+                  ariaLabel={t("First Day of Week")}
+                  value={preferences.firstDay}
+                  onValueChange={(firstDay) => save({ firstDay })}
+                  align="end"
+                  options={[
+                    { value: "Monday", label: t("Monday") },
+                    { value: "Sunday", label: t("Sunday") },
+                  ]}
+                />
+              </SettingRow>
+              <SettingRow
+                title={t("Sound Effects")}
+                description={t("Play gentle chime upon completing a task.")}
+              >
+                <Switch
+                  label={t("Sound Effects")}
+                  checked={preferences.sound}
+                  onChange={(value) => save({ sound: value })}
+                />
+              </SettingRow>
+            </section>
+          )}
+          {section === "General" && (
+            <section className={styles.section}>
+              <h2>{t("Focus (Pomodoro) Settings")}</h2>
+              <SettingRow
+                title={t("Pomodoro Duration")}
+                description={t("Standard deep work session length in minutes.")}
+              >
+                <NumberField
+                  label={t("Pomodoro Duration")}
+                  value={preferences.duration}
+                  min={5}
+                  max={120}
+                  onChange={(duration) => save({ duration })}
+                />
+              </SettingRow>
+              <SettingRow
+                title={t("Auto-start Breaks")}
+                description={t("Automatically start break timer when focus session finishes.")}
+              >
+                <Switch
+                  label={t("Auto-start Breaks")}
+                  checked={preferences.autoBreak}
+                  onChange={(value) => save({ autoBreak: value })}
+                />
+              </SettingRow>
+            </section>
+          )}
+          {section === "Tasks & Rules" && (
+            <section className={styles.section}>
+              <h2>{t("Tasks & Rules")}</h2>
+              <SettingRow
+                title={t("Daily Capacity")}
+                description={t("Choose a comfortable number of tasks for your day.")}
+              >
+                <NumberField
+                  label={t("Daily Capacity")}
+                  value={preferences.dailyCapacity}
+                  min={1}
+                  max={20}
+                  onChange={(dailyCapacity) => save({ dailyCapacity })}
+                />
+              </SettingRow>
+              <Link href="/today" className={shared.textButton}>
+                {t("View today's capacity →")}
+              </Link>
+            </section>
+          )}
+          {section === "Notifications" && (
+            <section className={styles.section}>
+              <h2>{t("Notifications")}</h2>
+              <SettingRow
+                title={t("Task Reminders")}
+                description={t("Keep track of upcoming tasks and focus sessions.")}
+              >
+                <Switch
+                  label={t("Task Reminders")}
+                  checked={preferences.reminders}
+                  onChange={(value) => save({ reminders: value })}
+                />
+              </SettingRow>
+              <p className={shared.muted}>{t("提醒偏好仅用于页面预览，通知服务尚未接入。")}</p>
+            </section>
+          )}
+          {section === "Appearance" && (
+            <section className={styles.section}>
+              <h2>{t("Appearance")}</h2>
+              <SettingRow
+                title={t("Theme")}
+                description={t("A quiet, warm space for focused work.")}
+              >
+                <ThemeToggle />
+              </SettingRow>
+              <p className={shared.muted}>
+                {t("Your display preferences are saved on this device.")}
+              </p>
+            </section>
+          )}
+          {section === "Account & Sync" && (
+            <section className={styles.section}>
+              <h2>{t("Account & Sync")}</h2>
+              {user ? (
+                <>
+                  {isRecovery && (
+                    <p className={shared.muted}>
+                      {t("你已通过密码重置链接登录，请设置新密码并保存。")}
+                    </p>
+                  )}
+                  <SettingRow title={user.displayName || profileName} description={user.email}>
+                    <div className={styles.accountActions}>
+                      <Link href="/profile" className={shared.button}>
+                        {t("View Profile")}
+                      </Link>
+                      <button
+                        type="button"
+                        className={shared.textButton}
+                        onClick={() => void signOut()}
+                      >
+                        {t("退出登录")}
+                      </button>
+                    </div>
+                  </SettingRow>
+                  {user.email && (
+                    <AvatarRow avatarUrl={avatarUrl} email={user.email} userId={user.id} />
+                  )}
+                  <div className={styles.passwordBlock}>
+                    <div>
+                      <div className={styles.title}>{t("修改密码")}</div>
+                      <div className={styles.description}>
+                        {t("设置新密码后，其他设备需使用新密码重新登录。")}
+                      </div>
+                    </div>
+                    <PasswordForm />
+                  </div>
+                  <p className={shared.muted}>{t("任务、偏好与语音记录已同步到你的账户。")}</p>
+                </>
+              ) : (
+                <>
+                  <SettingRow title={profileName} description={t("Preview account")}>
                     <Link href="/profile" className={shared.button}>
                       {t("View Profile")}
                     </Link>
-                    <button
-                      type="button"
-                      className={shared.textButton}
-                      onClick={() => void signOut()}
-                    >
-                      {t("退出登录")}
-                    </button>
-                  </div>
-                </SettingRow>
-                {user.email && (
-                  <AvatarRow avatarUrl={avatarUrl} email={user.email} userId={user.id} />
-                )}
-                <div className={styles.passwordBlock}>
-                  <div>
-                    <div className={styles.title}>{t("修改密码")}</div>
-                    <div className={styles.description}>
-                      {t("设置新密码后，其他设备需使用新密码重新登录。")}
-                    </div>
-                  </div>
-                  <PasswordForm />
-                </div>
-                <p className={shared.muted}>{t("任务、偏好与语音记录已同步到你的账户。")}</p>
-              </>
-            ) : (
-              <>
-                <SettingRow title={profileName} description={t("Preview account")}>
-                  <Link href="/profile" className={shared.button}>
-                    {t("View Profile")}
-                  </Link>
-                </SettingRow>
-                <p className={shared.muted}>
-                  {t("当前使用前端示例数据。账号、同步与云端保存尚未接入。")}
-                </p>
-              </>
-            )}
-          </section>
-        )}
+                  </SettingRow>
+                  <p className={shared.muted}>
+                    {t("当前使用前端示例数据。账号、同步与云端保存尚未接入。")}
+                  </p>
+                </>
+              )}
+              <div className={styles.githubRow}>
+                <a
+                  href="https://github.com/Yohoia/DiDa-todo"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={t("View source on GitHub")}
+                  title={t("View source on GitHub")}
+                >
+                  <SiGithub size={16} aria-hidden="true" />
+                </a>
+              </div>
+            </section>
+          )}
+        </div>
       </div>
     </div>
   );

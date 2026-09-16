@@ -23,7 +23,7 @@ import styles from "./task-detail.module.css";
 export function TaskDetail() {
   const { t } = useI18n();
   const focusReturn = useDialogFocus();
-  const { selectedId, selectTask, tasks } = useWorkspace();
+  const { selectedId, selectTask, tasks, updateTask } = useWorkspace();
   const task = tasks.find((item) => item.id === selectedId);
   return (
     <Dialog
@@ -47,7 +47,36 @@ export function TaskDetail() {
           }
         }}
       >
-        <DialogTitle className={styles.badge}>{t("Task Detail")}</DialogTitle>
+        <div className={styles.header}>
+          <DialogTitle className={styles.badge}>{t("Task Detail")}</DialogTitle>
+          {task && (
+            <div className={styles.stateActions}>
+              <button
+                type="button"
+                className={styles.oneAction}
+                aria-pressed={!!task.featured}
+                aria-label={t("Set as today's focus")}
+                title={t("Set as today's focus")}
+                onClick={() => updateTask(task.id, { featured: !task.featured })}
+              >
+                one
+              </button>
+              {task.frozen ? (
+                <TaskLockButton onUnlock={() => updateTask(task.id, { frozen: false })} />
+              ) : (
+                <button
+                  type="button"
+                  className={styles.lockAction}
+                  aria-label={t("Lock task")}
+                  title={t("Lock task")}
+                  onClick={() => updateTask(task.id, { frozen: true })}
+                >
+                  <HiLockClosed size={15} aria-hidden="true" />
+                </button>
+              )}
+            </div>
+          )}
+        </div>
         <DialogDescription className="sr-only">
           {t("编辑任务信息、子任务，或开始专注。")}
         </DialogDescription>
@@ -78,20 +107,6 @@ function TaskEditor({ task }: { task: Task }) {
     updateTask(task.id, { tags: task.tags.filter((item) => item !== tag) });
   return (
     <>
-      <div className={styles.stateActions}>
-        {task.frozen ? (
-          <TaskLockButton onUnlock={() => updateTask(task.id, { frozen: false })} />
-        ) : (
-          <button
-            type="button"
-            className={styles.lockAction}
-            onClick={() => updateTask(task.id, { frozen: true })}
-          >
-            <HiLockClosed size={14} aria-hidden="true" />
-            {t("Lock task")}
-          </button>
-        )}
-      </div>
       <label className="sr-only" htmlFor="detail-title">
         {t("任务标题")}
       </label>
