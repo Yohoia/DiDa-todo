@@ -20,18 +20,6 @@
   outline: none;
 }
 
-/* ASR 原文：供用户核对转写是否准确 */
-.source {
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.5;
-  color: rgb(255 255 255 / 55%);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
 .summary {
   margin: 0;
   display: flex;

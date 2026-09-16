@@ -185,31 +185,6 @@
   color: var(--foreground);
   max-width: 100%;
 }
-.filterBar {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 14px 16px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--card) 80%, transparent);
-}
-.selectGroup {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-}
-.selectLabel {
-  color: var(--muted-foreground);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  line-height: 1;
-  text-transform: uppercase;
-}
 .empty {
   text-align: center;
   padding: 70px 20px;
@@ -225,6 +200,19 @@
 .empty p {
   color: var(--muted-foreground);
   font-size: 13px;
+}
+.inboxEmpty {
+  flex: 1;
+  min-height: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 20px;
+}
+.inboxEmptyImage {
+  width: min(100%, 340px);
+  height: auto;
+  object-fit: contain;
 }
 .pills {
   display: flex;
@@ -247,59 +235,6 @@
   background: var(--foreground);
   color: var(--card);
   border-color: var(--foreground);
-}
-.quickInput {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 12px 20px;
-}
-.quickInput:focus-within {
-  border-color: var(--brand-gold);
-}
-.quickInput input {
-  flex: 1;
-  min-width: 0;
-  font-size: 14px;
-  border: none;
-  outline: none;
-  background: transparent;
-}
-.quickInput button {
-  color: var(--brand-gold);
-  font-size: 12px;
-  font-weight: 600;
-  min-height: 32px;
-}
-/* 接近字数上限时出现的剩余计数 */
-.charCount {
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-  color: var(--task-muted);
-  flex: none;
-}
-/* 未输入时提示「/」聚焦快捷键，聚焦后隐藏 */
-.kbdHint {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 5px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--secondary);
-  color: var(--muted-foreground);
-  font-size: 11px;
-  font-family: var(--font-sans);
-  line-height: 1;
-  flex: none;
-}
-.quickInput:focus-within .kbdHint {
-  display: none;
 }
 .overlay {
   z-index: 200;
@@ -360,17 +295,8 @@
   .row {
     flex-wrap: wrap;
   }
-  .quickInput input,
   .fieldInput {
     font-size: 16px;
-  }
-  .filterBar {
-    align-items: stretch;
-    flex-direction: column;
-  }
-  .filterBar .selectGroup,
-  .filterBar .selectGroup > button {
-    width: 100%;
   }
 }
 

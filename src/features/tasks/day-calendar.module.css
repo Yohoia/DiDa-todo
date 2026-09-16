@@ -112,7 +112,7 @@
   background: none;
   color: var(--foreground);
   font-family: var(--font-serif);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   letter-spacing: 0.02em;
   cursor: pointer;
@@ -182,7 +182,7 @@
   border-radius: 50%;
   color: var(--foreground);
   font-family: var(--font-serif);
-  font-size: 14.5px;
+  font-size: 16px;
   font-weight: 500;
   transition:
     background 0.15s ease,
@@ -236,7 +236,7 @@
   height: var(--labels-h);
   align-items: center;
   color: var(--muted-foreground);
-  font-size: 11px;
+  font-size: 12.5px;
   background: var(--card);
   transition: top 0.45s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 2;
@@ -256,7 +256,7 @@
   .dayNum {
     width: 30px;
     height: 30px;
-    font-size: 13.5px;
+    font-size: 14.5px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

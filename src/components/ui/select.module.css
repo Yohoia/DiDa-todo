@@ -123,3 +123,28 @@
     font-size: 16px;
   }
 }
+
+/* 图标触发器：半透明磨砂底（blur + 微透明卡片色），选项列表仍显示文字标签 */
+.iconTrigger {
+  min-width: 0;
+  min-height: 0;
+  width: 34px;
+  height: 34px;
+  justify-content: center;
+  gap: 0;
+  padding: 0;
+  border-color: color-mix(in srgb, var(--foreground) 8%, transparent);
+  background: color-mix(in srgb, var(--card) 60%, transparent);
+  backdrop-filter: blur(10px) saturate(1.5);
+  -webkit-backdrop-filter: blur(10px) saturate(1.5);
+  box-shadow: none;
+  color: var(--muted-foreground);
+}
+.iconTrigger svg {
+  display: block;
+}
+.iconTrigger:hover {
+  border-color: color-mix(in srgb, var(--foreground) 18%, transparent);
+  background: color-mix(in srgb, var(--card) 85%, transparent);
+  color: var(--foreground);
+}

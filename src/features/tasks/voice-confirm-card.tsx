@@ -5,8 +5,6 @@ import { useI18n } from "@/features/preferences/preferences-provider";
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { HiCheck } from "react-icons/hi2";
-import { getDemoDate, getTodayKey } from "@/lib/date-utils";
-import type { MessageKey } from "@/i18n/messages";
 import type { VoiceCaptureState, VoiceParsed } from "@/types/voice";
 import styles from "./voice-confirm-card.module.css";
 
@@ -24,7 +22,7 @@ export function VoiceConfirmCard({
   onEdit: (item: VoiceParsed) => void;
   onAdd: (items: VoiceParsed[]) => void;
 }) {
-  const { t, label, locale } = useI18n();
+  const { t, locale } = useI18n();
   const cardRef = useRef<HTMLDivElement>(null);
   const items = state.parsed.filter((item) => item.isTodo);
   const [selected, setSelected] = useState<boolean[]>(() => items.map(() => true));
@@ -54,14 +52,13 @@ export function VoiceConfirmCard({
         }
       }}
     >
-      <p className={styles.source}>“{state.transcript}”</p>
       {items.length > 0 ? (
         <>
           <ul className={styles.items}>
             {items.map((item, index) => {
+              // 只展示整理结果：解析后的具体日期与时间（清单恒为 Inbox 不再显示）
               const meta: string[] = [];
-              if (item.list) meta.push(label(item.list));
-              if (item.date) meta.push(formatVoiceDate(item.date, locale, t));
+              if (item.date) meta.push(formatVoiceDate(item.date, locale));
               if (item.time) meta.push(item.time);
               return (
                 <li className={styles.item} key={index}>
@@ -123,10 +120,8 @@ export function VoiceConfirmCard({
   );
 }
 
-/** 今天/明天用现有键，其余日期交给 Intl 短格式。 */
-function formatVoiceDate(date: string, locale: string, t: (key: MessageKey) => string): string {
-  if (date === getTodayKey()) return t("Today");
-  if (date === getDemoDate(1)) return t("Tomorrow");
+/** 确认卡只显示整理结果：日期一律为换算后的具体日期（如 9月16日），不显示「明天」这类相对词。 */
+function formatVoiceDate(date: string, locale: string): string {
   return new Intl.DateTimeFormat(locale === "zh-CN" ? "zh-CN" : "en", {
     month: "short",
     day: "numeric",

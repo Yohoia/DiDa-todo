@@ -23,6 +23,8 @@
       <text x="148" y="0">REACT 19</text>
       <circle cx="252" cy="-5" r="3" fill="#B88E57"/>
       <text x="273" y="0">TYPESCRIPT</text>
+      <circle cx="385" cy="-5" r="3" fill="#B88E57"/>
+      <text x="406" y="0">SUPABASE</text>
     </g>
   </g>
 

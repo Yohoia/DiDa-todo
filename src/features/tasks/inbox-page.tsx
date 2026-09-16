@@ -1,25 +1,31 @@
 "use client";
 import { useI18n } from "@/features/preferences/preferences-provider";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
-import { PageHeader, EmptyState } from "@/components/shared/workspace-ui";
+import { HiArrowUturnLeft, HiSparkles } from "react-icons/hi2";
+import { PageHeader, SectionLabel } from "@/components/shared/workspace-ui";
 import { TaskRow } from "@/components/task/task-row";
+import { useTodayKey } from "@/hooks/use-today-key";
 import { useWorkspace } from "./workspace-provider";
-import styles from "@/styles/workspace.module.css";
+import { DayCalendar } from "./day-calendar";
+import { CaptureDialog } from "./capture-dialog";
+import shared from "@/styles/workspace.module.css";
+import styles from "./schedule.module.css";
 
-const TITLE_LIMIT = 200;
-
+/** 收件箱 = 日程页：日历按天查看当天任务；「/」捕获直接记到今天，AI 整理入口在头部 */
 export function InboxPage() {
-  const { t } = useI18n();
-  const { tasks, addTask, toggleTask, toggleSubtask, updateTask, selectTask } = useWorkspace();
-  const [title, setTitle] = useState("");
+  const { t, date: formatDate } = useI18n();
+  const { tasks, addTask, toggleTask, toggleSubtask, deleteTask, selectTask, preferences, notify } =
+    useWorkspace();
+  const todayKey = useTodayKey();
+  const [selected, setSelected] = useState(todayKey);
   const [justAddedId, setJustAddedId] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  // 最新捕获的想法排在最前，紧贴输入框，便于连续记录时即时看到
-  const inbox = tasks.filter((task) => task.list === "Inbox" && !task.completed).reverse();
+  // 「记一笔」捕获弹窗：按 / 或点头部 / 图标呼出，条目按今天日期保存
+  const [captureOpen, setCaptureOpen] = useState(false);
 
-  // 「/」随手聚焦捕获框（不打断正在输入的其它控件）
+  // 「/」随手呼出捕获弹窗（不打断正在输入的其它控件）
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       if (event.key !== "/") return;
@@ -27,84 +33,127 @@ export function InboxPage() {
       const tag = el?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || el?.isContentEditable) return;
       event.preventDefault();
-      inputRef.current?.focus();
+      setCaptureOpen(true);
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const remaining = TITLE_LIMIT - title.length;
+  const datesWithTodos = useMemo(
+    () => new Set(tasks.filter((task) => task.date).map((task) => task.date)),
+    [tasks],
+  );
+  const dayTasks = tasks
+    .filter((task) => task.date === selected)
+    .sort(
+      (a, b) =>
+        Number(a.completed) - Number(b.completed) ||
+        (a.time || "24:00").localeCompare(b.time || "24:00") ||
+        a.created - b.created,
+    );
+
+  const dayLabel = `${formatDate(selected, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  })} · ${formatDate(selected, { weekday: "long" })}`;
+
+  // 捕获直接记到今天（收件箱清单）：跳回今天，让新条目带高亮立即可见
+  const handleCapture = (title: string) => {
+    const id = addTask(title, "Inbox", todayKey);
+    if (id) setJustAddedId(id);
+    setSelected(todayKey);
+  };
+
   return (
-    <div className={styles.page} style={{ maxWidth: 700 }}>
-      <PageHeader
-        title={t("Inbox")}
-        subtitle={inbox.length ? t("tasks.inboxCount", { count: inbox.length }) : t("Inbox Zero")}
-      />
-      <form
-        className={styles.quickInput}
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (!title.trim()) return;
-          const id = addTask(title);
-          if (id) setJustAddedId(id);
-          setTitle("");
-          // 提交后保留焦点，支持一口气连续记录
-          inputRef.current?.focus();
-        }}
-      >
-        <label className="sr-only" htmlFor="inbox-add">
-          {t("添加收件箱任务")}
-        </label>
-        <input
-          id="inbox-add"
-          ref={inputRef}
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
-          placeholder={t("Dump what's on your mind...")}
-          maxLength={TITLE_LIMIT}
-          autoComplete="off"
-        />
-        {remaining <= 40 && (
-          <span className={styles.charCount} aria-hidden="true">
-            {remaining}
-          </span>
-        )}
-        {!title && (
-          <kbd className={styles.kbdHint} aria-hidden="true">
-            /
-          </kbd>
-        )}
-        <motion.button
-          type="submit"
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          transition={{ duration: 0.15, ease: "easeOut" }}
-        >
-          {t("Add")}
-        </motion.button>
-      </form>
-      {inbox.length ? (
-        <div className="flex flex-col gap-3">
-          <AnimatePresence mode="popLayout">
-            {inbox.map((task) => (
-              <TaskRow
-                key={task.id}
-                task={task}
-                variant="inbox"
-                highlight={task.id === justAddedId}
-                onOpen={() => selectTask(task.id)}
-                onToggle={() => toggleTask(task.id)}
-                onToggleSubtask={(subtaskId) => toggleSubtask(task.id, subtaskId)}
-                onUnlock={() => updateTask(task.id, { frozen: false })}
-              />
-            ))}
-          </AnimatePresence>
+    <div className={shared.page}>
+      <PageHeader title={t("Inbox")} subtitle={t("收集想法，随录随整理。")}>
+        <div className={styles.headerActions}>
+          {selected !== todayKey && (
+            <button
+              type="button"
+              className={shared.textButton}
+              onClick={() => setSelected(todayKey)}
+            >
+              <HiArrowUturnLeft size={14} aria-hidden="true" /> {t("回到今天")}
+            </button>
+          )}
+          <div className={styles.iconGroup}>
+            <motion.button
+              type="button"
+              className={styles.iconTrigger}
+              onClick={() => setCaptureOpen(true)}
+              aria-label={t("记一笔")}
+              aria-keyshortcuts="/"
+              title={`${t("记一笔")} ( / )`}
+              whileTap={{ scale: 0.94 }}
+            >
+              <span className={styles.slashGlyph} aria-hidden="true">
+                /
+              </span>
+            </motion.button>
+            <motion.button
+              type="button"
+              className={styles.iconTrigger}
+              onClick={() => notify({ key: "AI 整理功能开发中" })}
+              aria-label={t("AI 整理")}
+              title={t("AI 整理")}
+              whileTap={{ scale: 0.94 }}
+            >
+              <HiSparkles size={15} aria-hidden="true" />
+            </motion.button>
+          </div>
         </div>
-      ) : (
-        <EmptyState title={t("Inbox Zero")}>
-          {t("Everything is organized. Clean slate achieved.")}
-        </EmptyState>
-      )}
+      </PageHeader>
+      <DayCalendar
+        selectedKey={selected}
+        onSelect={setSelected}
+        firstDay={preferences.firstDay}
+        datesWithTodos={datesWithTodos}
+      />
+      <section>
+        {/* 切换日期时整块（日期标签 + 列表 + 空态）交叉淡入淡出，行级增删由内层 popLayout 接管 */}
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={selected}
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -3 }}
+            transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <SectionLabel gold>{dayLabel}</SectionLabel>
+            <div className={styles.list}>
+              <AnimatePresence mode="popLayout" initial={false}>
+                {dayTasks.map((task) => (
+                  <TaskRow
+                    key={task.id}
+                    task={task}
+                    highlight={task.id === justAddedId}
+                    onOpen={() => selectTask(task.id)}
+                    onToggle={() => toggleTask(task.id)}
+                    onToggleSubtask={(subtaskId) => toggleSubtask(task.id, subtaskId)}
+                    onDelete={() => deleteTask(task.id)}
+                    whenMode="time"
+                  />
+                ))}
+              </AnimatePresence>
+            </div>
+            {!dayTasks.length && (
+              <div className={shared.inboxEmpty}>
+                <Image
+                  className={shared.inboxEmptyImage}
+                  src="/noschedule.png"
+                  alt={t("schedule.emptyDay")}
+                  width={1312}
+                  height={1199}
+                  sizes="(max-width: 640px) 64vw, 340px"
+                />
+              </div>
+            )}
+          </motion.div>
+        </AnimatePresence>
+      </section>
+      <CaptureDialog open={captureOpen} onOpenChange={setCaptureOpen} onCapture={handleCapture} />
     </div>
   );
 }

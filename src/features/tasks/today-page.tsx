@@ -69,7 +69,6 @@ export function TodayPage() {
       onOpen={() => selectTask(task.id)}
       onToggle={() => toggleTask(task.id)}
       onToggleSubtask={(subtaskId) => toggleSubtask(task.id, subtaskId)}
-      onUnlock={() => updateTask(task.id, { frozen: false })}
     />
   );
   return (

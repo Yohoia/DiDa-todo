@@ -20,9 +20,12 @@ type SelectProps<T extends string> = {
   options: readonly SelectOption<T>[];
   onValueChange: (value: T) => void;
   ariaLabel: string;
+  placeholder?: ReactNode;
   className?: string;
   disabled?: boolean;
   align?: "start" | "center" | "end";
+  /** 提供后触发器只显示图标（选项列表仍显示文字），配合 ariaLabel 说明用途 */
+  icon?: ReactNode;
 };
 
 export function Select<T extends string>({
@@ -30,9 +33,11 @@ export function Select<T extends string>({
   options,
   onValueChange,
   ariaLabel,
+  placeholder,
   className,
   disabled = false,
   align = "start",
+  icon,
 }: SelectProps<T>) {
   const [open, setOpen] = useState(false);
   const listboxId = useId();
@@ -62,7 +67,7 @@ export function Select<T extends string>({
       <Popover.Trigger asChild>
         <button
           type="button"
-          className={cn(styles.trigger, className)}
+          className={cn(styles.trigger, icon && styles.iconTrigger, className)}
           aria-label={ariaLabel}
           aria-haspopup="listbox"
           aria-controls={listboxId}
@@ -74,8 +79,8 @@ export function Select<T extends string>({
             }
           }}
         >
-          <span className={styles.value}>{selected?.label ?? value}</span>
-          <HiChevronDown className={styles.chevron} size={14} aria-hidden="true" />
+          {icon ?? <span className={styles.value}>{selected?.label ?? placeholder ?? value}</span>}
+          {!icon && <HiChevronDown className={styles.chevron} size={14} aria-hidden="true" />}
         </button>
       </Popover.Trigger>
       <Popover.Portal>

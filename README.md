@@ -24,14 +24,14 @@
 从首页进入工作台后，可以在同一套安静、紧凑的视觉语言中完成任务收集、时间安排、深度专注与进度回顾。界面支持简体中文与 English，也支持浅色、暗色和跟随系统外观。
 
 > [!IMPORTANT]
-> 邮箱认证已接入 Supabase：注册（邮箱 + 密码 + 六位验证码）、密码／验证码双模式登录、忘记密码与修改密码均已可用。任务数据仍暂存于浏览器会话；语音待办可选接入真实 AI 服务，其余首页指标、评价、统计与 AI 寄语均为展示内容。
+> 邮箱认证已上线（Supabase 东京区域）；任务数据暂存浏览器会话，首页指标与 AI 寄语为展示内容。
 
 ## 核心体验
 
 | 工作流     | 可以体验什么                          | 入口                                 |
 | ---------- | ------------------------------------- | ------------------------------------ |
 | 规划今天   | One Thing、容量提示、冻结任务与时间线 | `/today`                             |
-| 收集与整理 | Inbox 快速添加、任务详情、清单与标签  | `/inbox`、`/list-detail`             |
+| 收集与整理 | 捕获即进 Inbox、清单归类与标签整理    | `/inbox`                             |
 | 安排时间   | 月历选日、日期切换、任务时段          | `/schedule`                          |
 | 保持专注   | 可暂停、继续与退出的专注计时          | `/today`                             |
 | 回顾成长   | 已完成任务、专注热力图、等级与花园    | `/completed`、`/insight`、`/profile` |
@@ -77,13 +77,9 @@ pnpm dev
 
 ## 技术设计
 
-```text
-Next.js App Router
-├── Server Components        页面骨架、服务端偏好读取
-├── Client feature islands   任务、弹层、计时与导航状态
-├── Typed i18n               中英词典、日期与数字格式化
-└── Semantic design tokens   浅色、暗色与系统主题
-```
+<p align="center">
+  <img src="./assets/readme/architecture.svg" width="100%" alt="DiDa-todo 系统地图：Next.js 客户端经数据访问边界连接 Supabase 云端，Resend 负责验证码邮件，语音 AI 为可选服务">
+</p>
 
 核心栈为 Next.js 16、React 19、TypeScript、Tailwind CSS v4、Radix UI 与 Framer Motion；账号、偏好与语音记录接入 Supabase（Auth + Postgres，数据库启用 RLS 行级安全）。字体通过 `@fontsource` 本地打包，运行和构建不依赖 Google Fonts。
 

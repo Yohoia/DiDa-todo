@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { motion, type Variants } from "framer-motion";
-import { HiCalendar, HiClock, HiInbox, HiMicrophone, HiUser } from "react-icons/hi2";
+import { HiChartBar, HiClock, HiInbox, HiMicrophone, HiUser } from "react-icons/hi2";
 import { useWorkspace } from "@/features/tasks/workspace-provider";
 import { VoiceCaptureBar, useVoiceCapture } from "@/features/tasks/voice-capture";
 import { VoiceConfirmCard } from "@/features/tasks/voice-confirm-card";
@@ -14,9 +14,7 @@ import styles from "./workspace-nav.module.css";
 
 export const workspaceLinks = [
   { href: "/today", label: "Today", description: "今日计划" },
-  { href: "/inbox", label: "Inbox", description: "收集想法" },
-  { href: "/schedule", label: "Schedule", description: "按日期查看待办" },
-  { href: "/list-detail", label: "Lists", description: "管理工作、学习与生活清单" },
+  { href: "/inbox", label: "Inbox", description: "收集与整理" },
   { href: "/completed", label: "Archive", description: "已完成任务" },
   { href: "/insight", label: "Insights", description: "效率统计" },
   { href: "/settings", label: "Settings", description: "偏好设置" },
@@ -30,7 +28,7 @@ const rowVariants: Variants = {
   nav: { transition: { staggerChildren: 0.05, delayChildren: 0.16 } },
   voice: { transition: { staggerChildren: 0.02 } },
 };
-/* 各 slot 收向 dock 正中（640px）所需的位移，按当前图标布局标定 */
+/* 各 slot 收向 dock 正中所需的位移，按当前图标布局标定 */
 const CONVERGE_X = [100, 51, -25, -100];
 const itemVariants: Variants = {
   nav: {
@@ -94,19 +92,12 @@ export function WorkspaceNav() {
   const items = [
     { href: "/today", label: "今日待办", Icon: HiClock, active: pathname === "/today" },
     { href: "/inbox", label: "Inbox", Icon: HiInbox, active: pathname === "/inbox" },
-    {
-      href: "/schedule",
-      label: "日程安排",
-      Icon: HiCalendar,
-      active: pathname === "/schedule",
-    },
+    { href: "/insight", label: "Insights", Icon: HiChartBar, active: pathname === "/insight" },
     {
       href: "/profile",
       label: "个人中心",
       Icon: HiUser,
-      active: ["/profile", "/settings", "/insight", "/completed", "/list-detail"].includes(
-        pathname,
-      ),
+      active: ["/profile", "/settings", "/completed"].includes(pathname),
     },
   ];
   return (

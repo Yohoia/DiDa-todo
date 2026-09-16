@@ -114,6 +114,13 @@
   color: var(--muted-foreground);
   font-size: 10px;
 }
+/* 状态样式语言：
+   已完成 = 删除线 + 弱化（.completed，见上）；
+   锁定 = 灰调背景 + 标题弱化 + 行尾锁图标（.frozen）；
+   已过期 = 红调背景 + 左缘红条 + 时间转红（.overdueRow），与锁定叠加时红色优先 */
+.frozen {
+  background: color-mix(in srgb, var(--muted-foreground) 3%, transparent);
+}
 .frozen .checkButton {
   opacity: 0.7;
 }
@@ -121,31 +128,67 @@
   font-weight: 400;
   color: var(--muted-foreground);
 }
-.statuses {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  gap: 6px;
-}
-/* 已过期印章：细红描边矩形 + 倾角 + 宽字距，像盖在行右上角的章；
-   绝对定位不占行内布局，pointer-events 关掉避免挡住下层点击 */
-.overdue {
-  position: absolute;
-  top: 5px;
-  right: 2px;
-  rotate: -8deg;
-  padding: 2px 8px;
-  border: 1px solid color-mix(in srgb, var(--destructive) 58%, transparent);
-  border-radius: 4px;
+.overdueRow {
   background: color-mix(in srgb, var(--destructive) 4%, transparent);
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--destructive) 55%, transparent);
+}
+.overdueRow:hover {
+  background: color-mix(in srgb, var(--destructive) 7%, transparent);
+}
+.overdueRow .time,
+.overdueRow .scheduleDate {
   color: var(--destructive);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  line-height: 1.5;
-  white-space: nowrap;
+}
+/* 标题后的锁定状态小图标（仅展示，切换在详情页）；
+   显式 inline-block 覆盖 Tailwind preflight 的 svg{display:block}，保证与标题同行 */
+.lockMark {
+  display: inline-block;
+  margin-left: 7px;
+  vertical-align: -2px;
+  color: var(--muted-foreground);
+}
+/* 行内快捷删除：悬停/聚焦时从右缘浮现；渐变底与行悬停色衔接。
+   触屏无悬停，直接以低透明度常驻。 */
+.deleteButton {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  translate: 0 -50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  color: var(--muted-foreground);
+  background: linear-gradient(to right, transparent, var(--task-accent-light) 40%);
+  opacity: 0;
   pointer-events: none;
+  transform: translateX(6px);
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease,
+    color 0.15s ease,
+    background-color 0.15s ease;
   z-index: 1;
+}
+.row:hover .deleteButton,
+.deleteButton:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+.deleteButton:hover {
+  color: var(--destructive);
+  background: linear-gradient(to right, transparent, var(--task-accent-light) 40%);
+}
+@media (hover: none) {
+  .deleteButton {
+    opacity: 0.55;
+    pointer-events: auto;
+    transform: none;
+    background: none;
+  }
 }
 /* 收件箱变体：无时间锚点的「草稿/便签」样式，一眼区分未整理项 */
 .inboxRow {

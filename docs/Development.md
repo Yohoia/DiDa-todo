@@ -2,7 +2,7 @@
 
 ## 当前范围
 
-Phase 0 建立开发基础：Next.js、React、TypeScript、pnpm、Tailwind CSS、shadcn/ui 配置、Lucide、ESLint、Prettier 和 CI。当前首页、登录／注册弹窗及九个工作台页面已按 `docs/reference/` 实现；已实现简体中文／英文和浅色／暗色／跟随系统切换，显示偏好用 Cookie 保存。
+Phase 0 建立开发基础：Next.js、React、TypeScript、pnpm、Tailwind CSS、shadcn/ui 配置、Lucide、ESLint、Prettier 和 CI。当前首页、登录／注册弹窗及工作台页面已按 `docs/reference/` 实现（清单页已并入 Inbox，收集与整理合一）；已实现简体中文／英文和浅色／暗色／跟随系统切换，显示偏好用 Cookie 保存。
 
 账号体系已接入 Supabase Auth：注册（邮箱 + 密码 + 六位邮箱验证码）、密码／验证码双模式登录、忘记密码（邮件链接经 `/auth/callback` 回跳至设置页）与设置页修改密码均已可用；用户资料、偏好与语音记录写入 Supabase Postgres（RLS 已启用，见 `supabase/migrations/`）。任务数据仍使用前端示例状态。
 

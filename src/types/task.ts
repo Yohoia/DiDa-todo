@@ -1,4 +1,10 @@
-export type TaskList = "Inbox" | "Work" | "Study" | "Life";
+export const ORGANIZED_LISTS = ["Work", "Study", "Life"] as const;
+export type OrganizedList = (typeof ORGANIZED_LISTS)[number];
+export type TaskList = "Inbox" | OrganizedList;
+
+export function isOrganizedList(value: string | null): value is OrganizedList {
+  return ORGANIZED_LISTS.some((list) => list === value);
+}
 export type Subtask = { id: string; title: string; completed: boolean };
 
 /**

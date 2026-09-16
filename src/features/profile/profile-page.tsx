@@ -7,7 +7,6 @@ import {
   HiBriefcase,
   HiCheckCircle,
   HiCog,
-  HiCalendar,
   HiHome,
   HiClock,
   HiFire,
@@ -21,11 +20,10 @@ import shared from "@/styles/workspace.module.css";
 import styles from "./profile.module.css";
 
 const links = [
-  { href: "/schedule", title: "Schedule", subtitle: "规划接下来的每一天", Icon: HiCalendar },
   {
-    href: "/list-detail",
-    title: "Lists",
-    subtitle: "管理工作、学习与生活清单",
+    href: "/inbox",
+    title: "Inbox",
+    subtitle: "收集想法，规划每一天",
     Icon: HiBriefcase,
   },
   { href: "/completed", title: "Archive", subtitle: "回顾已完成的任务", Icon: HiCheckCircle },

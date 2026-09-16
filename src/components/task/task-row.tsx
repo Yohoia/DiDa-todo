@@ -2,21 +2,23 @@
 import { useI18n } from "@/features/preferences/preferences-provider";
 import { getTodayKey, isOverdue } from "@/lib/date-utils";
 
-import { HiCheck, HiClock } from "react-icons/hi2";
+import { useState } from "react";
+import { HiCheck, HiClock, HiLockClosed, HiOutlineTrash } from "react-icons/hi2";
 import { motion } from "framer-motion";
 import type { Task } from "@/types/task";
 import { cn } from "@/lib/utils";
 import taskStyles from "./task-row.module.css";
 import workspaceStyles from "@/styles/workspace.module.css";
 import { SubtaskPopover } from "./subtask-popover";
-import { TaskLockButton } from "./task-lock-button";
 
 type Props = {
   task: Task;
-  onToggle: () => void;
-  onToggleSubtask: (subtaskId: string) => void;
+  /** 不传（如 Inbox 收集场景）则整行不渲染完成勾选，子任务仅只读展示 */
+  onToggle?: () => void;
+  onToggleSubtask?: (subtaskId: string) => void;
   onOpen: () => void;
-  onUnlock?: () => void;
+  /** 行内快捷删除：不传则不渲染删除按钮（详情页仍有删除入口） */
+  onDelete?: () => void;
   /** 收件箱变体：无时间锚点，用「草稿/便签」样式区分未整理项 */
   variant?: "default" | "inbox";
   /** 刚捕获的条目播放一次高亮动画 */
@@ -29,12 +31,14 @@ export function TaskRow({
   onToggle,
   onToggleSubtask,
   onOpen,
-  onUnlock,
+  onDelete,
   variant = "default",
   highlight = false,
   whenMode = "contextual",
 }: Props) {
   const { t, date: formatDate } = useI18n();
+  // 删除分两拍：先播放「后坐 + 右滑淡出」，动画结束再真正移除（popLayout 接管补位）
+  const [removing, setRemoving] = useState(false);
   const isInbox = variant === "inbox";
   const hasSubtasks = task.subtasks.length > 0;
   const hasMeta = task.priority === 1 || task.tags.length > 0 || hasSubtasks;
@@ -56,15 +60,28 @@ export function TaskRow({
     <motion.div
       layout
       initial={{ opacity: 0, y: -10 }}
-      animate={{ opacity: 1, y: 0 }}
+      animate={
+        removing
+          ? // 删除退场：轻微后坐 → 加速右滑淡出
+            { x: [0, -6, 56], opacity: [1, 1, 0], scale: [1, 1, 0.98] }
+          : { opacity: 1, y: 0 }
+      }
       exit={{ opacity: 0, x: -20 }}
-      transition={{ duration: 0.2, ease: "easeOut" }}
+      transition={
+        removing
+          ? { duration: 0.36, ease: "easeIn", times: [0, 0.28, 1] }
+          : { duration: 0.2, ease: "easeOut" }
+      }
+      onAnimationComplete={() => {
+        if (removing) onDelete?.();
+      }}
       className={cn(
         taskStyles.row,
         isInbox && taskStyles.inboxRow,
         highlight && taskStyles.inboxRowNew,
         task.completed && taskStyles.completed,
         task.frozen && taskStyles.frozen,
+        overdue && taskStyles.overdueRow,
       )}
     >
       {!isInbox &&
@@ -87,16 +104,18 @@ export function TaskRow({
             {whenMode === "time" ? groupTime : when}
           </span>
         ))}
-      <button
-        type="button"
-        role="checkbox"
-        aria-checked={task.completed}
-        aria-label={t("tasks.complete", { title: task.title })}
-        onClick={onToggle}
-        className={taskStyles.checkButton}
-      >
-        <span className={taskStyles.checkbox}>{task.completed && <HiCheck size={12} />}</span>
-      </button>
+      {onToggle && (
+        <button
+          type="button"
+          role="checkbox"
+          aria-checked={task.completed}
+          aria-label={t("tasks.complete", { title: task.title })}
+          onClick={onToggle}
+          className={taskStyles.checkButton}
+        >
+          <span className={taskStyles.checkbox}>{task.completed && <HiCheck size={12} />}</span>
+        </button>
+      )}
       <div className={taskStyles.content}>
         <button
           type="button"
@@ -105,6 +124,10 @@ export function TaskRow({
           aria-label={t("tasks.open", { title: task.title })}
         >
           <span className={taskStyles.title}>{task.title}</span>
+          {/* 锁定仅为状态展示，跟在标题后；切换请进详情 */}
+          {task.frozen && (
+            <HiLockClosed size={13} className={taskStyles.lockMark} aria-hidden="true" />
+          )}
         </button>
         {hasMeta && (
           <div className={taskStyles.meta}>
@@ -124,11 +147,20 @@ export function TaskRow({
           </div>
         )}
       </div>
-      {(overdue || (task.frozen && onUnlock)) && (
-        <div className={taskStyles.statuses}>
-          {overdue && <span className={taskStyles.overdue}>{t("Overdue")}</span>}
-          {task.frozen && onUnlock && <TaskLockButton onUnlock={onUnlock} />}
-        </div>
+      {overdue && <span className="sr-only">{t("Overdue")}</span>}
+      {/* 删除：悬停浮现于右缘（触屏常驻），不占行内布局 */}
+      {onDelete && (
+        <motion.button
+          type="button"
+          className={taskStyles.deleteButton}
+          aria-label={t("Delete Task")}
+          onClick={() => setRemoving(true)}
+          whileTap={{ scale: 0.86 }}
+          animate={removing ? { opacity: 0 } : undefined}
+          initial={false}
+        >
+          <HiOutlineTrash size={15} aria-hidden="true" />
+        </motion.button>
       )}
     </motion.div>
   );

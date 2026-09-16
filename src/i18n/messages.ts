@@ -8,17 +8,9 @@ export const messages = {
     "zh-CN": "收件箱",
     en: "Inbox",
   },
-  Schedule: {
-    "zh-CN": "日程",
-    en: "Schedule",
-  },
   今日待办: {
     "zh-CN": "今日待办",
     en: "Today",
-  },
-  日程安排: {
-    "zh-CN": "日程安排",
-    en: "Schedule",
   },
   个人中心: {
     "zh-CN": "个人中心",
@@ -40,10 +32,6 @@ export const messages = {
     "zh-CN": "已完成",
     en: "Archive",
   },
-  Lists: {
-    "zh-CN": "清单",
-    en: "Lists",
-  },
   Study: {
     "zh-CN": "学习",
     en: "Study",
@@ -55,10 +43,6 @@ export const messages = {
   Work: {
     "zh-CN": "工作",
     en: "Work",
-  },
-  All: {
-    "zh-CN": "全部",
-    en: "All",
   },
   "Study & Learning": {
     "zh-CN": "学习与成长",
@@ -756,9 +740,21 @@ export const messages = {
     "zh-CN": "添加",
     en: "Add",
   },
-  "Add Task": {
-    "zh-CN": "添加任务",
-    en: "Add Task",
+  记一笔: {
+    "zh-CN": "记一笔",
+    en: "Capture a thought",
+  },
+  收进收件箱: {
+    "zh-CN": "收进收件箱",
+    en: "Add to Inbox",
+  },
+  已收进收件箱: {
+    "zh-CN": "已收进收件箱",
+    en: "Added to Inbox",
+  },
+  "先收集，后整理": {
+    "zh-CN": "先收集，后整理",
+    en: "Collect first, organize later",
   },
   "＋ Add Task": {
     "zh-CN": "＋ 添加任务",
@@ -900,13 +896,17 @@ export const messages = {
     "zh-CN": "这一天还没有安排",
     en: "Nothing planned for this day",
   },
-  "schedule.emptyHint": {
-    "zh-CN": "点击右上角「添加任务」，或按 ⌘K 快速记录。",
-    en: "Click “Add Task” in the top right, or press ⌘K to capture one.",
+  "收集想法，规划每一天": {
+    "zh-CN": "收集想法，规划每一天",
+    en: "Capture thoughts, plan your days",
   },
-  "schedule.emptyFilteredHint": {
-    "zh-CN": "此清单在这一天没有任务，试试切换筛选。",
-    en: "No tasks from this list on this day — try another filter.",
+  "AI 整理": {
+    "zh-CN": "AI 整理",
+    en: "AI Organize",
+  },
+  "AI 整理功能开发中": {
+    "zh-CN": "AI 整理功能开发中，敬请期待",
+    en: "AI Organize is coming soon",
   },
   Tomorrow: {
     "zh-CN": "明天",
@@ -1200,10 +1200,6 @@ export const messages = {
     "zh-CN": "更多工作台页面",
     en: "More workspace pages",
   },
-  规划接下来的每一天: {
-    "zh-CN": "规划接下来的每一天",
-    en: "Plan the days ahead",
-  },
   "管理工作、学习与生活清单": {
     "zh-CN": "管理工作、学习与生活清单",
     en: "Manage your work, study, and life lists",
@@ -1259,6 +1255,10 @@ export const messages = {
   选择清单: {
     "zh-CN": "选择清单",
     en: "Choose a list",
+  },
+  待整理: {
+    "zh-CN": "待整理",
+    en: "Unorganized",
   },
   "记录一个想法，或者输入 / 跳转到其他页面。": {
     "zh-CN": "记录一个想法，或者输入 / 跳转到其他页面。",
@@ -1470,6 +1470,10 @@ export const messages = {
     "zh-CN": "已添加至{list}{date}",
     en: "Added to {list}{date}",
   },
+  "tasks.movedToList": {
+    "zh-CN": "已移动至{list}清单",
+    en: "Moved to {list}",
+  },
   "tasks.restored": {
     "zh-CN": "已恢复到{list}{date}",
     en: "Restored to {list}{date}",
@@ -1547,8 +1551,8 @@ export const messages = {
     en: "Task time",
   },
   "tasks.deleted": {
-    "zh-CN": "任务已从本次预览中删除",
-    en: "Task deleted from this preview",
+    "zh-CN": "已删除任务",
+    en: "Task deleted",
   },
   "profile.plant": {
     "zh-CN": "专注花园植物 {index}",
@@ -1757,6 +1761,10 @@ export const messages = {
   进入工作台: {
     "zh-CN": "进入工作台",
     en: "Open Workspace",
+  },
+  "收集想法，随录随整理。": {
+    "zh-CN": "收集想法，随录随整理。",
+    en: "Capture ideas, organize as you go.",
   },
   退出登录: {
     "zh-CN": "退出登录",

@@ -8,26 +8,41 @@
   align-self: flex-end;
   margin-bottom: 8px;
 }
-.addButton {
+/* 头部工具图标组：「/」捕获与 AI 整理，半透明磨砂底 */
+.iconGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.iconTrigger {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  min-height: 32px;
-  padding: 6px 14px;
-  border: 1px solid var(--foreground);
-  border-radius: 20px;
-  background: var(--foreground);
-  color: var(--card);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--foreground) 8%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--card) 60%, transparent);
+  backdrop-filter: blur(10px) saturate(1.5);
+  -webkit-backdrop-filter: blur(10px) saturate(1.5);
+  box-shadow: none;
+  color: var(--muted-foreground);
   transition:
-    background 0.2s ease,
-    border-color 0.2s ease;
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease;
 }
-.addButton:hover {
-  background: var(--brand-gold);
-  border-color: var(--brand-gold);
+.iconTrigger:hover {
+  border-color: color-mix(in srgb, var(--foreground) 18%, transparent);
+  background: color-mix(in srgb, var(--card) 85%, transparent);
+  color: var(--foreground);
+}
+.slashGlyph {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1;
 }
 .list {
   margin-top: 14px;

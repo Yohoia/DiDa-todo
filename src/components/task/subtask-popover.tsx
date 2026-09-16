@@ -11,7 +11,8 @@ import styles from "./subtask-popover.module.css";
 
 type SubtaskPopoverProps = {
   subtasks: Subtask[];
-  onToggle: (subtaskId: string) => void;
+  /** 不传（如 Inbox 只读场景）时子任务仅展示，不含勾选交互 */
+  onToggle?: (subtaskId: string) => void;
   className?: string;
 };
 
@@ -71,26 +72,40 @@ export function SubtaskPopover({ subtasks, onToggle, className }: SubtaskPopover
         <ul className={styles.list}>
           {subtasks.map((subtask) => (
             <li key={subtask.id}>
-              <button
-                type="button"
-                role="checkbox"
-                aria-checked={subtask.completed}
-                aria-label={t(subtask.completed ? "tasks.reopenSubtask" : "tasks.completeSubtask", {
-                  title: subtask.title,
-                })}
-                className={styles.item}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onToggle(subtask.id);
-                }}
-              >
-                <span className={cn(styles.checkbox, subtask.completed && styles.checked)}>
-                  {subtask.completed && <HiCheck size={10} aria-hidden="true" />}
+              {onToggle ? (
+                <button
+                  type="button"
+                  role="checkbox"
+                  aria-checked={subtask.completed}
+                  aria-label={t(
+                    subtask.completed ? "tasks.reopenSubtask" : "tasks.completeSubtask",
+                    {
+                      title: subtask.title,
+                    },
+                  )}
+                  className={styles.item}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onToggle(subtask.id);
+                  }}
+                >
+                  <span className={cn(styles.checkbox, subtask.completed && styles.checked)}>
+                    {subtask.completed && <HiCheck size={10} aria-hidden="true" />}
+                  </span>
+                  <span className={cn(styles.title, subtask.completed && styles.completed)}>
+                    {subtask.title}
+                  </span>
+                </button>
+              ) : (
+                <span className={styles.item}>
+                  <span className={cn(styles.checkbox, subtask.completed && styles.checked)}>
+                    {subtask.completed && <HiCheck size={10} aria-hidden="true" />}
+                  </span>
+                  <span className={cn(styles.title, subtask.completed && styles.completed)}>
+                    {subtask.title}
+                  </span>
                 </span>
-                <span className={cn(styles.title, subtask.completed && styles.completed)}>
-                  {subtask.title}
-                </span>
-              </button>
+              )}
             </li>
           ))}
         </ul>

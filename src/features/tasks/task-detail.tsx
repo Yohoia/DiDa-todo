@@ -4,6 +4,7 @@ import { useI18n } from "@/features/preferences/preferences-provider";
 import { useDialogFocus } from "@/hooks/use-dialog-focus";
 
 import { useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { AnimatePresence, Reorder, motion, useDragControls } from "framer-motion";
 import { HiBars3, HiChevronDown, HiLockClosed, HiPlus, HiTrash, HiXMark } from "react-icons/hi2";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -14,7 +15,7 @@ import { Stepper } from "@/components/ui/stepper";
 import { Select } from "@/components/ui/select";
 import { TaskLockButton } from "@/components/task/task-lock-button";
 import { useWorkspace } from "./workspace-provider";
-import type { Task, TaskList } from "@/types/task";
+import { ORGANIZED_LISTS, type Task, type TaskList } from "@/types/task";
 import { cn, createId } from "@/lib/utils";
 import shared from "@/styles/workspace.module.css";
 import styles from "./task-detail.module.css";
@@ -60,7 +61,8 @@ const TAG_LIMIT = 3;
 
 function TaskEditor({ task }: { task: Task }) {
   const { t, label } = useI18n();
-  const { updateTask, deleteTask, startFocus } = useWorkspace();
+  const { updateTask, deleteTask, startFocus, notify, selectTask } = useWorkspace();
+  const pathname = usePathname();
   const [subtask, setSubtask] = useState("");
   const subtaskInputRef = useRef<HTMLInputElement>(null);
   const [subtasksOpen, setSubtasksOpen] = useState(false);
@@ -150,9 +152,18 @@ function TaskEditor({ task }: { task: Task }) {
           <Select
             ariaLabel={t("List")}
             value={task.list}
-            onValueChange={(value) => updateTask(task.id, { list: value })}
+            placeholder={t("待整理")}
+            onValueChange={(value) => {
+              const movedFromInbox = task.list === "Inbox";
+              if (value === task.list) return;
+              updateTask(task.id, { list: value });
+              notify({ key: "tasks.movedToList", values: { list: value } });
+              if (movedFromInbox && pathname === "/inbox") {
+                selectTask(null);
+              }
+            }}
             align="end"
-            options={(["Inbox", "Work", "Study", "Life"] as TaskList[]).map((value) => ({
+            options={(ORGANIZED_LISTS as readonly TaskList[]).map((value) => ({
               value,
               label: label(value),
             }))}

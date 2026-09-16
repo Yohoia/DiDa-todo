@@ -19,6 +19,14 @@ export const maxDuration = 30;
 const TASK_LISTS = ["Inbox", "Work", "Study", "Life"] as const;
 /** 一段语音最多拆出的待办数：防模型过度拆分（把一件事拆成碎片） */
 const MAX_TASKS = 8;
+/** 节假日解析窗口：覆盖元旦/春节等跨年节日（原 180 天会误拒） */
+const MAX_DAYS_AHEAD = 370;
+
+/** 农历节日对照（人工核对，每年初维护下一年）；公历节日（元旦/五一/国庆）按年计算不在此表。 */
+const LUNAR_HOLIDAYS: Record<number, Record<string, string>> = {
+  2026: { 春节: "2026-02-17", 清明: "2026-04-05", 端午: "2026-06-19", 中秋: "2026-09-25" },
+  2027: { 春节: "2027-02-06" },
+};
 
 const TaskSchema = z.object({
   isTodo: z.boolean(),
@@ -29,25 +37,58 @@ const TaskSchema = z.object({
   reason: z.string().optional(),
 });
 
-function buildPrompt(today: string, tomorrow: string, dayAfter: string): string {
+/** 本周六（周一起始的本周） */
+function saturdayOf(today: string): string {
+  const day = new Date(`${today}T12:00:00+08:00`).getDay();
+  return addDays(today, (6 - day + 7) % 7);
+}
+
+/** 节假日对照行：农历表两年 + 公历节日本年/次年 */
+function holidayLines(today: string): string {
+  const year = Number(today.slice(0, 4));
+  const lunar = [
+    ...Object.entries(LUNAR_HOLIDAYS[year] ?? {}),
+    ...Object.entries(LUNAR_HOLIDAYS[year + 1] ?? {}),
+  ].map(([name, date]) => `${name}=${date}`);
+  const gregorian = [`元旦=${year + 1}-01-01`, `五一=${year}-05-01`, `国庆=${year}-10-01`];
+  return [...lunar, ...gregorian].join("，");
+}
+
+function buildPrompt(today: string): string {
   const weekday = "日一二三四五六"[new Date(`${today}T12:00:00+08:00`).getDay()];
+  const now = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Shanghai",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date());
   return [
     "你是待办事项解析器，把用户语音转写文本解析为一件或多件待办，只输出一个 JSON 对象，不要输出任何其他内容。",
-    `今天是 ${today}（星期${weekday}）。一周从周一开始。`,
-    "可用清单：Inbox（默认）、Work（工作）、Study（学习）、Life（生活）。",
+    `今天是 ${today}（星期${weekday}），现在是 ${now}。一周从周一开始。语音是收集动作：所有结果都进 Inbox 清单。`,
     "",
     "规则：",
     "1. 一段话里说了几件事就拆成几件，按出现顺序排列，最多 8 件；只有一件事时也输出单元素数组。",
-    '2. title：去掉口语填充词（"帮我""提醒我""那个""记一下"），保留核心事项，每件不超过 30 字。',
-    '3. date：输出 YYYY-MM-DD。相对日期口径："今天"=今天，"明天"=+1 天，"后天"=+2 天，"周X/星期X"=本周内未来最近的一天（本周已过则取下周），"下周X"=下一周的周X，"X月X号/X号"按今年推算。解析不出日期则 null。',
-    '4. time：输出 24 小时制 HH:MM（"下午三点"=15:00，"上午十点半"=10:30）。只有时间没有日期时 date 为 null、time 有值。解析不出则 null。',
-    '5. list：按事项语义匹配清单；拿不准或匹配不上用 "Inbox"。',
+    '2. title：去掉口语填充词（"帮我""提醒我""那个""记一下"）和日期时间表达（"明天""下午三点""中秋"），保留核心事项，每件不超过 30 字。',
+    '3. list：一律输出 "Inbox"（分类整理由用户后续手动完成）。',
+    "4. date：输出 YYYY-MM-DD，词义口径：",
+    '   - 相对日："今天"=今天，"明天"=+1 天，"后天"=+2 天，"大后天"=+3 天，"N 天后"=今天+N',
+    '   - 周序："周X/星期X/礼拜X/这周X/本周X"=本周内未来最近的一天（本周已过则取下周），"下周X"=下一周的周X，"周末/本周末"=本周六，"下周末"=下周六',
+    '   - 月序："月底/月末"=本月最后一天，"月初"=本月 1 号，"下个月X号/下月X号"=下月对应日',
+    '   - 显式日期："X月X日/X月X号/X号"=按今年推算；该月份今年已过则取明年',
+    `   - 节假日：元旦、春节、清明、五一、端午、中秋、国庆优先用对照表：${holidayLines(today)}；表中没有的按你的知识推算；"今年/明年"前缀按字面取`,
+    "   - 完全没有日期信息则 null",
+    "5. time：输出 24 小时制 HH:MM，词义口径：",
+    '   - 时段换算："凌晨 X 点"=0-5 点段，"中午十二点/正午"=12:00，"下午 X 点"=X+12，"晚上/今晚 X 点"=X+12，"傍晚"≈18:00',
+    '   - 分钟："X 点半"=X:30，"X 点一刻"=X:15，"差一刻 X 点"=(X-1):45，"X 点 Y 分"=X:Y',
+    '   - 相对时刻："半小时后/一小时后/N 小时后"从现在时刻推算成具体 HH:MM；跨过午夜则 date 顺延一天',
+    '   - 只说"X 点"没有时段修饰：按现在时刻判断——今天的 X 点还没过就取今天，已过则取明天（此时若无日期词，date 填明天）',
+    "   - 只有时间没有日期 → date 为 null（上一条的顺延情形除外）；解析不出 time 则 null",
     "6. tasks 只放能形成具体事项的条目；寒暄、提问、闲聊、模糊到无法形成事项的内容不放入（此时 tasks 为空数组）。",
     "7. 输出格式（字段齐全，无值用 null）：",
-    '{"tasks":[{"isTodo":bool,"title":string|null,"list":"Inbox"|"Work"|"Study"|"Life"|null,"date":string|null,"time":string|null,"reason":"不超过20字判定依据"}]}',
+    '{"tasks":[{"isTodo":bool,"title":string|null,"list":"Inbox","date":string|null,"time":string|null,"reason":"不超过20字判定依据"}]}',
     "",
     "示例：",
-    `输入"明天下午三点提醒我交房租，后天上午去超市买东西" → {"tasks":[{"isTodo":true,"title":"交房租","list":"Life","date":"${tomorrow}","time":"15:00","reason":"明确事项与时间"},{"isTodo":true,"title":"去超市买东西","list":"Life","date":"${dayAfter}","time":null,"reason":"明确事项无具体时间"}]}`,
+    `输入"明天下午三点交房租，周末去超市买菜，晚上九点做复盘" → {"tasks":[{"isTodo":true,"title":"交房租","list":"Inbox","date":"${addDays(today, 1)}","time":"15:00","reason":"明天下午三点"},{"isTodo":true,"title":"去超市买菜","list":"Inbox","date":"${saturdayOf(today)}","time":null,"reason":"周末=本周六"},{"isTodo":true,"title":"做复盘","list":"Inbox","date":"${today}","time":"21:00","reason":"晚上九点"}]}`,
     '输入"今天天气怎么样" → {"tasks":[]}',
   ].join("\n");
 }
@@ -64,8 +105,8 @@ function semanticProblems(value: z.infer<typeof TaskSchema>, today: string): str
     const normalized = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
     if (normalized !== value.date) {
       problems.push(`date "${value.date}" 不是真实存在的日历日期`);
-    } else if (value.date < today || daysBetween(today, value.date) > 180) {
-      problems.push(`date "${value.date}" 超出今天起 180 天内的范围`);
+    } else if (value.date < today || daysBetween(today, value.date) > MAX_DAYS_AHEAD) {
+      problems.push(`date "${value.date}" 超出今天起 ${MAX_DAYS_AHEAD} 天内的范围`);
     }
   }
   if (value.time !== null) {
@@ -162,7 +203,8 @@ function sanitize(value: z.infer<typeof TaskSchema>): VoiceParsed {
   return {
     isTodo: value.isTodo,
     title: value.title ? value.title.trim().slice(0, 60) : null,
-    list: value.isTodo ? (value.list ?? "Inbox") : value.list,
+    // 语音=收集：无论模型判了什么清单，落点一律 Inbox（整理留给用户）
+    list: value.isTodo ? "Inbox" : value.list,
     date: value.isTodo ? value.date : null,
     time: value.isTodo ? value.time : null,
     reason: (value.reason ?? "").slice(0, 40),
@@ -210,7 +252,7 @@ export async function POST(request: Request) {
   const messages: { role: string; content: string }[] = [
     {
       role: "system",
-      content: buildPrompt(today, addDays(today, 1), addDays(today, 2)),
+      content: buildPrompt(today),
     },
     { role: "user", content: transcript },
   ];
