@@ -2,7 +2,9 @@ import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
 
 export type WorkspaceRealtimeStatus = "connecting" | "connected" | "reconnecting" | "offline";
 
-type RealtimeSource = Pick<SupabaseClient, "channel" | "removeChannel">;
+type RealtimeSource = Pick<SupabaseClient, "channel" | "removeChannel"> & {
+  realtime: Pick<SupabaseClient["realtime"], "setAuth">;
+};
 
 const RETRY_DELAYS_MS = [1_000, 2_000, 4_000, 8_000, 15_000];
 const REFRESH_DEBOUNCE_MS = 200;
@@ -10,6 +12,7 @@ const REFRESH_DEBOUNCE_MS = 200;
 /** Realtime events are change signals, not a trusted source of complete rows. */
 export function createWorkspaceRealtime({
   getClient,
+  getAccessToken,
   userId,
   onStatus,
   requestRefresh,
@@ -18,6 +21,7 @@ export function createWorkspaceRealtime({
   retryDelaysMs = RETRY_DELAYS_MS,
 }: {
   getClient: () => RealtimeSource;
+  getAccessToken: () => Promise<string | null>;
   userId: string;
   onStatus: (status: WorkspaceRealtimeStatus) => void;
   requestRefresh: () => void;
@@ -77,42 +81,54 @@ export function createWorkspaceRealtime({
     }, delay);
   };
 
-  const connect = () => {
+  const connect = async () => {
     if (!active) return;
     generation++;
     const currentGeneration = generation;
     setStatus("connecting");
-    let current = getClient().channel(`workspace:${userId}:${currentGeneration}`, {
-      config: {
-        postgres_changes_options: { wait: true },
-      },
-    });
-    for (const table of ["tasks", "subtasks", "user_preferences", "notifications"] as const) {
-      current = current.on(
-        "postgres_changes",
-        { event: "*", schema: "public", table, filter: `user_id=eq.${userId}` },
-        () => handleChange(),
-      );
-    }
-    channel = current;
-    current.subscribe((status, error) => {
+    try {
+      const client = getClient();
+      const accessToken = await getAccessToken();
+      if (!accessToken) throw new Error("Realtime auth session is not ready");
+      await client.realtime.setAuth(accessToken);
       if (!active || currentGeneration !== generation) return;
-      if (status === "SUBSCRIBED") {
-        attempts = 0;
-        setStatus("connected");
-        requestRefresh();
-        return;
+
+      let current = client.channel(`workspace:${userId}:${currentGeneration}`, {
+        config: {
+          postgres_changes_options: { wait: true },
+        },
+      });
+      for (const table of ["tasks", "subtasks", "user_preferences", "notifications"] as const) {
+        current = current.on(
+          "postgres_changes",
+          { event: "*", schema: "public", table, filter: `user_id=eq.${userId}` },
+          () => handleChange(),
+        );
       }
-      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-        onError?.(error ?? new Error(`Realtime ${status}`));
-        reconnect();
-        return;
-      }
-      if (status === "CLOSED") reconnect();
-    });
+      channel = current;
+      current.subscribe((status, error) => {
+        if (!active || currentGeneration !== generation) return;
+        if (status === "SUBSCRIBED") {
+          attempts = 0;
+          setStatus("connected");
+          requestRefresh();
+          return;
+        }
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          onError?.(error ?? new Error(`Realtime ${status}`));
+          reconnect();
+          return;
+        }
+        if (status === "CLOSED") reconnect();
+      });
+    } catch (error) {
+      if (!active || currentGeneration !== generation) return;
+      onError?.(error);
+      reconnect();
+    }
   };
 
-  connect();
+  void connect();
 
   return {
     stop() {

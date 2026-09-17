@@ -443,6 +443,12 @@ export function WorkspaceProvider({
     const client = createClient();
     const realtime = createWorkspaceRealtime({
       getClient: () => client,
+      getAccessToken: async () => {
+        const { data, error } = await client.auth.getSession();
+        if (error) throw error;
+        if (!data.session || data.session.user.id !== user.id) return null;
+        return data.session.access_token;
+      },
       userId: user.id,
       onStatus: setRealtimeStatus,
       requestRefresh: refreshWorkspace,
