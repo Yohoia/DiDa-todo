@@ -6,9 +6,7 @@ import { WorkspaceNav } from "@/components/layout/workspace-nav";
 import { WorkspaceOverlays } from "@/features/tasks/workspace-overlays";
 import { PageTransition } from "@/components/layout/page-transition";
 import { requireWorkspaceSession } from "@/lib/server/workspace-session";
-import { createRepository, DEFAULT_PREFERENCES } from "@/lib/data/repository";
-import type { Task } from "@/types/task";
-import type { AppNotification } from "@/types/notification";
+import { createRepository } from "@/lib/data/repository";
 import styles from "@/styles/workspace.module.css";
 
 export default async function WorkspaceLayout({ children }: { children: ReactNode }) {
@@ -16,18 +14,15 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
   const { supabase, user: authUser } = await requireWorkspaceSession();
   const user: WorkspaceUser = { id: authUser.id, email: authUser.email ?? "", displayName: "" };
   const repository = createRepository(supabase, user.id);
-  const [loadedTasks, loadedPreferences, profile, loadedNotifications] = await Promise.all([
-    repository.loadTasks().catch((error: unknown) => {
-      console.error("load tasks failed:", error);
-      return [] as Task[];
-    }),
-    repository.loadPreferences().catch(() => DEFAULT_PREFERENCES),
-    supabase.from("profiles").select("display_name").eq("id", user.id).maybeSingle(),
-    repository.listNotifications().catch((error: unknown) => {
-      console.error("load notifications failed:", error);
-      return [] as AppNotification[];
-    }),
-  ]);
+  const [loadedTasks, loadedPreferences, profile, loadedNotifications, recurrenceAvailable] =
+    await Promise.all([
+      repository.loadTasks(),
+      repository.loadPreferences(),
+      supabase.from("profiles").select("display_name").eq("id", user.id).maybeSingle(),
+      repository.listNotifications(),
+      repository.supportsRepeatingTasks(),
+    ]);
+  if (profile.error) throw new Error("Workspace profile could not be loaded");
   user.displayName = profile.data?.display_name?.trim() || user.email.split("@")[0] || "Friend";
 
   return (
@@ -36,6 +31,7 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
       initialTasks={loadedTasks}
       initialPreferences={loadedPreferences}
       initialNotifications={loadedNotifications}
+      recurrenceAvailable={recurrenceAvailable}
       user={user}
     >
       <div className={styles.shell}>

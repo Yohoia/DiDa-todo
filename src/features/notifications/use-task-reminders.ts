@@ -6,6 +6,7 @@ import { useI18n } from "@/features/preferences/preferences-provider";
 import { useWorkspace } from "@/features/tasks/workspace-provider";
 
 import { playNotificationChime } from "./notification-chime";
+import { taskDateTime } from "@/lib/date-utils";
 
 /**
  * 站内任务提醒（无系统通知、无后台任务）：
@@ -41,8 +42,8 @@ export function useTaskReminders() {
       for (const task of tasks) {
         const offset = parseOffsetMinutes(task.reminder);
         if (task.completed || !task.date || !task.time || offset === null) continue;
-        // date/time 为本地时间语义（与日历/时间轴一致）
-        const due = new Date(`${task.date}T${task.time}:00`);
+        const due = taskDateTime(task.date, task.time);
+        if (!due) continue;
         const remindAt = due.getTime() - offset * 60_000;
         if (now < remindAt || now >= remindAt + CATCHUP_WINDOW_MS) continue;
         const created = recordTaskDueNotification({

@@ -2,6 +2,9 @@
 import { useI18n } from "@/features/preferences/preferences-provider";
 
 import { useDialogFocus } from "@/hooks/use-dialog-focus";
+import { useTodayKey } from "@/hooks/use-today-key";
+import { canSetTodayFocus } from "./task-focus";
+import { RepeatTaskPicker } from "./repeat-task-picker";
 
 import { useRef, useState } from "react";
 import { usePathname } from "next/navigation";
@@ -25,6 +28,8 @@ export function TaskDetail() {
   const focusReturn = useDialogFocus();
   const { selectedId, selectTask, tasks, updateTask } = useWorkspace();
   const task = tasks.find((item) => item.id === selectedId);
+  const todayKey = useTodayKey();
+  const canPromote = !!task && canSetTodayFocus(task, todayKey);
   return (
     <Dialog
       open={!!task}
@@ -55,8 +60,9 @@ export function TaskDetail() {
                 type="button"
                 className={styles.oneAction}
                 aria-pressed={!!task.featured}
-                aria-label={t("Set as today's focus")}
-                title={t("Set as today's focus")}
+                disabled={!task.featured && !canPromote}
+                aria-label={task.featured ? t("取消今日专注") : t("Set as today's focus")}
+                title={canPromote || task.featured ? t("One Thing") : t("today.focusTodayOnly")}
                 onClick={() => updateTask(task.id, { featured: !task.featured })}
               >
                 one
@@ -90,7 +96,8 @@ const TAG_LIMIT = 3;
 
 function TaskEditor({ task }: { task: Task }) {
   const { t, label } = useI18n();
-  const { updateTask, deleteTask, startFocus, notify, selectTask } = useWorkspace();
+  const { updateTask, deleteTask, startFocus, notify, selectTask, recurrenceAvailable } =
+    useWorkspace();
   const pathname = usePathname();
   const [subtask, setSubtask] = useState("");
   const subtaskInputRef = useRef<HTMLInputElement>(null);
@@ -142,6 +149,14 @@ function TaskEditor({ task }: { task: Task }) {
         </span>
       </div>
       <div className={styles.properties}>
+        <div className={styles.property}>
+          <span>{t("repeat.label")}</span>
+          <RepeatTaskPicker
+            disabled={!recurrenceAvailable}
+            value={task.repeatIntervalDays}
+            onChange={(repeatIntervalDays) => updateTask(task.id, { repeatIntervalDays })}
+          />
+        </div>
         <div className={styles.property}>
           {t("Date")}{" "}
           <DateTimePicker

@@ -32,6 +32,8 @@ export type Task = {
   priority: 1 | 2 | 3;
   estimate: number; // Pomodoro count
   reminder: string;
+  repeatIntervalDays?: number; // 1=daily, 7=weekly, 1–365=custom; absent=never
+  repeatParentId?: string; // one next occurrence per completed task, enforced in DB
 
   // Completion state
   completed: boolean;

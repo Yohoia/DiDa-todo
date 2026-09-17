@@ -13,28 +13,31 @@ import { useWorkspace } from "./workspace-provider";
 import { DayCalendar } from "./day-calendar";
 import { CaptureDialog } from "./capture-dialog";
 import { AiOrganizeDialog } from "./ai-organize-dialog";
-import type { TaskOrganizationSuggestion } from "@/types/task-organization";
+import type { TaskCaptureDraft } from "./task-capture";
+import type { TaskOrganizationDraft } from "@/types/task-organization";
 import shared from "@/styles/workspace.module.css";
 import styles from "./schedule.module.css";
 
-/** 收件箱 = 日程页：日历按天查看当天任务；「/」捕获直接记到今天，AI 整理入口在头部 */
+/** 收件箱按天浏览；「/」默认记到今天，明确的自然语言日期覆盖默认值。 */
 export function InboxPage() {
   const { t, date: formatDate } = useI18n();
   const {
     tasks,
-    addTask,
-    updateTask,
+    saveCapturedTasks,
+    applyTaskOrganization,
     toggleTask,
     toggleSubtask,
     deleteTask,
     selectTask,
     preferences,
     notify,
+    focusId,
+    voiceCapture,
   } = useWorkspace();
   const todayKey = useTodayKey();
   const [selected, setSelected] = useState(todayKey);
   const [justAddedId, setJustAddedId] = useState<string | null>(null);
-  // 「记一笔」捕获弹窗：按 / 或点头部 / 图标呼出，条目按今天日期保存
+  // 「记一笔」默认今天，明确日期/时间先展示预览，保存成功后才显示回执。
   const [captureOpen, setCaptureOpen] = useState(false);
   const [organizeOpen, setOrganizeOpen] = useState(false);
   const [organizeCandidates, setOrganizeCandidates] = useState<typeof tasks>([]);
@@ -43,6 +46,18 @@ export function InboxPage() {
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
       if (event.key !== "/") return;
+      if (
+        event.isComposing ||
+        event.repeat ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.altKey ||
+        event.defaultPrevented ||
+        focusId ||
+        voiceCapture ||
+        document.querySelector('[role="dialog"]')
+      )
+        return;
       const el = document.activeElement as HTMLElement | null;
       const tag = el?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || el?.isContentEditable) return;
@@ -51,7 +66,7 @@ export function InboxPage() {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [focusId, voiceCapture]);
 
   const datesWithTodos = useMemo(
     () => new Set(tasks.filter((task) => task.date).map((task) => task.date)),
@@ -74,12 +89,17 @@ export function InboxPage() {
     day: "numeric",
   })} · ${formatDate(selected, { weekday: "long" })}`;
   const hasDayTasks = dayTasks.length > 0;
+  const unscheduled = tasks
+    .filter((task) => !task.date && !task.completed)
+    .sort((a, b) => a.priority - b.priority || a.created - b.created);
 
-  // 捕获直接记到今天（收件箱清单）：跳回今天，让新条目带高亮立即可见
-  const handleCapture = (title: string) => {
-    const id = addTask(title, "Inbox", todayKey);
-    if (id) setJustAddedId(id);
-    setSelected(todayKey);
+  // 捕获成功后跳到最终日期并高亮新条目，失败保留输入供重试。
+  const handleCapture = async (draft: TaskCaptureDraft) => {
+    const result = await saveCapturedTasks([draft]);
+    if (!result.savedIds.length) return false;
+    setJustAddedId(draft.id);
+    setSelected(draft.date || todayKey);
+    return true;
   };
 
   const startOrganizing = () => {
@@ -93,18 +113,13 @@ export function InboxPage() {
     setOrganizeOpen(true);
   };
 
-  const applyOrganization = (suggestions: TaskOrganizationSuggestion[]) => {
-    for (const suggestion of suggestions) {
-      updateTask(suggestion.id, {
-        list: suggestion.list,
-        tags: suggestion.tags,
-        priority: suggestion.priority,
-        estimate: suggestion.estimate,
-        ...(suggestion.time ? { time: suggestion.time } : {}),
-      });
-    }
+  const applyOrganization = async (suggestions: TaskOrganizationDraft[]) => {
+    const result = await applyTaskOrganization(organizeCandidates, suggestions);
     setOrganizeOpen(false);
-    notify({ key: "AI 整理已应用", values: { count: String(suggestions.length) } });
+    notify({
+      key: "organize.applicationResult",
+      values: { applied: result.applied, skipped: result.skipped, failed: result.failed },
+    });
   };
 
   return (
@@ -219,7 +234,30 @@ export function InboxPage() {
           </motion.div>
         </AnimatePresence>
       </section>
-      <CaptureDialog open={captureOpen} onOpenChange={setCaptureOpen} onCapture={handleCapture} />
+      {unscheduled.length > 0 && (
+        <section className="mt-10">
+          <SectionLabel>{t("tasks.unscheduled")}</SectionLabel>
+          <p className={shared.muted}>{t("tasks.unscheduledHint")}</p>
+          <AnimatePresence mode="popLayout" initial={false}>
+            {unscheduled.map((task) => (
+              <TaskRow
+                key={task.id}
+                task={task}
+                onOpen={() => selectTask(task.id)}
+                onToggle={() => toggleTask(task.id)}
+                onToggleSubtask={(id) => toggleSubtask(task.id, id)}
+                onDelete={() => deleteTask(task.id)}
+              />
+            ))}
+          </AnimatePresence>
+        </section>
+      )}
+      <CaptureDialog
+        today={todayKey}
+        open={captureOpen}
+        onOpenChange={setCaptureOpen}
+        onCapture={handleCapture}
+      />
       {organizeOpen && (
         <AiOrganizeDialog
           open

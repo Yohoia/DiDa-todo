@@ -2,9 +2,11 @@
 
 ## 当前范围
 
-Phase 0 建立开发基础：Next.js、React、TypeScript、pnpm、Tailwind CSS、shadcn/ui 配置、Lucide、ESLint、Prettier 和 CI。当前首页、登录／注册弹窗及工作台页面已按 `docs/reference/` 实现（清单页已并入 Inbox，收集与整理合一）；已实现简体中文／英文和浅色／暗色／跟随系统切换，显示偏好用 Cookie 保存。
+项目已具备 Next.js、React、TypeScript、pnpm、Tailwind CSS、Radix UI、ESLint、Prettier 和 CI 基础。首页、登录／注册弹窗与工作台已实现，清单并入 Inbox；支持中英文及浅色／暗色／跟随系统，显示偏好通过 Cookie 保存。
 
-账号体系已接入 Supabase Auth：注册（邮箱 + 密码 + 六位邮箱验证码）、密码／验证码双模式登录、忘记密码（邮件链接经 `/auth/callback` 回跳至设置页）与设置页修改密码均已可用；用户资料、偏好与语音记录写入 Supabase Postgres（RLS 已启用，见 `supabase/migrations/`）。任务数据仍使用前端示例状态。
+账号接入 Supabase Auth，支持注册、密码／验证码登录、邮箱验证码重置密码与邮箱换绑。设置页统一验证邮箱，网址参数不能跳过验证；云端认证策略单独配置。任务、子任务、资料、偏好、通知、语音确认及专注记录已写入 Supabase Postgres（RLS 与归属约束见迁移），不再用示例任务作为个人数据。
+
+后续按 [实施计划](implementation-plan.md) 的稳定编号推进；本次见 [修复记录](review-remediation-20260917.md)。旧审查文档是历史记录，不是当前功能状态。
 
 这是单一 Next.js 工程，当前不需要 monorepo、独立后端、全局状态库或任务队列。原始 `PRD.md` 和 `TechStack.md` 保持原样。
 
@@ -26,7 +28,7 @@ Phase 0 建立开发基础：Next.js、React、TypeScript、pnpm、Tailwind CSS�
 
 默认使用 Server Components，只有需要状态、事件或浏览器 API 的组件才添加 `"use client"`，尽量缩小客户端边界。服务器密钥和仅服务端依赖不能进入客户端模块。
 
-Phase 1 接入任务数据时，按需求增加 `services/`、`repositories/`、`schemas/`，形成：
+任务数据已接入，继续维持以下边界，不为未确认功能提前创建空抽象：
 
 ```text
 页面 / 功能模块 → Service（业务规则）→ Repository（数据访问）→ Supabase
@@ -61,7 +63,11 @@ pnpm check
 pnpm build
 ```
 
-格式不符时执行 `pnpm format`；代码检查失败时优先修复原因。`pnpm check` 包含 lint、类型、国际化测试和格式检查，因为生产构建不能替代这些质量检查。`pnpm test:i18n` 使用项目现有 TypeScript 和 Node.js 测试运行器，验证词条完整性、占位符一致性、插值、日期和偏好校验。界面改动还需检查两种语言、三种主题、移动端布局及弹窗键盘操作。
+格式不符时执行 `pnpm format`；检查失败先修复原因。`pnpm check` 包含 lint、类型、国际化、认证、持久化、同步恢复、审查回归和格式检查，构建不能替代这些检查。测试使用 Node.js 测试运行器；隔离测试不替代真实 Supabase、邮箱或麦克风验收。界面还需检查两种语言、三种主题、移动端与弹窗键盘操作。
+
+阶段功能见 [交付记录](stage-delivery-20260917.md)。`test:stage-one` 使用开发依赖 PGlite 在内存 PostgreSQL 中实际执行迁移，并模拟 Auth/RLS，测试重复事务与跨账号约束；不读取生产数据库、不进入应用客户端包。`test:stage-two` 使用模拟时钟验证专注周期和实际 Timer 的保存/切换/退出。两者都纳入 `pnpm check`。
+
+CI 构建并启动服务后单独设置 `WORKSPACE_TEST_ORIGIN` 执行匿名 HTTP/RSC 验证；构建和服务使用隔离占位 Supabase 配置，不需要生产密钥。本地已有运行服务时也可显式设置此变量运行 `test:auth-security`；没有变量时只跳过该 HTTP 用例。
 
 建议提交信息使用 `feat:`、`fix:`、`chore:`、`docs:` 等前缀。依赖升级时同步提交 `package.json` 与 `pnpm-lock.yaml`，不要混用 npm / yarn 锁文件。
 

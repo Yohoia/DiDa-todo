@@ -2,7 +2,15 @@
 import type { MessageKey } from "@/i18n/messages";
 import type { MessageValues } from "@/i18n/translate";
 
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+  type ReactNode,
+} from "react";
 import type { Task, TaskList } from "@/types/task";
 import type { AppNotification } from "@/types/notification";
 import type { VoiceCaptureState, VoiceParsed } from "@/types/voice";
@@ -14,16 +22,48 @@ import {
 } from "@/lib/data/repository";
 import { createClient } from "@/lib/supabase/client";
 import { LOGIN_REQUIRED_URL } from "@/lib/workspace-access";
+import { createWorkspaceSync } from "./workspace-sync";
+import { taskCompletionPatch } from "./task-completion";
+import { getTodayKey } from "@/lib/date-utils";
+import { normalizeFocusPatch } from "./task-focus";
+import { isOrganizationCandidateCurrent, organizationPatch } from "@/lib/data/task-organization";
+import type { TaskOrganizationDraft } from "@/types/task-organization";
+import { organizationDraftError } from "./organization-editor";
+import {
+  captureDraftError,
+  capturedTask,
+  type TaskCaptureDraft,
+  type CaptureSaveResult,
+} from "./task-capture";
+import type { FocusSessionRecord } from "@/types/focus";
+import {
+  pendingFocusSessions,
+  savePendingFocusSession,
+  acknowledgeFocusSession,
+} from "@/features/focus/focus-journal";
 
 type Notice = { key: MessageKey; values?: MessageValues };
-export type QuickAddPreset = { list: TaskList; date?: string; time?: string; title?: string };
+export type QuickAddPreset = {
+  list: TaskList;
+  date?: string;
+  time?: string;
+  title?: string;
+  captures?: TaskCaptureDraft[];
+  sourceVoice?: { transcript: string; durationSeconds?: number };
+};
 /** 登录用户摘要：服务端验证会话后注入。 */
 export type WorkspaceUser = { id: string; email: string; displayName: string };
 
 type WorkspaceState = {
+  recurrenceAvailable: boolean;
   tasks: Task[];
   updateTask: (id: string, patch: Partial<Task>) => void;
+  applyTaskOrganization: (
+    expected: Task[],
+    suggestions: TaskOrganizationDraft[],
+  ) => Promise<{ applied: number; skipped: number; failed: number }>;
   addTask: (title: string, list?: TaskList, date?: string, time?: string) => string | undefined;
+  saveCapturedTasks: (drafts: TaskCaptureDraft[]) => Promise<CaptureSaveResult>;
   toggleTask: (id: string) => void;
   toggleSubtask: (taskId: string, subtaskId: string) => void;
   deleteTask: (id: string) => void;
@@ -63,13 +103,7 @@ type WorkspaceState = {
     durationSeconds?: number;
   }) => void;
   /** 番茄钟退出时记录实际专注时长，供档案花园和统计页聚合。 */
-  recordFocusSession: (input: {
-    taskId: string;
-    startedAt: string;
-    endedAt: string;
-    durationSeconds: number;
-    completed: boolean;
-  }) => void;
+  recordFocusSession: (input: FocusSessionRecord) => void;
 };
 const WorkspaceContext = createContext<WorkspaceState | null>(null);
 
@@ -79,14 +113,24 @@ export function WorkspaceProvider({
   initialPreferences,
   initialNotifications,
   user,
+  recurrenceAvailable,
 }: {
   children: ReactNode;
   initialTasks: Task[];
   initialPreferences: Preferences;
   initialNotifications: AppNotification[];
   user: WorkspaceUser;
+  recurrenceAvailable: boolean;
 }) {
-  const [tasks, setTasks] = useState(initialTasks);
+  const [tasks, updateTasks] = useState(initialTasks);
+  const tasksRef = useRef(initialTasks);
+  // Update the mirror synchronously: async AI checks must see edits before
+  // React's next render, without side effects in state updater callbacks.
+  const setTasks = useCallback((next: Task[] | ((current: Task[]) => Task[])) => {
+    const value = typeof next === "function" ? next(tasksRef.current) : next;
+    tasksRef.current = value;
+    updateTasks(value);
+  }, []);
   const [selectedId, selectTask] = useState<string | null>(null);
   const [quickAdd, updateQuickAdd] = useState<QuickAddPreset | null>(null);
   const [voiceCapture, updateVoiceCapture] = useState<VoiceCaptureState | null>(null);
@@ -117,49 +161,64 @@ export function WorkspaceProvider({
   // 登录态的写穿通道：仓库只在浏览器事件里惰性创建；队列串行执行，
   // 保证「先取消旧 One Thing 再置新的」这类有顺序依赖的写入不违反唯一索引。
   const repositoryRef = useRef<Repository | null>(null);
-  const queueRef = useRef<Promise<unknown>>(Promise.resolve());
-  const syncRevisionRef = useRef(0);
-  const reconciliationNeededRef = useRef(false);
-  function persist(action: (repository: Repository) => Promise<void>) {
-    if (!sessionValidRef.current) return;
-    repositoryRef.current ??= createRepository(createClient(), user.id);
-    const repository = repositoryRef.current;
-    const revision = ++syncRevisionRef.current;
-    queueRef.current = queueRef.current
-      .then(() => {
-        if (sessionValidRef.current) return action(repository);
-      })
-      .catch((error: unknown) => {
-        console.error("sync failed:", error);
-        reconciliationNeededRef.current = true;
-        notify({ key: "sync.failed" });
-      })
-      .then(async () => {
-        // 等这批队列的最后一项结束再回读，避免旧请求失败时覆盖后续乐观更新。
-        if (
-          !sessionValidRef.current ||
-          !reconciliationNeededRef.current ||
-          revision !== syncRevisionRef.current
-        )
-          return;
-        try {
-          const [serverTasks, serverPreferences, serverNotifications] = await Promise.all([
-            repository.loadTasks(),
-            repository.loadPreferences(),
-            repository.listNotifications(),
-          ]);
-          setTasks(serverTasks);
-          updatePreferences(serverPreferences);
-          notificationsRef.current = serverNotifications;
-          updateNotifications(serverNotifications);
-          reconciliationNeededRef.current = false;
-        } catch (reloadError) {
-          console.error("sync recovery failed:", reloadError);
-        }
+  const syncRef = useRef<ReturnType<typeof createWorkspaceSync> | null>(null);
+  const persist = useCallback(
+    (action: (repository: Repository) => Promise<void>) => {
+      if (!sessionValidRef.current) return Promise.resolve();
+      syncRef.current ??= createWorkspaceSync({
+        getRepository: () => (repositoryRef.current ??= createRepository(createClient(), user.id)),
+        isActive: () => sessionValidRef.current,
+        onSnapshot: (snapshot) => {
+          setTasks(snapshot.tasks);
+          updatePreferences(snapshot.preferences);
+          notificationsRef.current = snapshot.notifications;
+          updateNotifications(snapshot.notifications);
+        },
+        onError: (error, recovery) => {
+          console.error(recovery ? "sync recovery failed:" : "sync failed:", error);
+          notify({
+            key:
+              error instanceof Error && error.message === "organization_conflict"
+                ? "organize.conflict"
+                : "sync.failed",
+          });
+        },
       });
-  }
+      return syncRef.current.enqueue(action);
+    },
+    [user.id, setTasks],
+  );
+
+  const recordFocusSession = useCallback(
+    (input: FocusSessionRecord) => {
+      if (input.durationSeconds <= 0) return;
+      savePendingFocusSession(user.id, input);
+      void persist(async (repository) => {
+        await repository.recordFocusSession(input);
+        acknowledgeFocusSession(user.id, input);
+      });
+    },
+    [persist, user.id],
+  );
+
+  useEffect(() => {
+    for (const input of pendingFocusSessions(user.id)) recordFocusSession(input);
+  }, [user.id, recordFocusSession]);
 
   function updateTask(id: string, patch: Partial<Task>) {
+    if (Object.hasOwn(patch, "repeatIntervalDays") && !recurrenceAvailable) {
+      notify({ key: "repeat.migrationNeeded" });
+      return;
+    }
+    const previousTasks = tasksRef.current;
+    const current = previousTasks.find((task) => task.id === id);
+    if (!current) return;
+    const normalized = normalizeFocusPatch(current, patch, getTodayKey());
+    if (!normalized) {
+      notify({ key: "today.focusTodayOnly" });
+      return;
+    }
+    patch = normalized;
     setTasks((current) =>
       current.map((task) => {
         if (task.id !== id && patch.featured === true && task.featured) {
@@ -169,10 +228,12 @@ export function WorkspaceProvider({
 
         const nextDate = patch.date !== undefined ? patch.date : task.date;
         const timeChanged = Object.hasOwn(patch, "time");
-        const nextTime = nextDate ? (timeChanged ? patch.time : task.time) : undefined;
+        // An explicit clock time can exist on an undated capture. Only clearing
+        // the date deliberately removes it; unrelated edits must preserve it.
+        const nextTime = patch.date === "" ? undefined : timeChanged ? patch.time : task.time;
         let schedule = task.schedule;
 
-        if (timeChanged) {
+        if (timeChanged || (!schedule && nextDate && nextTime)) {
           if (nextTime && nextDate) {
             const [hour, minute] = nextTime.split(":").map(Number);
             schedule = {
@@ -200,7 +261,7 @@ export function WorkspaceProvider({
     );
     // 置新 One Thing 前先排队取消旧的（tasks 里仍 featured 的其他任务）
     if (patch.featured === true) {
-      for (const other of tasks) {
+      for (const other of previousTasks) {
         if (other.featured && other.id !== id) {
           const otherId = other.id;
           persist((repository) => repository.updateTask(otherId, { featured: false }));
@@ -208,6 +269,60 @@ export function WorkspaceProvider({
       }
     }
     persist((repository) => repository.updateTask(id, patch));
+  }
+
+  async function applyTaskOrganization(expected: Task[], suggestions: TaskOrganizationDraft[]) {
+    const result = { applied: 0, skipped: 0, failed: 0 };
+    const byId = new Map(expected.map((task) => [task.id, task]));
+    for (const suggestion of suggestions) {
+      if (organizationDraftError(suggestion)) {
+        result.failed++;
+        continue;
+      }
+      const original = byId.get(suggestion.id);
+      if (
+        !original ||
+        !isOrganizationCandidateCurrent(
+          original,
+          tasksRef.current.find((task) => task.id === suggestion.id),
+        )
+      ) {
+        result.skipped++;
+        continue;
+      }
+      const patch = organizationPatch(suggestion, original, preferences.duration);
+      await persist(async (repository) => {
+        if (
+          !isOrganizationCandidateCurrent(
+            original,
+            tasksRef.current.find((task) => task.id === original.id),
+          )
+        ) {
+          result.skipped++;
+          return;
+        }
+        let applied: boolean;
+        try {
+          applied = await repository.applyTaskOrganization(original, patch);
+        } catch (error) {
+          result.failed++;
+          throw error;
+        }
+        if (!applied) {
+          result.skipped++;
+          throw new Error("organization_conflict");
+        }
+        result.applied++;
+        setTasks((current) =>
+          current.map((task) => {
+            if (task.id !== original.id || !isOrganizationCandidateCurrent(original, task))
+              return task;
+            return { ...task, ...patch };
+          }),
+        );
+      });
+    }
+    return result;
   }
   function addTask(title: string, list: TaskList = "Inbox", date = "", time?: string) {
     if (!title.trim()) return;
@@ -236,14 +351,52 @@ export function WorkspaceProvider({
     return id;
   }
   function toggleTask(id: string) {
-    const task = tasks.find((item) => item.id === id);
-    const completed = task ? !task.completed : true;
-    const patch = { completed, completedAt: completed ? new Date().toISOString() : undefined };
+    const task = tasksRef.current.find((item) => item.id === id);
+    if (!task) return;
+    const patch = taskCompletionPatch(task);
     setTasks((current) => current.map((item) => (item.id === id ? { ...item, ...patch } : item)));
-    persist((repository) => repository.updateTask(id, patch));
+    persist(async (repository) => {
+      await repository.updateTask(id, patch);
+      if (patch.completed && task.repeatIntervalDays) {
+        const child = await repository.loadRepeatChild(id);
+        if (child && sessionValidRef.current)
+          setTasks((current) =>
+            current.some((item) => item.id === child.id) ? current : [...current, child],
+          );
+      }
+    });
+  }
+  async function saveCapturedTasks(drafts: TaskCaptureDraft[]): Promise<CaptureSaveResult> {
+    const result: CaptureSaveResult = { savedIds: [], failedIds: [] };
+    for (const draft of drafts) {
+      if (!sessionValidRef.current || captureDraftError(draft)) {
+        result.failedIds.push(draft.id);
+        continue;
+      }
+      const task = capturedTask(draft, preferences.duration);
+      setTasks((current) =>
+        current.some((item) => item.id === draft.id) ? current : [...current, task],
+      );
+      await persist(async (repository) => {
+        try {
+          await repository.createTask(task);
+          result.savedIds.push(draft.id);
+        } catch (error) {
+          result.failedIds.push(draft.id);
+          throw error;
+        }
+      });
+      if (!result.savedIds.includes(draft.id) && !result.failedIds.includes(draft.id))
+        result.failedIds.push(draft.id);
+    }
+    notify({
+      key: "capture.saveResult",
+      values: { saved: String(result.savedIds.length), failed: String(result.failedIds.length) },
+    });
+    return result;
   }
   function toggleSubtask(taskId: string, subtaskId: string) {
-    const task = tasks.find((item) => item.id === taskId);
+    const task = tasksRef.current.find((item) => item.id === taskId);
     if (!task) return;
     const subtasks = task.subtasks.map((subtask) =>
       subtask.id === subtaskId ? { ...subtask, completed: !subtask.completed } : subtask,
@@ -287,25 +440,31 @@ export function WorkspaceProvider({
     return true;
   }
   function markNotificationRead(id: string) {
-    updateNotifications((current) =>
-      current.map((item) => (item.id === id ? { ...item, read: true } : item)),
+    const notification = notificationsRef.current.find((item) => item.id === id);
+    if (!notification) return;
+    notificationsRef.current = notificationsRef.current.map((item) =>
+      item.id === id ? { ...item, read: true } : item,
     );
-    persist((repository) => repository.markNotificationRead(id));
+    updateNotifications(notificationsRef.current);
+    persist((repository) => repository.markTaskNotificationRead(notification.taskId));
   }
   function markAllNotificationsRead() {
-    updateNotifications((current) => current.map((item) => ({ ...item, read: true })));
+    notificationsRef.current = notificationsRef.current.map((item) => ({ ...item, read: true }));
+    updateNotifications(notificationsRef.current);
     persist((repository) => repository.markAllNotificationsRead());
   }
 
   function clearNotifications() {
-    const ids = notificationsRef.current.filter((item) => !item.dismissedAt).map((item) => item.id);
-    if (!ids.length) return;
+    const taskIds = notificationsRef.current
+      .filter((item) => !item.dismissedAt)
+      .map((item) => item.taskId);
+    if (!taskIds.length) return;
     const dismissedAt = new Date().toISOString();
     notificationsRef.current = notificationsRef.current.map((item) =>
       item.dismissedAt ? item : { ...item, dismissedAt, read: true },
     );
     updateNotifications(notificationsRef.current);
-    persist((repository) => repository.dismissNotifications(ids));
+    persist((repository) => repository.dismissTaskNotifications(taskIds));
   }
 
   async function signOut() {
@@ -326,9 +485,12 @@ export function WorkspaceProvider({
   return (
     <WorkspaceContext.Provider
       value={{
+        recurrenceAvailable,
         tasks,
         updateTask,
+        applyTaskOrganization,
         addTask,
+        saveCapturedTasks,
         toggleTask,
         toggleSubtask,
         deleteTask,
@@ -363,8 +525,7 @@ export function WorkspaceProvider({
         signOut,
         recordVoiceCapture: (input) =>
           persist((repository) => repository.recordVoiceCapture(input)),
-        recordFocusSession: (input) =>
-          persist((repository) => repository.recordFocusSession(input)),
+        recordFocusSession,
       }}
     >
       {children}

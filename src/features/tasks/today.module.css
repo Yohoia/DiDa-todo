@@ -10,7 +10,7 @@
   gap: 40px 60px;
   align-items: start;
 }
-/* 四宫格：行2 = 今日专注 ↔ 随时区，行3 = 今日必做 ↔ 时间轴 */
+/* 重点卡片和随时区位于左列，完整时间轴独立占据右列。 */
 .journal > header {
   grid-column: 1 / -1;
   grid-row: 1;
@@ -25,23 +25,16 @@
   min-width: 0;
 }
 .anySection {
-  grid-column: 2;
-  grid-row: 2;
-  margin-top: -16px;
-  min-width: 0;
-  position: relative;
-}
-.mustDoSection {
   grid-column: 1;
   grid-row: 3;
   min-width: 0;
-  margin-top: -20px;
+  position: relative;
 }
 .timeline {
   grid-column: 2;
-  grid-row: 3;
+  grid-row: 2 / span 2;
   min-width: 0;
-  margin-top: -20px;
+  margin-top: -16px;
   display: flex;
   flex-direction: column;
 }
@@ -149,6 +142,16 @@
   height: 24px;
   line-height: 1;
 }
+.meta .focusTime {
+  flex-shrink: 0;
+  gap: 5px;
+  color: var(--brand-gold);
+  font-variant-numeric: tabular-nums;
+}
+.meta .focusLock {
+  flex-shrink: 0;
+  color: var(--brand-gold);
+}
 .focusStart {
   min-height: 42px;
   padding: 10px 14px;
@@ -210,9 +213,9 @@
 .anyDivider::after {
   margin-left: 12px;
 }
-/* 时间轴视窗：默认容纳三条（行高 80px），超出滚动、隐藏滚动条 */
+/* 时间轴独立占据右列，可展示六条任务；超出滚动。 */
 .timedScroll {
-  max-height: var(--today-three-rows-height);
+  max-height: calc(var(--today-three-rows-height) * 2);
   overflow-y: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -259,7 +262,7 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
-  /* 与左列分页控件同高同距，保持两列控件同一水平线（抵消滚动区下边距后与分页同为 12px） */
+  /* 提示紧跟滚动区，不改变任务行高。 */
   min-height: 28px;
   margin-top: -4px;
   font-size: 11px;
@@ -306,42 +309,6 @@
 .pageDotOn {
   height: 16px;
   background: var(--brand-gold);
-}
-.pageNav {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  margin-top: 12px;
-}
-.pageArrow {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--muted-foreground);
-  cursor: pointer;
-  transition:
-    color 0.2s,
-    background-color 0.2s;
-}
-.pageArrow:hover:not(:disabled) {
-  color: var(--brand-gold);
-  background: var(--task-accent-light);
-}
-.pageArrow:disabled {
-  opacity: 0.25;
-  cursor: default;
-}
-.pageIndicator {
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 1px;
-  color: var(--muted-foreground);
 }
 .timedItem {
   position: relative;
@@ -404,7 +371,7 @@
     max-width: 700px;
     gap: 40px;
   }
-  /* 单列时按 问候 → 专注 → 必做 → 随时 → 时间轴 排列 */
+  /* 单列时按 日期 → 今日重点 → 随时 → 时间轴 排列。 */
   .journal > header {
     grid-column: 1;
     grid-row: 1;
@@ -417,18 +384,15 @@
     grid-row: 2;
     margin-top: 0;
   }
-  .mustDoSection {
-    grid-column: 1;
-    grid-row: 3;
-  }
   .anySection {
     grid-column: 1;
-    grid-row: 4;
+    grid-row: 3;
     margin-top: 0;
   }
   .timeline {
     grid-column: 1;
-    grid-row: 5;
+    grid-row: auto;
+    margin-top: 0;
   }
 }
 @media (max-width: 600px) {

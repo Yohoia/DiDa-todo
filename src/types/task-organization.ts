@@ -1,4 +1,6 @@
-import type { OrganizedList, Task } from "@/types/task";
+import type { OrganizedList, Task, TaskList } from "@/types/task";
+
+export const MAX_ORGANIZE_TASKS = 40;
 
 export type TaskOrganizationInput = Pick<
   Task,
@@ -13,4 +15,10 @@ export type TaskOrganizationSuggestion = {
   priority: 1 | 2 | 3;
   estimate: number;
   reason: string;
+};
+
+/** Human edits are local drafts until confirmed; an explicit null time clears it. */
+export type TaskOrganizationDraft = Omit<TaskOrganizationSuggestion, "list"> & {
+  list: TaskList;
+  timeEdited?: boolean;
 };

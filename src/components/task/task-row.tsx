@@ -114,12 +114,15 @@ export function TaskRow({
           {/* One Thing 仅为状态展示，跟在标题后；切换请进详情 */}
           {task.featured && (
             <span className={taskStyles.oneMark} title={t("One Thing")}>
-              one
+              {t("Today's Focus")}
             </span>
           )}
           {/* 锁定仅为状态展示，跟在标题后；切换请进详情 */}
           {task.frozen && (
-            <HiLockClosed size={13} className={taskStyles.lockMark} aria-hidden="true" />
+            <span title={t("tasks.locked")}>
+              <HiLockClosed size={13} className={taskStyles.lockMark} aria-hidden="true" />
+              <span className="sr-only">{t("tasks.locked")}</span>
+            </span>
           )}
         </button>
         {hasMeta && (

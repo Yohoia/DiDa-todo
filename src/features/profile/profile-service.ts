@@ -36,25 +36,24 @@ export type ProfileData = {
  */
 export async function getProfile(): Promise<ProfileData> {
   const { supabase, user } = await requireWorkspaceSession();
-  const [{ data: row }, stats] = await Promise.all([
+  const [profile, stats] = await Promise.all([
     supabase
       .from("profiles")
       .select("display_name, avatar_url, created_at")
       .eq("id", user.id)
       .maybeSingle(),
-    loadFocusStats(supabase).catch((error: unknown) => {
-      console.error("load profile stats failed:", error);
-      return null;
-    }),
+    loadFocusStats(supabase),
   ]);
+  if (profile.error) throw new Error("Profile could not be loaded");
+  const row = profile.data;
 
   const minutesPerPlant = 120;
   const weeklyGoal = 8;
-  const weeklyMinutes = Math.floor((stats?.focusSecondsThisWeek ?? 0) / 60);
+  const weeklyMinutes = Math.floor(stats.focusSecondsThisWeek / 60);
   const planted = Math.min(weeklyGoal, Math.floor(weeklyMinutes / minutesPerPlant));
   const symbols = ["🌲", "🌳", "🪴", "🌿"];
-  const activeDates = recentDateKeys(7).filter((key) => (stats?.activity[key] ?? 0) > 0);
-  const totalXp = (stats?.completedTasks ?? 0) * 40 + Math.floor((stats?.focusSeconds ?? 0) / 60);
+  const activeDates = recentDateKeys(7).filter((key) => (stats.activity[key] ?? 0) > 0);
+  const totalXp = stats.completedTasks * 40 + Math.floor(stats.focusSeconds / 60);
   const level = Math.floor(totalXp / 1000) + 1;
 
   return {
@@ -70,7 +69,7 @@ export async function getProfile(): Promise<ProfileData> {
     nextLevelXp: level * 1000,
     focusGarden: {
       weeklyMinutes,
-      streakDays: stats?.streakDays ?? 0,
+      streakDays: stats.streakDays,
       weeklyGoal,
       minutesPerPlant,
       currentPlantMinutes: planted >= weeklyGoal ? 0 : weeklyMinutes % minutesPerPlant,

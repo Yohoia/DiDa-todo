@@ -87,12 +87,16 @@
     color 0.2s,
     background-color 0.2s;
 }
-.oneAction:hover,
+.oneAction:hover:not(:disabled),
 .oneAction:focus-visible,
 .oneAction[aria-pressed="true"] {
   border-color: color-mix(in srgb, var(--brand-gold) 55%, var(--border));
   background: var(--task-accent-light);
   color: var(--brand-gold);
+}
+.oneAction:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 .title {
   font-family: var(--font-serif);

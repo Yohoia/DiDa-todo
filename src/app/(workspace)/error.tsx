@@ -7,10 +7,10 @@ import { useI18n } from "@/features/preferences/preferences-provider";
 
 export default function WorkspaceError({
   error,
-  reset,
+  retry,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  retry: () => void;
 }) {
   const { t } = useI18n();
   useEffect(() => {
@@ -60,7 +60,7 @@ export default function WorkspaceError({
       </p>
       <div style={{ display: "flex", gap: "1rem" }}>
         <button
-          onClick={reset}
+          onClick={retry}
           style={{
             padding: "0.75rem 1.5rem",
             backgroundColor: "var(--brand-gold)",

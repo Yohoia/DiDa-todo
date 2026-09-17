@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Task, TaskList } from "@/types/task";
 import type { AppNotification } from "@/types/notification";
+import type { FocusSessionRecord } from "@/types/focus";
+import { isOrganizationCandidateCurrent } from "./task-organization.ts";
 
 /**
  * Supabase 数据仓库：组件不直接 supabase.from()，统一经此层读写（TechStack §14）。
@@ -43,6 +45,9 @@ type TaskRow = {
   frozen: boolean;
   featured: boolean;
   created_at: string;
+  updated_at: string;
+  repeat_interval_days?: number | null;
+  repeat_parent_id?: string | null;
 };
 
 type SubtaskRow = {
@@ -121,6 +126,8 @@ function rowToTask(row: TaskRow, subtasks: SubtaskRow[]): Task {
     priority: (row.priority as Task["priority"]) ?? 3,
     estimate: row.estimate,
     reminder: row.reminder,
+    repeatIntervalDays: row.repeat_interval_days ?? undefined,
+    repeatParentId: row.repeat_parent_id ?? undefined,
     completed: row.completed,
     completedAt: row.completed_at ?? undefined,
     frozen: row.frozen,
@@ -148,6 +155,9 @@ function taskToRow(task: Task) {
     priority: task.priority,
     estimate: task.estimate,
     reminder: task.reminder,
+    ...(task.repeatIntervalDays !== undefined
+      ? { repeat_interval_days: task.repeatIntervalDays }
+      : {}),
     completed: task.completed,
     completed_at: task.completedAt ?? null,
     frozen: task.frozen ?? false,
@@ -175,6 +185,8 @@ function updateColumns(patch: Partial<Task>): Record<string, unknown> {
   if (patch.priority !== undefined) row.priority = patch.priority;
   if (patch.estimate !== undefined) row.estimate = patch.estimate;
   if (patch.reminder !== undefined) row.reminder = patch.reminder;
+  if (Object.hasOwn(patch, "repeatIntervalDays"))
+    row.repeat_interval_days = patch.repeatIntervalDays ?? null;
   if (patch.completed !== undefined) {
     row.completed = patch.completed;
     row.completed_at = patch.completedAt ?? (patch.completed ? new Date().toISOString() : null);
@@ -187,9 +199,12 @@ function updateColumns(patch: Partial<Task>): Record<string, unknown> {
 }
 
 export type Repository = {
+  supportsRepeatingTasks(): Promise<boolean>;
   loadTasks(): Promise<Task[]>;
   createTask(task: Task): Promise<void>;
   updateTask(id: string, patch: Partial<Task>): Promise<void>;
+  applyTaskOrganization(expected: Task, patch: Partial<Task>): Promise<boolean>;
+  loadRepeatChild(parentId: string): Promise<Task | null>;
   deleteTask(id: string): Promise<void>;
   loadPreferences(): Promise<StoredPreferences>;
   savePreferences(patch: Partial<StoredPreferences>): Promise<void>;
@@ -199,18 +214,12 @@ export type Repository = {
     taskCount: number;
     durationSeconds?: number;
   }): Promise<void>;
-  recordFocusSession(input: {
-    taskId: string;
-    startedAt: string;
-    endedAt: string;
-    durationSeconds: number;
-    completed: boolean;
-  }): Promise<void>;
+  recordFocusSession(input: FocusSessionRecord): Promise<void>;
   listNotifications(): Promise<AppNotification[]>;
   createTaskDueNotification(notification: AppNotification): Promise<void>;
-  markNotificationRead(id: string): Promise<void>;
+  markTaskNotificationRead(taskId: string): Promise<void>;
   markAllNotificationsRead(): Promise<void>;
-  dismissNotifications(ids: string[]): Promise<void>;
+  dismissTaskNotifications(taskIds: string[]): Promise<void>;
 };
 
 /**
@@ -219,6 +228,12 @@ export type Repository = {
  */
 export function createRepository(client: SupabaseClient, userId: string): Repository {
   const repository: Repository = {
+    async supportsRepeatingTasks() {
+      const { error } = await client.from("tasks").select("repeat_interval_days").limit(0);
+      if (!error) return true;
+      if (error.code === "42703" || error.code === "PGRST204") return false;
+      throw new Error(error.message);
+    },
     async loadTasks() {
       const [taskRows, subtaskRows] = await Promise.all([
         loadAllTaskRows(client),
@@ -236,7 +251,18 @@ export function createRepository(client: SupabaseClient, userId: string): Reposi
 
     async createTask(task) {
       const { error } = await client.from("tasks").insert({ ...taskToRow(task), user_id: userId });
-      if (error) throw new Error(error.message);
+      if (error) {
+        if (error.code !== "23505") throw new Error(error.message);
+        const existing = await client
+          .from("tasks")
+          .select("id")
+          .eq("id", task.id)
+          .eq("user_id", userId)
+          .maybeSingle();
+        if (existing.error || !existing.data) throw new Error(error.message);
+        // A confirmed capture retries with the same ID, never overwriting edits.
+        if (!task.subtasks.length) return;
+      }
       if (task.subtasks.length) await repository.updateTask(task.id, { subtasks: task.subtasks });
     },
 
@@ -273,6 +299,50 @@ export function createRepository(client: SupabaseClient, userId: string): Reposi
         : client.from("subtasks").delete().eq("task_id", id);
       const { error } = await stale;
       if (error) throw new Error(error.message);
+    },
+
+    async applyTaskOrganization(expected, patch) {
+      const { data, error } = await client
+        .from("tasks")
+        .select("*")
+        .eq("id", expected.id)
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      if (!data) return false;
+      const row = data as TaskRow;
+      if (!isOrganizationCandidateCurrent(expected, rowToTask(row, []))) return false;
+      // The version predicate closes the race between reading and writing,
+      // including edits from another device. No migration is required.
+      const result = await client
+        .from("tasks")
+        .update(updateColumns(patch))
+        .eq("id", expected.id)
+        .eq("user_id", userId)
+        .eq("updated_at", row.updated_at)
+        .eq("completed", false)
+        .select("id");
+      if (result.error) throw new Error(result.error.message);
+      return result.data?.length === 1;
+    },
+
+    async loadRepeatChild(parentId) {
+      const { data, error } = await client
+        .from("tasks")
+        .select("*")
+        .eq("repeat_parent_id", parentId)
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      if (!data) return null;
+      const { data: subtasks, error: subtaskError } = await client
+        .from("subtasks")
+        .select("id, task_id, title, completed, position")
+        .eq("task_id", data.id)
+        .eq("user_id", userId)
+        .order("position");
+      if (subtaskError) throw new Error(subtaskError.message);
+      return rowToTask(data as TaskRow, (subtasks ?? []) as SubtaskRow[]);
     },
 
     async deleteTask(id) {
@@ -327,9 +397,10 @@ export function createRepository(client: SupabaseClient, userId: string): Reposi
       if (error) throw new Error(error.message);
     },
 
-    async recordFocusSession({ taskId, startedAt, endedAt, durationSeconds, completed }) {
+    async recordFocusSession({ id, taskId, startedAt, endedAt, durationSeconds, completed }) {
       if (durationSeconds <= 0) return;
-      const { error } = await client.from("focus_sessions").insert({
+      const row = {
+        id,
         user_id: userId,
         task_id: taskId,
         mode: "focus",
@@ -337,8 +408,21 @@ export function createRepository(client: SupabaseClient, userId: string): Reposi
         ended_at: endedAt,
         duration_seconds: Math.round(durationSeconds),
         completed,
-      });
-      if (error) throw new Error(error.message);
+      };
+      const { error } = await client.from("focus_sessions").insert(row);
+      if (!error) return;
+      if (error.code !== "23505") throw new Error(error.message);
+      // Replays/checkpoints share an ID. An older checkpoint cannot shrink
+      // an already saved session or create duplicate experience points.
+      let replay = client
+        .from("focus_sessions")
+        .update(row)
+        .eq("id", id)
+        .eq("user_id", userId)
+        .lte("duration_seconds", row.duration_seconds);
+      if (!completed) replay = replay.eq("completed", false);
+      const updated = await replay;
+      if (updated.error) throw new Error(updated.error.message);
     },
 
     async listNotifications() {
@@ -394,12 +478,12 @@ export function createRepository(client: SupabaseClient, userId: string): Reposi
       if (error && error.code !== "23505") throw new Error(error.message);
     },
 
-    async markNotificationRead(id) {
+    async markTaskNotificationRead(taskId) {
       const { error } = await client
         .from("notifications")
         .update({ read: true })
         .eq("user_id", userId)
-        .eq("id", id);
+        .eq("task_id", taskId);
       if (error) throw new Error(error.message);
     },
 
@@ -412,14 +496,15 @@ export function createRepository(client: SupabaseClient, userId: string): Reposi
       if (error) throw new Error(error.message);
     },
 
-    async dismissNotifications(ids) {
+    async dismissTaskNotifications(taskIds) {
       // 只隐藏确认时已有的通知，不影响清空期间刚到达的新提醒。
-      for (let from = 0; from < ids.length; from += READ_PAGE_SIZE) {
+      // 多标签页冲突时本地 ID 可能是临时值，使用稳定的任务 ID 定位真实通知。
+      for (let from = 0; from < taskIds.length; from += READ_PAGE_SIZE) {
         const { error } = await client
           .from("notifications")
           .update({ dismissed_at: new Date().toISOString(), read: true })
           .eq("user_id", userId)
-          .in("id", ids.slice(from, from + READ_PAGE_SIZE));
+          .in("task_id", taskIds.slice(from, from + READ_PAGE_SIZE));
         if (error) throw new Error(error.message);
       }
     },

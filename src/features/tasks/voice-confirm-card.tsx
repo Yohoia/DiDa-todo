@@ -6,11 +6,12 @@ import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { HiCheck } from "react-icons/hi2";
 import type { VoiceCaptureState, VoiceParsed } from "@/types/voice";
+import { useWorkspace } from "./workspace-provider";
 import styles from "./voice-confirm-card.module.css";
 
 /** 黑洞"吐出"结果：识别完成后从胶囊上方展开的确认卡。
     一段语音拆出的多件事逐项列出，每项可勾选（默认全选），✓ 只落选中的；
-    编辑入口仅在单条时提供（QuickAdd 是单任务表单）。 */
+    单条和多条共用可编辑确认列表，选择状态也供胶囊快捷确认读取。 */
 export function VoiceConfirmCard({
   state,
   onDiscard,
@@ -19,21 +20,22 @@ export function VoiceConfirmCard({
 }: {
   state: VoiceCaptureState;
   onDiscard: () => void;
-  onEdit: (item: VoiceParsed) => void;
-  onAdd: (items: VoiceParsed[]) => void;
+  onEdit: (items: VoiceParsed[]) => void;
+  onAdd: (items: VoiceParsed[]) => Promise<void>;
 }) {
   const { t, locale } = useI18n();
   const cardRef = useRef<HTMLDivElement>(null);
+  const { setVoiceCapture } = useWorkspace();
   const items = state.parsed.filter((item) => item.isTodo);
-  const [selected, setSelected] = useState<boolean[]>(() => items.map(() => true));
+  const [adding, setPending] = useState(false);
+  const pending = adding || state.saving === true;
 
   // 确认卡接管焦点：Esc 丢弃，Tab 在勾选项与操作按钮间移动
   useEffect(() => {
     cardRef.current?.focus();
   }, []);
 
-  const selectedItems = items.filter((_, index) => selected[index]);
-  const single = selectedItems.length === 1 ? selectedItems[0] : null;
+  const selectedItems = items.filter((item) => item.selected !== false);
 
   return (
     <motion.div
@@ -46,7 +48,7 @@ export function VoiceConfirmCard({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ type: "spring", stiffness: 340, damping: 26 }}
       onKeyDown={(event) => {
-        if (event.key === "Escape") {
+        if (event.key === "Escape" && !pending) {
           event.preventDefault();
           onDiscard();
         }
@@ -65,16 +67,22 @@ export function VoiceConfirmCard({
                   <button
                     type="button"
                     role="checkbox"
-                    aria-checked={selected[index]}
+                    aria-checked={item.selected !== false}
                     aria-label={item.title ?? t("添加")}
                     className={styles.pick}
+                    disabled={pending}
                     onClick={() =>
-                      setSelected((current) =>
-                        current.map((value, i) => (i === index ? !value : value)),
-                      )
+                      setVoiceCapture({
+                        ...state,
+                        parsed: state.parsed.map((current) =>
+                          current.captureId === item.captureId
+                            ? { ...current, selected: current.selected === false }
+                            : current,
+                        ),
+                      })
                     }
                   >
-                    {selected[index] && <HiCheck size={11} aria-hidden="true" />}
+                    {item.selected !== false && <HiCheck size={11} aria-hidden="true" />}
                   </button>
                   <div className={styles.itemBody}>
                     <span className={styles.title}>{item.title}</span>
@@ -85,23 +93,38 @@ export function VoiceConfirmCard({
             })}
           </ul>
           <div className={styles.actions}>
-            <button type="button" className={styles.ghost} onClick={onDiscard}>
+            <button type="button" className={styles.ghost} disabled={pending} onClick={onDiscard}>
               {t("丢弃")}
             </button>
-            {single && (
-              <button type="button" className={styles.ghost} onClick={() => onEdit(single)}>
-                {t("编辑")}
+            {selectedItems.length > 0 && (
+              <button
+                type="button"
+                className={styles.ghost}
+                disabled={pending}
+                onClick={() => onEdit(selectedItems)}
+              >
+                {t("capture.adjustAll")}
               </button>
             )}
             <button
               type="button"
               className={styles.primary}
-              disabled={selectedItems.length === 0}
-              onClick={() => onAdd(selectedItems)}
+              disabled={pending || selectedItems.length === 0}
+              onClick={async () => {
+                if (pending) return;
+                setPending(true);
+                try {
+                  await onAdd(selectedItems);
+                } finally {
+                  setPending(false);
+                }
+              }}
             >
-              {selectedItems.length > 1
-                ? t("添加 {count} 项", { count: String(selectedItems.length) })
-                : t("添加")}
+              {pending
+                ? t("organize.saving")
+                : selectedItems.length > 1
+                  ? t("添加 {count} 项", { count: String(selectedItems.length) })
+                  : t("添加")}
             </button>
           </div>
         </>

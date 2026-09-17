@@ -1,8 +1,32 @@
 import type { TaskOrganizationInput, TaskOrganizationSuggestion } from "@/types/task-organization";
+import { MAX_ORGANIZE_TASKS } from "../../types/task-organization.ts";
 
 type OrganizeResponse = { suggestions?: unknown; error?: unknown };
 
+type OrganizationRequest = {
+  date: string;
+  locale: string;
+  pomodoroMinutes: number;
+  tasks: TaskOrganizationInput[];
+};
+
 export async function organizeDayTasks(
+  input: OrganizationRequest,
+  signal?: AbortSignal,
+): Promise<TaskOrganizationSuggestion[]> {
+  const suggestions: TaskOrganizationSuggestion[] = [];
+  for (let from = 0; from < input.tasks.length; from += MAX_ORGANIZE_TASKS) {
+    signal?.throwIfAborted();
+    const batch = await organizeBatch(
+      { ...input, tasks: input.tasks.slice(from, from + MAX_ORGANIZE_TASKS) },
+      signal,
+    );
+    suggestions.push(...batch);
+  }
+  return suggestions;
+}
+
+async function organizeBatch(
   input: {
     date: string;
     locale: string;
@@ -31,5 +55,13 @@ export async function organizeDayTasks(
 
   const data = (await response.json()) as OrganizeResponse;
   if (!Array.isArray(data.suggestions)) throw new Error("organize_failed");
-  return data.suggestions as TaskOrganizationSuggestion[];
+  const suggestions = data.suggestions as TaskOrganizationSuggestion[];
+  const ids = new Set(input.tasks.map((task) => task.id));
+  if (
+    suggestions.length !== ids.size ||
+    new Set(suggestions.map((item) => item.id)).size !== ids.size ||
+    suggestions.some((item) => !ids.has(item.id))
+  )
+    throw new Error("organize_failed");
+  return suggestions;
 }

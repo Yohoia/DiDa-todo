@@ -1,0 +1,52 @@
+.dialog {
+  max-width: 640px;
+  max-height: calc(100dvh - 40px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.items {
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.item {
+  padding: 14px;
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.item label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted-foreground);
+}
+.item .pick {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+.title {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--foreground);
+  padding: 8px;
+  font-size: 14px;
+}
+.properties {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.error {
+  color: var(--destructive);
+  font-size: 12px;
+}

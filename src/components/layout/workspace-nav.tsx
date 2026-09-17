@@ -209,8 +209,12 @@ export function WorkspaceNav() {
         audioLevel={audioLevel}
         onPrimary={
           voiceCapture?.phase === "confirming"
-            ? // 胶囊上的 ✓ 快捷键：无勾选上下文，直接添加全部条目
-              () => addConfirmed(voiceCapture.parsed.filter((item) => item.isTodo))
+            ? // 胶囊与确认卡共享勾选状态，快捷确认不会添加被取消勾选的条目。
+              () => {
+                void addConfirmed(
+                  voiceCapture.parsed.filter((item) => item.isTodo && item.selected !== false),
+                );
+              }
             : confirmVoice
         }
         onCancel={cancelVoice}

@@ -2,6 +2,13 @@
 
 export const APP_TIME_ZONE = "Asia/Shanghai";
 
+/** Task wall-clock times are Shanghai times, never the device's timezone. */
+export function taskDateTime(date: string, time: string): Date | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) return null;
+  const value = new Date(`${date}T${time}:00+08:00`);
+  return Number.isFinite(value.getTime()) && getTodayKey(value) === date ? value : null;
+}
+
 let todayKeyCache: { key: string; expiresAt: number } | null = null;
 
 /**

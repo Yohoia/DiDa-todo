@@ -3,6 +3,19 @@
 Database schema changes live in `supabase/migrations`. Never edit a migration that has already
 been deployed. Add a new, ordered `*.sql` migration instead.
 
+## Repeating tasks (0007)
+
+Apply `0007_repeating_tasks.sql` to enable daily, weekly and 1–365 day intervals. Completion
+creates one successor in the same transaction, with owner checks and a unique parent constraint.
+It inherits task content, scheduled time, duration and reminder, clones unchecked subtasks, and
+resets completion, One Thing and lock flags. Overdue instances advance along their original
+interval to the first date after today (Asia/Shanghai), rather than creating a backlog.
+
+Changing an instance does not rewrite history or an already created successor. Deleting one
+instance does not cascade through the chain. See [stage delivery](../docs/stage-delivery-20260917.md).
+The application disables repeat controls when the columns are absent; real database errors still
+surface as errors. Local migration tests do not mean the production migration has been deployed.
+
 ## Notification lifecycle
 
 Notifications do not expire automatically. Reading only marks a notification as read. Clearing

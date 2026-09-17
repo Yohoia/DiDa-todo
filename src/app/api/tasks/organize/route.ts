@@ -6,12 +6,12 @@
 import { z } from "zod";
 import { guardVoiceRequest } from "@/lib/server/voice-request-guard";
 import type { TaskOrganizationSuggestion } from "@/types/task-organization";
+import { MAX_ORGANIZE_TASKS } from "@/types/task-organization";
 
 export const maxDuration = 30;
 
 const ORGANIZED_LISTS = ["Work", "Study", "Life"] as const;
 const TASK_LISTS = ["Inbox", ...ORGANIZED_LISTS] as const;
-const MAX_TASKS = 40;
 
 const TimeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 const RequestSchema = z.object({
@@ -32,7 +32,7 @@ const RequestSchema = z.object({
       }),
     )
     .min(1)
-    .max(MAX_TASKS),
+    .max(MAX_ORGANIZE_TASKS),
 });
 
 const SuggestionSchema = z.object({

@@ -8,17 +8,56 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { useWorkspace } from "@/features/tasks/workspace-provider";
 import styles from "./focus-session.module.css";
 import shared from "@/styles/workspace.module.css";
+import { createId } from "@/lib/utils";
+import type { FocusSessionRecord } from "@/types/focus";
+import {
+  newFocusRun,
+  focusRemaining,
+  pauseFocusRun,
+  resumeFocusRun,
+  focusRunRecord,
+  startFocusBreak,
+  nextFocusRound,
+  settleFocusRun,
+  readActiveFocus,
+  saveActiveFocus,
+  clearActiveFocus,
+  type FocusRun,
+} from "./focus-run";
 
 export function FocusSession() {
   const { t } = useI18n();
   const focusReturn = useDialogFocus();
-  const { focusId, stopFocus, tasks, preferences, recordFocusSession } = useWorkspace();
+  const {
+    focusId,
+    startFocus,
+    stopFocus,
+    tasks,
+    preferences,
+    recordFocusSession,
+    toggleTask,
+    user,
+  } = useWorkspace();
+  const timerExitRef = useRef<(() => void) | null>(null);
+  const recoveredRef = useRef(false);
+  useEffect(() => {
+    if (recoveredRef.current) return;
+    recoveredRef.current = true;
+    const active = readActiveFocus(user.id);
+    if (!active) return;
+    if (tasks.some((item) => item.id === active.taskId && !item.completed))
+      startFocus(active.taskId);
+    else clearActiveFocus(user.id);
+  }, [user.id, tasks, startFocus]);
   const task = tasks.find((item) => item.id === focusId);
   return (
     <Dialog
       open={!!task}
       onOpenChange={(open) => {
-        if (!open) stopFocus();
+        if (!open) {
+          if (timerExitRef.current) timerExitRef.current();
+          else stopFocus();
+        }
       }}
     >
       <DialogContent
@@ -31,14 +70,19 @@ export function FocusSession() {
           {t("Focusing on:")}
           <strong>{task?.title}</strong>
         </DialogTitle>
-        <DialogDescription className="sr-only">
-          {t("沉浸式番茄钟，关闭后结束本次计时。")}
-        </DialogDescription>
+        <DialogDescription className="sr-only">{t("focus.lifecycleHint")}</DialogDescription>
         {task && (
           <Timer
             key={task.id}
             taskId={task.id}
             minutes={preferences.duration}
+            userId={user.id}
+            autoBreak={preferences.autoBreak}
+            exitRef={timerExitRef}
+            onCompleteTask={() => {
+              toggleTask(task.id);
+              stopFocus();
+            }}
             onExit={stopFocus}
             onRecord={recordFocusSession}
           />
@@ -52,80 +96,199 @@ function Timer({
   minutes,
   onExit,
   onRecord,
+  userId,
+  autoBreak,
+  exitRef,
+  onCompleteTask,
 }: {
   taskId: string;
   minutes: number;
   onExit: () => void;
-  onRecord: (input: {
-    taskId: string;
-    startedAt: string;
-    endedAt: string;
-    durationSeconds: number;
-    completed: boolean;
-  }) => void;
+  onRecord: (input: FocusSessionRecord) => void;
+  userId: string;
+  autoBreak: boolean;
+  exitRef: { current: (() => void) | null };
+  onCompleteTask: () => void;
 }) {
   const { t } = useI18n();
-  const totalSeconds = minutes * 60;
-  const [remaining, setRemaining] = useState(totalSeconds);
-  const [running, setRunning] = useState(true);
-  const secondsRef = useRef(totalSeconds);
-  const startedAtRef = useRef(new Date().toISOString());
-  const recordedRef = useRef(false);
+  const [run, setRun] = useState(() => {
+    const saved = readActiveFocus(userId);
+    return saved?.taskId === taskId ? saved : newFocusRun(taskId, createId(), minutes, autoBreak);
+  });
+  const runRef = useRef(run);
+  const [remaining, setRemaining] = useState(() => focusRemaining(run));
+  const lastRecordRef = useRef("");
+  const endedRef = useRef(false);
+  const [storageUnavailable, setStorageUnavailable] = useState(false);
   const recordCallbackRef = useRef(onRecord);
   useEffect(() => {
     recordCallbackRef.current = onRecord;
   }, [onRecord]);
 
   const recordSession = useCallback(() => {
-    if (recordedRef.current) return;
-    const durationSeconds = totalSeconds - secondsRef.current;
-    if (durationSeconds <= 0) return;
-    recordedRef.current = true;
-    recordCallbackRef.current({
-      taskId,
-      startedAt: startedAtRef.current,
-      endedAt: new Date().toISOString(),
-      durationSeconds,
-      completed: secondsRef.current === 0,
-    });
-  }, [taskId, totalSeconds]);
-
-  // 标题栏关闭、Esc 或路由切换都会卸载计时器，仍保存已经发生的专注时长。
-  useEffect(() => () => recordSession(), [recordSession]);
+    if (endedRef.current) return;
+    const record = focusRunRecord(runRef.current);
+    if (!record) return;
+    const fingerprint = `${record.id}:${record.durationSeconds}:${record.completed}`;
+    if (lastRecordRef.current === fingerprint) return;
+    lastRecordRef.current = fingerprint;
+    recordCallbackRef.current(record);
+  }, []);
+  const commit = useCallback(
+    (next: FocusRun) => {
+      runRef.current = next;
+      setRun(next);
+      setRemaining(focusRemaining(next));
+      if (!saveActiveFocus(userId, next)) setStorageUnavailable(true);
+    },
+    [userId],
+  );
+  const exit = useCallback(() => {
+    recordSession();
+    endedRef.current = true;
+    clearActiveFocus(userId);
+    onExit();
+  }, [onExit, recordSession, userId]);
   useEffect(() => {
-    if (!running || secondsRef.current === 0) return;
-    const deadline = Date.now() + secondsRef.current * 1000;
-    const timer = window.setInterval(() => {
-      const seconds = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
-      secondsRef.current = seconds;
+    exitRef.current = exit;
+    return () => {
+      exitRef.current = null;
+    };
+  }, [exit, exitRef]);
+  useEffect(() => {
+    const checkpoint = () => {
+      if (endedRef.current) return;
+      saveActiveFocus(userId, runRef.current);
+      recordSession();
+    };
+    const hidden = () => {
+      if (document.visibilityState === "hidden") checkpoint();
+    };
+    window.addEventListener("pagehide", checkpoint);
+    document.addEventListener("visibilitychange", hidden);
+    return () => {
+      checkpoint();
+      window.removeEventListener("pagehide", checkpoint);
+      document.removeEventListener("visibilitychange", hidden);
+    };
+  }, [recordSession, userId]);
+  useEffect(() => {
+    const tick = () => {
+      if (endedRef.current) return;
+      const current = runRef.current;
+      const seconds = focusRemaining(current);
       setRemaining(seconds);
-      if (seconds === 0) window.clearInterval(timer);
-    }, 250);
-    return () => window.clearInterval(timer);
-  }, [running]);
+      if (seconds === 0 && current.phase !== "focusComplete" && current.phase !== "breakComplete") {
+        recordSession();
+        commit(settleFocusRun(current, createId()));
+      } else if (current.phase === "focus" && (current.totalSeconds - seconds) % 30 === 0)
+        recordSession();
+    };
+    // Schedule the initial sample too: a restored elapsed deadline must settle once.
+    const timer = window.setInterval(tick, 250);
+    const initial = window.setTimeout(() => {
+      if (!saveActiveFocus(userId, runRef.current)) setStorageUnavailable(true);
+      tick();
+    }, 0);
+    return () => {
+      window.clearTimeout(initial);
+      window.clearInterval(timer);
+    };
+  }, [commit, recordSession, userId]);
+  const resting =
+    run.phase === "shortBreak" || run.phase === "longBreak" || run.phase === "breakComplete";
+  const done = run.phase === "focusComplete" || run.phase === "breakComplete";
   return (
     <>
-      <div className={styles.timer} role="timer" aria-label={t("剩余专注时间")}>
+      <p className={shared.muted} role="status">
+        {t(
+          resting
+            ? run.phase === "breakComplete"
+              ? "focus.breakComplete"
+              : run.phase === "longBreak"
+                ? "focus.longBreak"
+                : "focus.shortBreak"
+            : "focus.round",
+          { count: String(run.completedRounds + (run.phase === "focus" ? 1 : 0)) },
+        )}
+      </p>
+      <div
+        className={styles.timer}
+        role="timer"
+        aria-label={t(resting ? "focus.remainingBreak" : "剩余专注时间")}
+      >
         {String(Math.floor(remaining / 60)).padStart(2, "0")}:
         {String(remaining % 60).padStart(2, "0")}
       </div>
-      {remaining === 0 && <p role="status">{t("Session complete. Take a gentle break.")}</p>}
+      {done && (
+        <p role="status">
+          {t(
+            run.phase === "breakComplete"
+              ? "focus.breakComplete"
+              : "Session complete. Take a gentle break.",
+          )}
+        </p>
+      )}
+      {storageUnavailable && (
+        <p className={shared.muted} role="alert">
+          {t("focus.storageUnavailable")}
+        </p>
+      )}
+      <label className={shared.muted}>
+        <input
+          type="checkbox"
+          checked={run.autoNext}
+          onChange={(event) => commit({ ...runRef.current, autoNext: event.target.checked })}
+        />{" "}
+        {t("focus.autoNext")}
+      </label>
       <div className={shared.actions}>
-        {remaining > 0 && (
-          <button className={styles.stop} onClick={() => setRunning(!running)}>
-            {running ? t("Pause") : t("Resume")}
+        {!done && remaining > 0 && (
+          <button
+            className={styles.stop}
+            onClick={() => {
+              commit(
+                runRef.current.deadline === null
+                  ? resumeFocusRun(runRef.current)
+                  : pauseFocusRun(runRef.current),
+              );
+              recordSession();
+            }}
+          >
+            {run.deadline !== null ? t("Pause") : t("Resume")}
           </button>
         )}
-        <button
-          className={styles.stop}
-          onClick={() => {
-            recordSession();
-            onExit();
-          }}
-        >
-          {remaining === 0 ? t("Finish Session") : t("Pause & Exit")}
+        {run.phase === "focusComplete" && (
+          <button className={styles.stop} onClick={() => commit(startFocusBreak(runRef.current))}>
+            {t("focus.startBreak")}
+          </button>
+        )}
+        {(done || resting) && (
+          <button
+            className={styles.stop}
+            onClick={() => commit(nextFocusRound(runRef.current, createId()))}
+          >
+            {t(resting && !done ? "focus.skipBreak" : "focus.nextRound")}
+          </button>
+        )}
+        {done && (
+          <button
+            className={styles.stop}
+            onClick={() => {
+              recordSession();
+              endedRef.current = true;
+              clearActiveFocus(userId);
+              onCompleteTask();
+            }}
+          >
+            {t("focus.completeTask")}
+          </button>
+        )}
+        <button className={styles.stop} onClick={exit}>
+          {t("focus.saveExit")}
         </button>
       </div>
+      <p className={shared.muted}>{t("focus.lifecycleHint")}</p>
     </>
   );
 }

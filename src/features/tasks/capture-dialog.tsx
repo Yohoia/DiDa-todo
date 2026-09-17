@@ -6,6 +6,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { HiCheck, HiPlus } from "react-icons/hi2";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import styles from "./capture-dialog.module.css";
+import { createId } from "@/lib/utils";
+import { parseQuickCapture, type TaskCaptureDraft } from "./task-capture";
 
 export const TITLE_LIMIT = 200;
 
@@ -14,23 +16,41 @@ export function CaptureDialog({
   open,
   onOpenChange,
   onCapture,
+  today,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onCapture: (title: string) => void;
+  onCapture: (draft: TaskCaptureDraft) => Promise<boolean>;
+  today: string;
 }) {
   const { t } = useI18n();
   const [title, setTitle] = useState("");
   const [receipts, setReceipts] = useState<{ id: number; title: string }[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [draftId, setDraftId] = useState(createId);
+  const [pending, setPending] = useState(false);
+  const pendingRef = useRef(false);
+  const [saveError, setSaveError] = useState(false);
   const remaining = TITLE_LIMIT - title.length;
+  const draft = parseQuickCapture(title, today, { list: "Inbox", date: today }, draftId);
 
-  const submit = () => {
+  const submit = async () => {
     const text = title.trim();
-    if (!text) return;
-    onCapture(text);
-    setReceipts((current) => [{ id: Date.now(), title: text }, ...current].slice(0, 8));
-    setTitle("");
+    if (!text || pendingRef.current) return;
+    pendingRef.current = true;
+    setPending(true);
+    setSaveError(false);
+    try {
+      if (!(await onCapture(draft))) return;
+      setReceipts((current) => [{ id: Date.now(), title: draft.title }, ...current].slice(0, 8));
+      setTitle("");
+      setDraftId(createId());
+    } catch {
+      setSaveError(true);
+    } finally {
+      pendingRef.current = false;
+      setPending(false);
+    }
     inputRef.current?.focus();
   };
 
@@ -38,6 +58,7 @@ export function CaptureDialog({
     <Dialog
       open={open}
       onOpenChange={(next) => {
+        if (pendingRef.current) return;
         // 关闭时清场：回执与半截输入不留到下次
         if (!next) {
           setTitle("");
@@ -71,7 +92,7 @@ export function CaptureDialog({
           className={styles.body}
           onSubmit={(event) => {
             event.preventDefault();
-            submit();
+            void submit();
           }}
         >
           <div className={styles.inputBox}>
@@ -83,12 +104,13 @@ export function CaptureDialog({
               ref={inputRef}
               className={styles.input}
               value={title}
+              disabled={pending}
               onChange={(event) => setTitle(event.target.value)}
               onKeyDown={(event) => {
                 // 显式处理回车提交（不依赖浏览器隐式提交）；输入法组词中的回车忽略
                 if (event.key === "Enter" && !event.nativeEvent.isComposing) {
                   event.preventDefault();
-                  submit();
+                  void submit();
                 }
               }}
               placeholder={t("Dump what's on your mind...")}
@@ -102,6 +124,7 @@ export function CaptureDialog({
             )}
             <motion.button
               type="submit"
+              disabled={pending || !title.trim()}
               className={styles.addBtn}
               aria-label={t("收进收件箱")}
               title={`${t("收进收件箱")} (↵)`}
@@ -114,7 +137,17 @@ export function CaptureDialog({
               </span>
             </motion.button>
           </div>
+          {title.trim() && (
+            <p className="mt-2 text-xs text-muted-foreground" role="status">
+              {draft.title} · {draft.date} · {draft.time || t("随时")}
+            </p>
+          )}
         </form>
+        {saveError && (
+          <p className="px-5 text-xs text-destructive" role="alert">
+            {t("sync.failed")}
+          </p>
+        )}
         <div className={styles.receipts}>
           <AnimatePresence initial={false}>
             {receipts.map((receipt) => (

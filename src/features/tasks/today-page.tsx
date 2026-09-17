@@ -2,13 +2,14 @@
 import { useI18n } from "@/features/preferences/preferences-provider";
 
 import { useEffect, useRef, useState } from "react";
-import { HiChevronDown, HiChevronLeft, HiChevronRight, HiClock, HiXMark } from "react-icons/hi2";
+import { HiChevronDown, HiClock, HiLockClosed, HiXMark } from "react-icons/hi2";
 import { AnimatePresence, motion } from "framer-motion";
 import { SectionLabel, EmptyState } from "@/components/shared/workspace-ui";
 import { TaskRow } from "@/components/task/task-row";
 import { SubtaskPopover } from "@/components/task/subtask-popover";
 import { useTodayKey } from "@/hooks/use-today-key";
 import { useWorkspace } from "./workspace-provider";
+import { getTodayTasks } from "./today-tasks";
 import { cn } from "@/lib/utils";
 import type { Task } from "@/types/task";
 import shared from "@/styles/workspace.module.css";
@@ -26,16 +27,14 @@ export function TodayPage() {
   const { tasks, preferences, selectTask, toggleTask, toggleSubtask, startFocus, updateTask } =
     useWorkspace();
   const todayKey = useTodayKey();
-  const today = tasks.filter((task) => task.date === todayKey);
-  const active = today.filter((task) => !task.completed);
-  const featured = today.find((task) => task.featured && !task.completed);
+  const {
+    active,
+    featured,
+    timed: timedTasks,
+    anytime: anytimeTasks,
+  } = getTodayTasks(tasks, todayKey);
   const [year, month, day] = todayKey.split("-").map(Number);
   const todayLine = `${year} / ${month} / ${day} ${formatDate(todayKey, { weekday: "long" })}`;
-  const timelineTasks = today.filter((task) => !task.frozen && !task.featured);
-  const timedTasks = timelineTasks
-    .filter((task) => task.time)
-    .sort((a, b) => (a.time ?? "").localeCompare(b.time ?? ""));
-  const anytimeTasks = timelineTasks.filter((task) => !task.time);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollMore, setCanScrollMore] = useState(false);
   const [atBottom, setAtBottom] = useState(false);
@@ -46,22 +45,13 @@ export function TodayPage() {
     setAtBottom(el.scrollTop + el.clientHeight >= el.scrollHeight - 4);
   };
   useEffect(syncScrollState, [timedTasks.length]);
-  // 随时 / 今日必做：每页三条，左右方向感知的分页切换
+  // 随时任务：每页三条，左右方向感知的分页切换。
   const PAGE_SIZE = 3;
-  const mustDoTasks = today.filter((task) => task.frozen);
   const [anyPage, setAnyPage] = useState(0);
   const [anyDir, setAnyDir] = useState(1);
-  const [mustPage, setMustPage] = useState(0);
-  const [mustDir, setMustDir] = useState(1);
   const anyPages = Math.max(1, Math.ceil(anytimeTasks.length / PAGE_SIZE));
   const anyPageSafe = Math.min(anyPage, anyPages - 1);
   const anyPaged = anytimeTasks.slice(anyPageSafe * PAGE_SIZE, anyPageSafe * PAGE_SIZE + PAGE_SIZE);
-  const mustPages = Math.max(1, Math.ceil(mustDoTasks.length / PAGE_SIZE));
-  const mustPageSafe = Math.min(mustPage, mustPages - 1);
-  const mustPaged = mustDoTasks.slice(
-    mustPageSafe * PAGE_SIZE,
-    mustPageSafe * PAGE_SIZE + PAGE_SIZE,
-  );
   const renderRow = (task: Task) => (
     <TaskRow
       key={task.id}
@@ -130,6 +120,16 @@ export function TodayPage() {
               <h2>{featured.title}</h2>
             </button>
             <div className={styles.meta}>
+              <span className={styles.focusTime}>
+                <HiClock size={13} aria-hidden="true" />
+                {featured.time || t("随时")}
+              </span>
+              {featured.frozen && (
+                <span className={styles.focusLock} title={t("tasks.locked")}>
+                  <HiLockClosed size={13} aria-hidden="true" />
+                  <span className="sr-only">{t("tasks.locked")}</span>
+                </span>
+              )}
               {featured.tags.map((tag) => (
                 <span key={tag} className={shared.tag}>
                   #{tag}
@@ -159,100 +159,46 @@ export function TodayPage() {
             </motion.button>
           </article>
         ) : (
-          <EmptyState title={t("A little room to breathe")}>
-            {t("Your focus is complete. Enjoy the progress.")}
-          </EmptyState>
+          <EmptyState title={t("today.chooseFocus")}>{t("today.focusHint")}</EmptyState>
         )}
       </section>
-      <section className={styles.mustDoSection}>
-        <SectionLabel>{t("Today's Must-Dos")}</SectionLabel>
-        <div className={styles.pageViewport}>
-          <AnimatePresence mode="popLayout" custom={mustDir} initial={false}>
-            <motion.div
-              key={mustPageSafe}
-              custom={mustDir}
-              variants={pageVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
-              className="flex flex-col"
-            >
-              {mustPaged.map(renderRow)}
-            </motion.div>
-          </AnimatePresence>
-        </div>
-        {mustPages > 1 && (
-          <div className={styles.pageNav}>
-            <button
-              type="button"
-              className={styles.pageArrow}
-              aria-label={t("上一页")}
-              disabled={mustPageSafe === 0}
-              onClick={() => {
-                setMustDir(-1);
-                setMustPage(Math.max(0, mustPageSafe - 1));
-              }}
-            >
-              <HiChevronLeft size={16} />
-            </button>
-            <span className={styles.pageIndicator}>
-              {mustPageSafe + 1}/{mustPages}
-            </span>
-            <button
-              type="button"
-              className={styles.pageArrow}
-              aria-label={t("下一页")}
-              disabled={mustPageSafe === mustPages - 1}
-              onClick={() => {
-                setMustDir(1);
-                setMustPage(Math.min(mustPages - 1, mustPageSafe + 1));
-              }}
-            >
-              <HiChevronRight size={16} />
-            </button>
+      {anytimeTasks.length > 0 && (
+        <section className={styles.anySection}>
+          <SectionLabel>{t("Any")}</SectionLabel>
+          <div className={styles.pageViewport}>
+            <AnimatePresence mode="popLayout" custom={anyDir} initial={false}>
+              <motion.div
+                key={anyPageSafe}
+                custom={anyDir}
+                variants={pageVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
+                className="flex flex-col"
+              >
+                {anyPaged.map(renderRow)}
+              </motion.div>
+            </AnimatePresence>
+            {anyPages > 1 && (
+              <div className={styles.pageDots}>
+                {Array.from({ length: anyPages }, (_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    aria-label={`${i + 1} / ${anyPages}`}
+                    className={cn(styles.pageDot, i === anyPageSafe && styles.pageDotOn)}
+                    onClick={() => {
+                      setAnyDir(i > anyPageSafe ? 1 : -1);
+                      setAnyPage(i);
+                    }}
+                  />
+                ))}
+              </div>
+            )}
           </div>
-        )}
-      </section>
-      <section className={styles.anySection}>
-        {anytimeTasks.length > 0 && (
-          <>
-            <SectionLabel>{t("Any")}</SectionLabel>
-            <div className={styles.pageViewport}>
-              <AnimatePresence mode="popLayout" custom={anyDir} initial={false}>
-                <motion.div
-                  key={anyPageSafe}
-                  custom={anyDir}
-                  variants={pageVariants}
-                  initial="enter"
-                  animate="center"
-                  exit="exit"
-                  transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
-                  className="flex flex-col"
-                >
-                  {anyPaged.map(renderRow)}
-                </motion.div>
-              </AnimatePresence>
-              {anyPages > 1 && (
-                <div className={styles.pageDots}>
-                  {Array.from({ length: anyPages }, (_, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      aria-label={`${i + 1} / ${anyPages}`}
-                      className={cn(styles.pageDot, i === anyPageSafe && styles.pageDotOn)}
-                      onClick={() => {
-                        setAnyDir(i > anyPageSafe ? 1 : -1);
-                        setAnyPage(i);
-                      }}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          </>
-        )}
-      </section>
+        </section>
+      )}
       <section className={styles.timeline}>
         <SectionLabel>{t("Timeline")}</SectionLabel>
         {timedTasks.length === 0 && (

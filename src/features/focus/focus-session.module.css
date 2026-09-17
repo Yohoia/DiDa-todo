@@ -17,6 +17,7 @@
   gap: 20px;
   z-index: 300;
   padding: 32px;
+  overflow-y: auto;
 }
 .title {
   font-size: 1.2rem;
@@ -48,4 +49,17 @@
 }
 .stop:hover {
   border-color: var(--foreground);
+}
+@media (max-width: 600px) {
+  .focus {
+    padding: 24px 16px;
+    gap: 16px;
+  }
+  .title {
+    margin-bottom: 12px;
+  }
+  .stop {
+    padding: 10px 16px;
+    letter-spacing: 1px;
+  }
 }

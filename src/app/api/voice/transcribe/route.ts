@@ -9,6 +9,7 @@
 
 import { guardVoiceRequest } from "@/lib/server/voice-request-guard";
 import { request as httpsRequest } from "node:https";
+import { inspectWav } from "@/lib/audio/inspect-wav";
 
 /** 覆盖未启用 Fluid Compute 时较短的 Vercel 默认时限。 */
 export const maxDuration = 60;
@@ -18,40 +19,9 @@ const MAX_REQUEST_BYTES = MAX_BYTES + 64 * 1024;
 const MAX_SECONDS = 61; // 客户端按 60s 截断，留 1s 舍入余量
 const ASR_TIMEOUT_MS = 45_000;
 
-type WavInfo = { byteRate: number; dataBytes: number };
 type UpstreamResult = { status: number; body: string };
 
 const MAX_UPSTREAM_RESPONSE_BYTES = 4 * 1024 * 1024;
-
-/** 解析 WAV 头：校验 RIFF/WAVE 与 fmt/data 块，算出时长所需的字节率与数据长度。 */
-function inspectWav(bytes: Uint8Array): WavInfo | null {
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  if (bytes.byteLength < 44) return null;
-  if (ascii(bytes, 0) !== "RIFF" || ascii(bytes, 8) !== "WAVE") return null;
-  let offset = 12;
-  let byteRate = 0;
-  while (offset + 8 <= bytes.byteLength) {
-    const id = ascii(bytes, offset);
-    const size = view.getUint32(offset + 4, true);
-    if (id === "fmt ") {
-      // fmt 块体自 offset+8 起：+12 是 sampleRate，byteRate（时长换算用）在 +16
-      byteRate = view.getUint32(offset + 16, true);
-    } else if (id === "data") {
-      return { byteRate, dataBytes: Math.min(size, bytes.byteLength - offset - 8) };
-    }
-    offset += 8 + size + (size % 2);
-  }
-  return null;
-}
-
-function ascii(bytes: Uint8Array, offset: number): string {
-  return String.fromCharCode(
-    bytes[offset],
-    bytes[offset + 1],
-    bytes[offset + 2],
-    bytes[offset + 3],
-  );
-}
 
 /**
  * 百炼北京共享域名在部分 Vercel 出口上会让 Node fetch/undici 连接超时。

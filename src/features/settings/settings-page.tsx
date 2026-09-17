@@ -12,7 +12,6 @@ import { HiArrowLeft, HiCheck, HiPencil, HiPower } from "react-icons/hi2";
 import { SiGithub } from "react-icons/si";
 import { AvatarView } from "@/components/shared/avatar-view";
 import { avatarImageSrc, avatarSeed, randomAvatarSeed } from "@/lib/avatar";
-import { meetsPasswordPolicy, PASSWORD_RULES } from "@/lib/password-policy";
 import { ResetPasswordPanel } from "@/features/auth/reset-password-panel";
 import { authErrorText, isValidEmail } from "@/features/auth/auth-errors";
 import resetStyles from "@/features/auth/reset-password-panel.module.css";
@@ -46,10 +45,12 @@ function Switch({
   label,
   checked,
   onChange,
+  disabled = false,
 }: {
   label: string;
   checked: boolean;
   onChange: (value: boolean) => void;
+  disabled?: boolean;
 }) {
   return (
     <button
@@ -57,6 +58,7 @@ function Switch({
       role="switch"
       aria-label={label}
       aria-checked={checked}
+      disabled={disabled}
       className={styles.switch}
       onClick={() => onChange(!checked)}
     >
@@ -102,92 +104,6 @@ function NumberField({
         if (event.key === "Enter") event.currentTarget.blur();
       }}
     />
-  );
-}
-/**
- * Recovery 会话（邮件重置链接回跳）中设置新密码：
- * 邮箱所有权已由链接验证，此处两次一致 + 策略校验后直接 updateUser 提交。
- */
-function PasswordForm() {
-  const { t, label } = useI18n();
-  const router = useRouter();
-  const { notify } = useWorkspace();
-  const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState("");
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (password !== confirm) {
-      setError("两次输入的密码不一致。");
-      return;
-    }
-    if (!meetsPasswordPolicy(password)) {
-      setError("密码不满足要求，请对照下方规则修改。");
-      return;
-    }
-    setPending(true);
-    setError("");
-    try {
-      const { error } = await createClient().auth.updateUser({ password });
-      if (error) {
-        const text = error.message.toLowerCase();
-        setError(
-          error.code === "weak_password" || text.includes("password should be")
-            ? "密码强度不足，请更换更复杂的密码。"
-            : error.message,
-        );
-        return;
-      }
-      setPassword("");
-      setConfirm("");
-      notify({ key: "密码已更新。" });
-      // 改密完成即结束 recovery 任务，清掉 ?recovery=1 回到常规账户区块
-      router.replace("/settings");
-    } finally {
-      setPending(false);
-    }
-  }
-
-  return (
-    <form className={styles.passwordForm} onSubmit={handleSubmit}>
-      <input
-        type="password"
-        aria-label={t("新密码")}
-        autoComplete="new-password"
-        placeholder={t("设置密码 (不少于8位)")}
-        minLength={8}
-        required
-        value={password}
-        onChange={(event) => setPassword(event.target.value)}
-      />
-      <input
-        type="password"
-        aria-label={t("确认新密码")}
-        autoComplete="new-password"
-        placeholder={t("确认新密码")}
-        minLength={8}
-        required
-        value={confirm}
-        onChange={(event) => setConfirm(event.target.value)}
-      />
-      <ul className={styles.passwordRules} aria-label={t("密码要求")}>
-        {PASSWORD_RULES.map(({ key, test }) => (
-          <li key={key} data-valid={test(password)}>
-            {test(password) ? "✓" : "·"} {t(key)}
-          </li>
-        ))}
-      </ul>
-      <button type="submit" className={shared.button} disabled={pending}>
-        {t("更新密码")}
-      </button>
-      {error && (
-        <p className={styles.passwordNotice} role="alert">
-          {label(error)}
-        </p>
-      )}
-    </form>
   );
 }
 /** 邮箱换绑：独立一行 + 弹窗输入新邮箱，确认邮件发送至新地址后生效 */
@@ -419,7 +335,7 @@ export function SettingsPage({
   const { t, label } = useI18n();
   const router = useRouter();
   const { preferences, setPreferences, notify, user, signOut } = useWorkspace();
-  // 密码重置链接经 /auth/callback 换会话后落到 ?recovery=1：直达账户区改密码
+  // recovery 只定位账户区，不是身份验证凭证；所有改密都重新验证邮箱。
   const isRecovery = useSearchParams().get("recovery") === "1";
   const [section, setSection] = useState(isRecovery ? "Account & Sync" : "General");
   const [resetOpen, setResetOpen] = useState(false);
@@ -572,11 +488,7 @@ export function SettingsPage({
               <h2>{t("Account & Sync")}</h2>
               {user ? (
                 <>
-                  {isRecovery && (
-                    <p className={shared.muted}>
-                      {t("你已通过密码重置链接登录，请设置新密码并保存。")}
-                    </p>
-                  )}
+                  {isRecovery && <p className={shared.muted}>{t("auth.recoveryHint")}</p>}
                   <DisplayNameRow userId={user.id} initialName={user.displayName || profileName} />
                   {user.email && <EmailBindingRow email={user.email} onToast={notifyAuthText} />}
                   {user.email && (
@@ -584,11 +496,7 @@ export function SettingsPage({
                   )}
                   <SettingRow
                     title={t("修改密码")}
-                    description={
-                      isRecovery
-                        ? t("设置新密码后，其他设备需使用新密码重新登录。")
-                        : t("为确保是你本人操作，需通过邮箱验证码验证后才能设置新密码。")
-                    }
+                    description={t("为确保是你本人操作，需通过邮箱验证码验证后才能设置新密码。")}
                   >
                     <button
                       type="button"
@@ -612,17 +520,16 @@ export function SettingsPage({
                           {t("为确保是你本人操作，需通过邮箱验证码验证后才能设置新密码。")}
                         </DialogDescription>
                       </div>
-                      {isRecovery ? (
-                        <PasswordForm />
-                      ) : (
-                        user.email && (
-                          <ResetPasswordPanel
-                            lockedEmail={user.email}
-                            autoSend
-                            onToast={notifyAuthText}
-                            onDone={() => setResetOpen(false)}
-                          />
-                        )
+                      {user.email && (
+                        <ResetPasswordPanel
+                          lockedEmail={user.email}
+                          autoSend
+                          onToast={notifyAuthText}
+                          onDone={() => {
+                            setResetOpen(false);
+                            router.replace("/settings");
+                          }}
+                        />
                       )}
                     </DialogContent>
                   </Dialog>

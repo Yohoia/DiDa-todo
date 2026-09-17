@@ -5,7 +5,7 @@ import { useI18n } from "@/features/preferences/preferences-provider";
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { HiCheck, HiXMark } from "react-icons/hi2";
-import { cn } from "@/lib/utils";
+import { cn, createId } from "@/lib/utils";
 import { MAX_RECORD_SECONDS, WavRecorder } from "@/lib/audio/wav-recorder";
 import { getDemoDate } from "@/lib/date-utils";
 import { useWorkspace } from "./workspace-provider";
@@ -28,8 +28,14 @@ const DEMO_TRANSCRIPT = "明天下午三点提醒我交房租，后天上午去�
  */
 export function useVoiceCapture() {
   const { locale } = useI18n();
-  const { voiceCapture, setVoiceCapture, addTask, setQuickAdd, notify, recordVoiceCapture } =
-    useWorkspace();
+  const {
+    voiceCapture,
+    setVoiceCapture,
+    saveCapturedTasks,
+    setQuickAdd,
+    notify,
+    recordVoiceCapture,
+  } = useWorkspace();
   const recorderRef = useRef<WavRecorder | null>(null);
   const busyRef = useRef(false);
   const startingRef = useRef(false);
@@ -208,13 +214,19 @@ export function useVoiceCapture() {
         },
       ];
     }
-    setVoiceCapture({ ...state, phase: "confirming", transcript, parsed });
+    setVoiceCapture({
+      ...state,
+      phase: "confirming",
+      transcript,
+      parsed: parsed.map((item) => ({ ...item, captureId: createId(), selected: true })),
+    });
     busyRef.current = false;
     requestRef.current = null;
   }
 
   /** × / Esc：丢弃录音或确认卡，释放设备并收回导航栏。 */
   function cancelVoice() {
+    if (busyRef.current && voiceCapture?.phase === "confirming") return;
     if (timerRef.current) clearTimeout(timerRef.current);
     flowRef.current += 1;
     requestRef.current?.abort();
@@ -227,38 +239,66 @@ export function useVoiceCapture() {
     setVoiceCapture(null);
   }
 
-  /** ✓ 添加：落库确认卡上勾选的全部条目（多条时逐条 addTask，最后一条的 toast 保留）。 */
-  function addConfirmed(items: VoiceParsed[]) {
+  /** ✓ 添加：只保存勾选的条目，成功项移出草稿，失败项使用原 ID 重试。 */
+  async function addConfirmed(items: VoiceParsed[]) {
     const state = voiceCapture;
-    if (!state || !items.length) return;
-    for (const item of items) {
-      addTask(
-        item.title ?? state.transcript,
-        item.list ?? state.list,
-        item.date ?? "",
-        item.time ?? undefined,
+    if (!state || !items.length || busyRef.current) return;
+    busyRef.current = true;
+    setVoiceCapture({ ...state, saving: true });
+    try {
+      const result = await saveCapturedTasks(
+        items.map((item) => ({
+          id: item.captureId ?? createId(),
+          title: item.title ?? state.transcript,
+          list: item.list ?? state.list,
+          date: item.date ?? "",
+          time: item.time ?? undefined,
+        })),
       );
+      const saved = items.filter(
+        (item) => item.captureId && result.savedIds.includes(item.captureId),
+      );
+      // 登录态留档原文与解析结果（voice_captures），失败静默不影响添加
+      if (saved.length)
+        recordVoiceCapture({
+          transcript: state.transcript,
+          parsed: saved,
+          taskCount: saved.length,
+          durationSeconds: durationSecondsRef.current,
+        });
+      if (!result.failedIds.length) {
+        durationSecondsRef.current = undefined;
+        setVoiceCapture(null);
+      } else
+        setVoiceCapture({
+          ...state,
+          saving: false,
+          parsed: state.parsed.filter(
+            (item) => !item.captureId || !result.savedIds.includes(item.captureId),
+          ),
+        });
+    } catch {
+      setVoiceCapture({ ...state, saving: false });
+      notify({ key: "sync.failed" });
+    } finally {
+      busyRef.current = false;
     }
-    // 登录态留档原文与解析结果（voice_captures），失败静默不影响添加
-    recordVoiceCapture({
-      transcript: state.transcript,
-      parsed: items,
-      taskCount: items.length,
-      durationSeconds: durationSecondsRef.current,
-    });
-    durationSecondsRef.current = undefined;
-    setVoiceCapture(null);
   }
 
-  /** 编辑：把单条解析结果预填进 QuickAdd（多条场景在确认卡上不提供编辑入口）。 */
-  function editConfirmed(item: VoiceParsed) {
+  /** 编辑：将已勾选的单条或多条解析结果交给共用确认列表。 */
+  function editConfirmed(items: VoiceParsed[]) {
     const state = voiceCapture;
-    if (!state) return;
+    if (!state || busyRef.current) return;
     setQuickAdd({
-      list: item.list ?? state.list,
-      date: item.date ?? undefined,
-      time: item.time ?? undefined,
-      title: item.title ?? state.transcript,
+      list: state.list,
+      captures: items.map((item) => ({
+        id: item.captureId ?? createId(),
+        title: item.title ?? state.transcript,
+        list: item.list ?? state.list,
+        date: item.date ?? "",
+        time: item.time ?? undefined,
+      })),
+      sourceVoice: { transcript: state.transcript, durationSeconds: durationSecondsRef.current },
     });
     setVoiceCapture(null);
   }
@@ -330,11 +370,17 @@ export function VoiceCaptureBar({
           onCancel();
         } else if (event.key === "Enter" && event.target === event.currentTarget) {
           event.preventDefault();
-          if (phase !== "thinking") onPrimary();
+          if (phase !== "thinking" && !state?.saving) onPrimary();
         }
       }}
     >
-      <button type="button" className={styles.side} aria-label={t("取消")} onClick={onCancel}>
+      <button
+        type="button"
+        className={styles.side}
+        aria-label={t("取消")}
+        disabled={state?.saving}
+        onClick={onCancel}
+      >
         <HiXMark size={15} aria-hidden="true" />
       </button>
       {phase === "recording" && (
@@ -360,7 +406,7 @@ export function VoiceCaptureBar({
         type="button"
         className={cn(styles.side, styles.confirm)}
         aria-label={t("完成语音输入")}
-        disabled={phase === "thinking"}
+        disabled={phase === "thinking" || state?.saving}
         onClick={onPrimary}
       >
         <HiCheck size={15} aria-hidden="true" />

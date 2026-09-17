@@ -1,5 +1,134 @@
 // Message IDs are source copy; keep UI labels separate from task content.
 export const messages = {
+  "focus.lifecycleHint": {
+    "zh-CN":
+      "刷新可在当前标签页恢复；关闭或退出保留已专注时长。短休息 5 分钟，每 4 轮长休息 15 分钟，休息不计入专注。",
+    en: "Reload to restore in this tab. Closing retains focused time. Take a 5-minute break, or 15 minutes every four rounds. Breaks do not count as focus.",
+  },
+  "focus.shortBreak": { "zh-CN": "短休息", en: "Short break" },
+  "focus.longBreak": { "zh-CN": "长休息", en: "Long break" },
+  "focus.round": { "zh-CN": "第 {count} 轮专注", en: "Focus round {count}" },
+  "focus.remainingBreak": { "zh-CN": "剩余休息时间", en: "Remaining break time" },
+  "focus.breakComplete": {
+    "zh-CN": "休息结束，可以开始下一轮。",
+    en: "Break complete. Ready for the next round.",
+  },
+  "focus.storageUnavailable": {
+    "zh-CN": "浏览器存储不可用，刷新后无法恢复计时；仍会尝试保存专注记录。",
+    en: "Browser storage is unavailable. The timer cannot survive a reload; focus records will still be saved when possible.",
+  },
+  "focus.autoNext": {
+    "zh-CN": "本次休息结束后自动开始下一轮",
+    en: "Automatically start the next round after this break",
+  },
+  "focus.startBreak": { "zh-CN": "开始休息", en: "Start break" },
+  "focus.nextRound": { "zh-CN": "继续下一轮", en: "Next round" },
+  "focus.skipBreak": { "zh-CN": "跳过休息并继续", en: "Skip break and continue" },
+  "focus.completeTask": { "zh-CN": "完成任务并退出", en: "Complete task and exit" },
+  "focus.saveExit": { "zh-CN": "保存并退出", en: "Save and exit" },
+  "capture.notConfigured": {
+    "zh-CN": "智能解析尚未配置，仍可直接创建任务。",
+    en: "AI parsing is not configured. You can still create tasks directly.",
+  },
+  "capture.authRequired": {
+    "zh-CN": "请重新登录后再使用智能解析。",
+    en: "Sign in again to use AI parsing.",
+  },
+  "capture.rateLimited": {
+    "zh-CN": "解析请求过于频繁，请稍后重试。",
+    en: "Too many parsing requests. Try again later.",
+  },
+  "repeat.confirm": { "zh-CN": "确认间隔", en: "Confirm interval" },
+  "repeat.migrationNeeded": {
+    "zh-CN": "重复任务需部署数据库升级后启用，其余任务功能不受影响。",
+    en: "Deploy the database upgrade to enable repeating tasks. Other task features remain available.",
+  },
+  "capture.reviewTitle": { "zh-CN": "核对并调整待办", en: "Review and adjust tasks" },
+  "capture.reviewHint": {
+    "zh-CN": "勾选要添加的事项，可逐项修改标题、日期、时间和清单。取消不会保存未提交的草稿。",
+    en: "Select tasks and edit their titles, dates, times and lists. Unsubmitted drafts are not saved on cancel.",
+  },
+  "capture.title": { "zh-CN": "任务标题", en: "Task title" },
+  "capture.item": { "zh-CN": "事项 {count}", en: "Task {count}" },
+  "capture.invalidTitle": {
+    "zh-CN": "标题需为 1–200 个字符。",
+    en: "Title must contain 1–200 characters.",
+  },
+  "capture.invalidDate": { "zh-CN": "请选择有效日期。", en: "Choose a valid date." },
+  "capture.saveResult": {
+    "zh-CN": "已保存 {saved} 项，失败 {failed} 项。",
+    en: "Saved {saved}; failed {failed}.",
+  },
+  "capture.parse": { "zh-CN": "智能解析并调整", en: "Parse and adjust" },
+  "capture.parsing": { "zh-CN": "正在解析…", en: "Parsing…" },
+  "capture.parseHint": {
+    "zh-CN": "支持“明天下午三点开会”。多件事可点击智能解析，核对后再保存。",
+    en: "Try “meeting tomorrow at 15:00”. Use Parse and adjust for multiple tasks, then confirm.",
+  },
+  "capture.noTasks": {
+    "zh-CN": "未识别到待办，请补充具体要做的事。",
+    en: "No tasks recognized. Describe what needs doing.",
+  },
+  "capture.adjustAll": { "zh-CN": "逐项调整", en: "Adjust tasks" },
+  "repeat.label": { "zh-CN": "重复", en: "Repeat" },
+  "repeat.never": { "zh-CN": "不重复", en: "Never" },
+  "repeat.daily": { "zh-CN": "每天", en: "Daily" },
+  "repeat.weekly": { "zh-CN": "每周", en: "Weekly" },
+  "repeat.custom": { "zh-CN": "自定义间隔", en: "Custom interval" },
+  "repeat.days": { "zh-CN": "间隔天数（1–365）", en: "Interval in days (1–365)" },
+  "organize.humanAdjusted": { "zh-CN": "人工已调整", en: "Adjusted by you" },
+  "organize.aiSuggestion": { "zh-CN": "AI 建议", en: "AI suggestion" },
+  "organize.adjust": { "zh-CN": "调整细节", en: "Adjust details" },
+  "organize.collapse": { "zh-CN": "收起编辑", en: "Collapse editor" },
+  "organize.restoreAi": { "zh-CN": "恢复 AI 建议", en: "Restore AI suggestion" },
+  "organize.tagsHint": {
+    "zh-CN": "用逗号分隔，最多 3 个标签",
+    en: "Comma-separated, up to 3 tags",
+  },
+  "organize.draftHint": {
+    "zh-CN": "时间留空表示随时。调整只保存在本次草稿中，确认后才更新任务。",
+    en: "Leave time empty for Anytime. Edits remain local until confirmed.",
+  },
+  "organize.invalidList": { "zh-CN": "请选择现有清单。", en: "Choose an existing list." },
+  "organize.invalidTime": { "zh-CN": "请输入有效时间。", en: "Enter a valid time." },
+  "organize.invalidPriority": {
+    "zh-CN": "优先级应为 P1、P2 或 P3。",
+    en: "Priority must be P1, P2 or P3.",
+  },
+  "organize.invalidEstimate": {
+    "zh-CN": "预估应为 1–16 个番茄钟。",
+    en: "Estimate must be 1–16 pomodoros.",
+  },
+  "organize.invalidTags": {
+    "zh-CN": "最多 3 个标签，每个不超过 12 个字符。",
+    en: "Use up to 3 tags, at most 12 characters each.",
+  },
+  "organize.reviewHint": {
+    "zh-CN": "可调整细节或取消勾选，确认后保存",
+    en: "Adjust details or deselect tasks before saving",
+  },
+  "auth.recoveryHint": {
+    "zh-CN": "修改密码前需要验证当前账号的邮箱。",
+    en: "Verify your account email before changing your password.",
+  },
+  "today.focusTodayOnly": {
+    "zh-CN": "One Thing 只能选择今天未完成的任务，请先调整任务日期。",
+    en: "Choose an unfinished task scheduled for today as your One Thing.",
+  },
+  "tasks.unscheduled": { "zh-CN": "未安排", en: "Unscheduled" },
+  "tasks.unscheduledHint": {
+    "zh-CN": "尚未选择日期的任务，可打开详情安排到合适的一天。",
+    en: "Tasks without a date. Open a task to schedule it.",
+  },
+  "organize.saving": { "zh-CN": "正在保存…", en: "Saving…" },
+  "organize.conflict": {
+    "zh-CN": "任务已发生变化，已跳过过期的 AI 建议，请重新整理。",
+    en: "Tasks changed. Outdated AI suggestions were skipped; organize again.",
+  },
+  "organize.applicationResult": {
+    "zh-CN": "已应用 {applied} 条，已跳过 {skipped} 条，保存失败 {failed} 条。",
+    en: "Applied {applied}, skipped {skipped}, failed {failed}.",
+  },
   Today: {
     "zh-CN": "今天",
     en: "Today",
@@ -300,6 +429,10 @@ export const messages = {
     "zh-CN": "自动开始休息",
     en: "Auto-start Breaks",
   },
+  "focus.autoBreakUnavailable": {
+    "zh-CN": "休息计时尚未提供，暂不可开启。专注结束后会提示你休息。",
+    en: "Break timers are not available yet. This option is disabled; focus sessions end with a break reminder.",
+  },
   "Automatically start break timer when focus session finishes.": {
     "zh-CN": "专注结束后自动开始休息计时。",
     en: "Automatically start break timer when focus session finishes.",
@@ -439,6 +572,10 @@ export const messages = {
   "Lock task": {
     "zh-CN": "锁定任务",
     en: "Lock task",
+  },
+  "tasks.locked": {
+    "zh-CN": "已锁定",
+    en: "Locked",
   },
   任务状态: {
     "zh-CN": "任务状态",
@@ -829,15 +966,23 @@ export const messages = {
     en: "AI Insight:",
   },
   "Today's Focus": {
-    "zh-CN": "今日专注",
+    "zh-CN": "今日重点",
     en: "Today's Focus",
+  },
+  "today.chooseFocus": {
+    "zh-CN": "今天最重要的一件事是什么？",
+    en: "What matters most today?",
+  },
+  "today.focusHint": {
+    "zh-CN": "在任务详情中设置今日重点，任务仍保留在原来的时间安排中。",
+    en: "Set today's focus in task details. The task stays in its original schedule.",
   },
   "One Thing": {
     "zh-CN": "最重要的一件事",
     en: "One Thing",
   },
   "Set as today's focus": {
-    "zh-CN": "设为今日专注",
+    "zh-CN": "设为今日重点",
     en: "Set as today's focus",
   },
   设为今日专注: {
@@ -845,7 +990,7 @@ export const messages = {
     en: "Set as today's focus",
   },
   取消今日专注: {
-    "zh-CN": "取消今日专注",
+    "zh-CN": "取消今日重点",
     en: "Remove from today's focus",
   },
   "Estimate:": {
@@ -1735,8 +1880,8 @@ export const messages = {
     en: "Back to home",
   },
   "sync.failed": {
-    "zh-CN": "同步失败，更改仅保留在本页。",
-    en: "Sync failed — changes are kept on this page only.",
+    "zh-CN": "同步失败，正在尝试恢复云端状态。请检查连接后重试。",
+    en: "Sync failed — trying to restore cloud state. Check your connection and try again.",
   },
   "邮箱或密码不正确。": {
     "zh-CN": "邮箱或密码不正确。",

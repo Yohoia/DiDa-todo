@@ -67,6 +67,7 @@ export function ResetPasswordPanel({
   const [confirm, setConfirm] = useState("");
   const [pending, setPending] = useState(false);
   const [cooldown, setCooldown] = useState(initial.cooldown);
+  const verifiedEmailRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -92,6 +93,7 @@ export function ResetPasswordPanel({
       return;
     }
     setPending(true);
+    verifiedEmailRef.current = null;
     try {
       const { error } = await createClient().auth.resetPasswordForEmail(value);
       if (error) {
@@ -128,6 +130,7 @@ export function ResetPasswordPanel({
         onToast(authErrorText(error), 5000);
         return;
       }
+      verifiedEmailRef.current = email.trim();
       setStep("password");
     } finally {
       setPending(false);
@@ -137,6 +140,10 @@ export function ResetPasswordPanel({
   async function resetPassword(event: FormEvent) {
     event.preventDefault();
     if (pending) return;
+    if (step !== "password" || verifiedEmailRef.current !== email.trim()) {
+      onToast("请输入完整的 6 位验证码。", 5000);
+      return;
+    }
     if (password !== confirm) {
       onToast("两次输入的密码不一致。", 5000);
       return;
@@ -153,6 +160,7 @@ export function ResetPasswordPanel({
         return;
       }
       onToast("密码已更新。");
+      verifiedEmailRef.current = null;
       onDone();
     } finally {
       setPending(false);

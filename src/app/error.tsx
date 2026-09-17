@@ -6,10 +6,10 @@ import { useI18n } from "@/features/preferences/preferences-provider";
 
 export default function Error({
   error,
-  reset,
+  retry,
 }: {
   error: Error & { digest?: string };
-  reset: () => void;
+  retry: () => void;
 }) {
   const { t } = useI18n();
   useEffect(() => {
@@ -58,7 +58,7 @@ export default function Error({
         {t("errors.description")}
       </p>
       <button
-        onClick={reset}
+        onClick={retry}
         style={{
           padding: "0.75rem 1.5rem",
           backgroundColor: "var(--brand-gold)",

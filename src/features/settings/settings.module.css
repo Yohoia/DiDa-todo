@@ -121,6 +121,10 @@
   border-radius: 50%;
   transition: transform 0.3s;
 }
+.switch:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 .switch[aria-checked="true"] {
   background: var(--brand-gold);
 }
