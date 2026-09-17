@@ -207,8 +207,11 @@ test("actual PostgreSQL stage-three rules protect account, growth, insights, and
 
     await t.test("focus statistics use the requested calendar month boundary", async () => {
       const edge = await db.query<{ edge: string }>(
-        `select ((date_trunc('month',(now() at time zone 'Pacific/Kiritimati')::date)
-          at time zone 'Pacific/Kiritimati')::timestamptz + interval '1 hour')::text as edge`,
+        `select (
+          ((date_trunc('month',(now() at time zone 'Pacific/Kiritimati')::date)
+            at time zone 'Pacific/Kiritimati') + interval '1 hour')
+          at time zone 'Pacific/Kiritimati'
+        )::text as edge`,
       );
       const at = edge.rows[0]!.edge;
       await db.query(
