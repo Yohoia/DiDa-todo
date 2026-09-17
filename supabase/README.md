@@ -14,17 +14,18 @@ interval to the first date after today (Asia/Shanghai), rather than creating a b
 Changing an instance does not rewrite history or an already created successor. Deleting one
 instance does not cascade through the chain. See [stage delivery](../docs/stage-delivery-20260917.md).
 The application disables repeat controls when the columns are absent; real database errors still
-surface as errors. Production migration deployment succeeded in GitHub Actions run 34, while
-repeating-task behavior still needs target-environment acceptance.
+surface as errors. Production migration deployment succeeded in GitHub Actions run 34. On
+2026-09-17, target-account acceptance completed a daily repeating task and confirmed the unique
+successor on the following day.
 
 ## Workspace Realtime and search (0008-0009)
 
 `0008_workspace_realtime.sql` adds the four workspace tables to `supabase_realtime` and sets their
 replica identity to full rows for account-filtered Realtime delivery. `0009_task_search.sql`
 creates the account-scoped `search_tasks` RPC and trigram indexes when the Supabase `extensions`
-schema is available. Both migrations were deployed by GitHub Actions run 34. Real multi-device,
-disconnect/reconnect, large-result search, and target RPC/index behavior still require explicit
-acceptance against the live project.
+schema is available. Both migrations were deployed by GitHub Actions run 34. Live-project
+acceptance has covered authenticated two-page sync, forced Realtime disconnect/reconnect,
+concurrent version conflicts, and 33-row search pagination (30 + 3) with matching RPC/UI order.
 
 ## Notification lifecycle
 
@@ -46,8 +47,8 @@ configuration and never exposes that key to the browser.
 
 Migrations `0010` and `0011` have been deployed by the production migration jobs. Migration
 `0012_fix_real_notifications.sql` allows the account's task-free daily digest while keeping task
-reminders tied to an owned task, and fixes read updates for aggregate notifications. It is pending
-deployment until the next `main` migration workflow finishes. The in-memory PostgreSQL suite
+reminders tied to an owned task, fixes read updates for aggregate notifications, and was deployed
+by the production migration job in GitHub Actions run 40. The in-memory PostgreSQL suite
 executes every migration from `0001` through `0012` and verifies the RLS, dedupe, month-boundary,
 reward idempotency, preference validation, notification policy, and cascade behavior.
 

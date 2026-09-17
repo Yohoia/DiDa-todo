@@ -208,8 +208,11 @@ export function WorkspaceProvider({
   const [realtimeStatus, setRealtimeStatus] = useState<WorkspaceRealtimeStatus>("connecting");
   const displayPreferences = usePreferences();
   useEffect(() => {
-    const { data } = createClient().auth.onAuthStateChange((_event, session) => {
-      if (!session || session.user.id !== user.id) {
+    const { data } = createClient().auth.onAuthStateChange((event, session) => {
+      // A network interruption can momentarily report no session before storage is
+      // restored. Only an explicit sign-out or a different authenticated user ends
+      // this workspace; the server-rendered session remains the source of truth.
+      if (event === "SIGNED_OUT" || (session && session.user.id !== user.id)) {
         sessionValidRef.current = false;
         setSessionValid(false);
         // 完整导航清理当前用户的任务、弹窗和浏览器内存，跨标签页退出同样生效。

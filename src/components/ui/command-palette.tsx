@@ -217,6 +217,7 @@ export function CommandPalette() {
               <Command.Item
                 className={cn(styles.item, styles.loadMore)}
                 value="__load-more-search-results__"
+                keywords={[query.trim()]}
                 onSelect={() => void loadMore()}
               >
                 {searching ? t("正在搜索…") : t("显示更多")}

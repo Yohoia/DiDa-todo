@@ -29,6 +29,22 @@ const storage = {
     storageValues.delete(key);
   },
 };
+
+test("workspace auth state handling survives a transient missing session", () => {
+  const source = readFileSync(
+    new URL("../src/features/tasks/workspace-provider.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(source, /event === "SIGNED_OUT" \|\| \(session && session\.user\.id !== user\.id\)/);
+  assert.doesNotMatch(source, /if \(!session \|\| session\.user\.id !== user\.id\)/);
+});
+test("search load-more remains visible for the active command palette query", () => {
+  const source = readFileSync(
+    new URL("../src/components/ui/command-palette.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(source, /value="__load-more-search-results__"\s+keywords=\{\[query\.trim\(\)\]\}/);
+});
 test("focus restore follows an absolute deadline and paused time never contributes", () => {
   const paused = pauseFocusRun(run, start + 60_000);
   assert.equal(focusRemaining(paused, start + 900_000), 1440);
