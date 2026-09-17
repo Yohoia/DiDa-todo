@@ -60,7 +60,7 @@ test("realtime subscribes to owner-only workspace tables and coalesces refresh s
   });
   const channel = channels[0];
   assert.deepEqual(channel.options, {
-    config: { private: true, postgres_changes_options: { wait: true } },
+    config: { postgres_changes_options: { wait: true } },
   });
   assert.deepEqual(
     channel.events.map((event) => event.filter.table),
@@ -117,5 +117,31 @@ test("realtime channel failures reconnect with bounded backoff", async () => {
     "connected",
   ]);
   assert.equal(errors.length, 2);
+  realtime.stop();
+});
+
+test("realtime channel removal does not re-enter from a synchronous close", async () => {
+  const base = source();
+  const client = {
+    channel: base.client.channel.bind(base.client),
+    removeChannel(channel: FakeChannel) {
+      channel.removed = true;
+      channel.subscribeCallback?.("CLOSED");
+      return Promise.resolve(1);
+    },
+  };
+  const statuses: string[] = [];
+  const realtime = createWorkspaceRealtime({
+    getClient: () => client as never,
+    userId: "user-1",
+    onStatus: (status) => statuses.push(status),
+    requestRefresh: () => {},
+    retryDelaysMs: [10],
+  });
+  const first = base.channels[0];
+  first.subscribeCallback!("CHANNEL_ERROR", new Error("unauthorized"));
+  await wait(20);
+  assert.equal(first.removed, true);
+  assert.equal(base.channels.length, 2);
   realtime.stop();
 });

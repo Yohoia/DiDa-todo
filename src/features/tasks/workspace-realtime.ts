@@ -60,6 +60,9 @@ export function createWorkspaceRealtime({
 
   const reconnect = () => {
     if (!active) return;
+    // removeChannel can synchronously deliver CLOSED to the old subscription.
+    // Invalidate that generation before touching the channel to avoid re-entry.
+    generation++;
     setStatus("reconnecting");
     if (channel) {
       removeChannel(channel);
@@ -81,7 +84,6 @@ export function createWorkspaceRealtime({
     setStatus("connecting");
     let current = getClient().channel(`workspace:${userId}:${currentGeneration}`, {
       config: {
-        private: true,
         postgres_changes_options: { wait: true },
       },
     });

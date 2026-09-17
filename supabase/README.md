@@ -35,7 +35,7 @@ create the next reminder while catch-up scans cannot resurrect the old one. The 
 rows older than the account retention preference. Deleting a task cascades to its notifications.
 Notification inserts and task reassignments must reference a task owned by the authenticated user.
 
-## Insights, growth, account, and preferences (0010-0011)
+## Insights, growth, account, and notification policies (0010-0012)
 
 Migration `0010` adds focus-goal and notification preferences, permanent growth events/plants, and
 the database-side insight aggregation. Migration `0011` validates account time zones, adds the
@@ -44,9 +44,12 @@ a minimal private account-deletion audit after Auth user deletion. Account expor
 reads and excludes credentials; account deletion itself requires the server-side service-role
 configuration and never exposes that key to the browser.
 
-Both migrations are pending deployment until the corresponding `main` workflow finishes. The
-in-memory PostgreSQL suite executes every migration from `0001` through `0011` and verifies the
-RLS, dedupe, month-boundary, reward idempotency, preference validation, and cascade behavior.
+Migrations `0010` and `0011` have been deployed by the production migration jobs. Migration
+`0012_fix_real_notifications.sql` allows the account's task-free daily digest while keeping task
+reminders tied to an owned task, and fixes read updates for aggregate notifications. It is pending
+deployment until the next `main` migration workflow finishes. The in-memory PostgreSQL suite
+executes every migration from `0001` through `0012` and verifies the RLS, dedupe, month-boundary,
+reward idempotency, preference validation, notification policy, and cascade behavior.
 
 ## Automatic production deployment
 

@@ -313,6 +313,11 @@ test("actual PostgreSQL stage-three rules protect account, growth, insights, and
           ]),
           /notification_retention_days/,
         );
+        const digest = await db.query<{ id: string }>(
+          "insert into notifications(user_id,type,dedupe_key,title,remind_at) values ($1,'daily_digest','daily-digest:2026-09-17','Digest','2026-09-17T23:00:00Z') returning id",
+          [owner],
+        );
+        await db.query("update notifications set read=true where id=$1", [digest.rows[0]!.id]);
         await db.query(
           "update user_preferences set notification_retention_days=30 where user_id=$1",
           [owner],
