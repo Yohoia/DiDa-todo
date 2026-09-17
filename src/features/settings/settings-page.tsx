@@ -15,6 +15,8 @@ import { avatarImageSrc, avatarSeed, randomAvatarSeed } from "@/lib/avatar";
 import { ResetPasswordPanel } from "@/features/auth/reset-password-panel";
 import { authErrorText, isValidEmail } from "@/features/auth/auth-errors";
 import resetStyles from "@/features/auth/reset-password-panel.module.css";
+import { AccountPrivacyPanel } from "./account-privacy-panel";
+import { VoiceHistoryPanel } from "./voice-history-panel";
 import { messages, type MessageKey } from "@/i18n/messages";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -22,6 +24,22 @@ import shared from "@/styles/workspace.module.css";
 import styles from "./settings.module.css";
 
 const sections = ["General", "Tasks & Rules", "Notifications", "Appearance", "Account & Sync"];
+const TIME_ZONES = [
+  "Asia/Shanghai",
+  "Asia/Tokyo",
+  "Asia/Singapore",
+  "Asia/Dubai",
+  "Australia/Sydney",
+  "Europe/London",
+  "Europe/Berlin",
+  "Europe/Moscow",
+  "America/New_York",
+  "America/Chicago",
+  "America/Denver",
+  "America/Los_Angeles",
+  "America/Sao_Paulo",
+  "UTC",
+];
 function SettingRow({
   title,
   description,
@@ -404,6 +422,33 @@ export function SettingsPage({
                   onChange={(value) => save({ sound: value })}
                 />
               </SettingRow>
+              <SettingRow
+                title={t("settings.timeZone")}
+                description={t("settings.timeZoneDescription")}
+              >
+                <Select
+                  ariaLabel={t("settings.timeZone")}
+                  value={preferences.timeZone}
+                  onValueChange={(timeZone) => save({ timeZone })}
+                  align="end"
+                  options={TIME_ZONES.map((timeZone) => ({ value: timeZone, label: timeZone }))}
+                />
+              </SettingRow>
+              <SettingRow
+                title={t("settings.hourFormat")}
+                description={t("settings.hourFormatDescription")}
+              >
+                <Select
+                  ariaLabel={t("settings.hourFormat")}
+                  value={preferences.hour12 ? "12" : "24"}
+                  onValueChange={(value) => save({ hour12: value === "12" })}
+                  align="end"
+                  options={[
+                    { value: "24", label: t("settings.24Hour") },
+                    { value: "12", label: t("settings.12Hour") },
+                  ]}
+                />
+              </SettingRow>
             </section>
           )}
           {section === "General" && (
@@ -431,6 +476,18 @@ export function SettingsPage({
                   onChange={(value) => save({ autoBreak: value })}
                 />
               </SettingRow>
+              <SettingRow
+                title={t("settings.dailyFocusGoal")}
+                description={t("settings.dailyFocusGoalDescription")}
+              >
+                <NumberField
+                  label={t("settings.dailyFocusGoal")}
+                  value={preferences.dailyFocusGoalMinutes}
+                  min={15}
+                  max={600}
+                  onChange={(dailyFocusGoalMinutes) => save({ dailyFocusGoalMinutes })}
+                />
+              </SettingRow>
             </section>
           )}
           {section === "Tasks & Rules" && (
@@ -451,6 +508,34 @@ export function SettingsPage({
               <Link href="/today" className={shared.textButton}>
                 {t("View today's capacity →")}
               </Link>
+              <SettingRow
+                title={t("settings.defaultReminder")}
+                description={t("settings.defaultReminderDescription")}
+              >
+                <Select
+                  ariaLabel={t("settings.defaultReminder")}
+                  value={String(preferences.defaultReminderMinutes)}
+                  onValueChange={(value) => save({ defaultReminderMinutes: Number(value) })}
+                  align="end"
+                  options={[0, 5, 10, 15, 30, 60].map((minutes) => ({
+                    value: String(minutes),
+                    label:
+                      minutes === 0
+                        ? t("settings.atStartTime")
+                        : t("settings.minutesBefore", { count: minutes }),
+                  }))}
+                />
+              </SettingRow>
+              <SettingRow
+                title={t("settings.gamification")}
+                description={t("settings.gamificationDescription")}
+              >
+                <Switch
+                  label={t("settings.gamification")}
+                  checked={preferences.gamificationEnabled}
+                  onChange={(value) => save({ gamificationEnabled: value })}
+                />
+              </SettingRow>
             </section>
           )}
           {section === "Notifications" && (
@@ -464,6 +549,31 @@ export function SettingsPage({
                   label={t("Task Reminders")}
                   checked={preferences.reminders}
                   onChange={(value) => save({ reminders: value })}
+                />
+              </SettingRow>
+              <SettingRow
+                title={t("settings.dailyDigest")}
+                description={t("settings.dailyDigestDescription")}
+              >
+                <Switch
+                  label={t("settings.dailyDigest")}
+                  checked={preferences.dailyDigest}
+                  onChange={(value) => save({ dailyDigest: value })}
+                />
+              </SettingRow>
+              <SettingRow
+                title={t("settings.notificationRetention")}
+                description={t("settings.notificationRetentionDescription")}
+              >
+                <Select
+                  ariaLabel={t("settings.notificationRetention")}
+                  value={String(preferences.notificationRetentionDays)}
+                  onValueChange={(value) => save({ notificationRetentionDays: Number(value) })}
+                  align="end"
+                  options={[1, 3, 7, 14, 30, 60, 90].map((days) => ({
+                    value: String(days),
+                    label: t("settings.retentionDays", { count: days }),
+                  }))}
                 />
               </SettingRow>
               <p className={shared.muted}>{t("notifications.inAppHint")}</p>
@@ -534,6 +644,8 @@ export function SettingsPage({
                     </DialogContent>
                   </Dialog>
                   <p className={shared.muted}>{t("任务、偏好与语音记录已同步到你的账户。")}</p>
+                  {user.email && <AccountPrivacyPanel email={user.email} />}
+                  <VoiceHistoryPanel userId={user.id} />
                 </>
               ) : (
                 <>

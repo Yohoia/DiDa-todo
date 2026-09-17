@@ -9,7 +9,8 @@
  */
 
 import { z } from "zod";
-import { getTodayKey } from "@/lib/date-utils";
+import { dateKeyWeekday, getTodayKey, isValidTimeZone } from "@/lib/date-utils";
+import { getAuthenticatedSession } from "@/lib/server/workspace-session";
 import { guardVoiceRequest } from "@/lib/server/voice-request-guard";
 import type { VoiceParsed } from "@/types/voice";
 
@@ -39,7 +40,7 @@ const TaskSchema = z.object({
 
 /** 本周六（周一起始的本周） */
 function saturdayOf(today: string): string {
-  const day = new Date(`${today}T12:00:00+08:00`).getDay();
+  const day = dateKeyWeekday(today);
   return addDays(today, (6 - day + 7) % 7);
 }
 
@@ -54,10 +55,10 @@ function holidayLines(today: string): string {
   return [...lunar, ...gregorian].join("，");
 }
 
-function buildPrompt(today: string): string {
-  const weekday = "日一二三四五六"[new Date(`${today}T12:00:00+08:00`).getDay()];
+function buildPrompt(today: string, timeZone: string): string {
+  const weekday = "日一二三四五六"[dateKeyWeekday(today)];
   const now = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Shanghai",
+    timeZone,
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
@@ -237,6 +238,21 @@ export async function POST(request: Request) {
     return Response.json({ error: "not_configured" }, { status: 503 });
   }
 
+  const session = await getAuthenticatedSession();
+  if (!session) return Response.json({ error: "auth_required" }, { status: 401 });
+  const { data: preference, error: preferenceError } = await session.supabase
+    .from("user_preferences")
+    .select("time_zone")
+    .eq("user_id", session.user.id)
+    .maybeSingle();
+  if (preferenceError && preferenceError.code !== "PGRST204") {
+    return Response.json({ error: "bad_request" }, { status: 400 });
+  }
+  const requestedTimeZone = preference?.time_zone ?? "Asia/Shanghai";
+  if (!isValidTimeZone(requestedTimeZone)) {
+    return Response.json({ error: "bad_request" }, { status: 400 });
+  }
+
   let body: { transcript?: unknown; locale?: unknown };
   try {
     body = await request.json();
@@ -248,11 +264,11 @@ export async function POST(request: Request) {
     return Response.json({ error: "bad_request" }, { status: 400 });
   }
 
-  const today = getTodayKey();
+  const today = getTodayKey(new Date(), requestedTimeZone);
   const messages: { role: string; content: string }[] = [
     {
       role: "system",
-      content: buildPrompt(today),
+      content: buildPrompt(today, requestedTimeZone),
     },
     { role: "user", content: transcript },
   ];

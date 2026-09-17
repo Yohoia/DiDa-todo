@@ -6,6 +6,7 @@ import { CodeField } from "@/components/ui/code-field";
 import { useI18n } from "@/features/preferences/preferences-provider";
 import { meetsPasswordPolicy, PASSWORD_RULES } from "@/lib/password-policy";
 import { createClient } from "@/lib/supabase/client";
+import { autoSendGuardKey } from "./reset-password-guard";
 import { authErrorText, isValidEmail } from "./auth-errors";
 
 import styles from "./reset-password-panel.module.css";
@@ -22,15 +23,14 @@ type Props = {
   onBack?: () => void;
 };
 
-const AUTO_SEND_GUARD_KEY = "dida-reset-code-sent-at";
 const AUTO_SEND_WINDOW_MS = 55_000;
 
 /** autoSend 初始状态：55 秒内发过则直接进入输码步并恢复倒计时，否则待发码 */
-function autoSendInitial(autoSend: boolean, locked: boolean) {
-  if (!autoSend || !locked || typeof window === "undefined") {
+function autoSendInitial(autoSend: boolean, lockedEmail?: string) {
+  if (!autoSend || !lockedEmail || typeof window === "undefined") {
     return { step: "email" as Step, cooldown: 0, shouldSend: false };
   }
-  const last = Number(window.localStorage.getItem(AUTO_SEND_GUARD_KEY) ?? 0);
+  const last = Number(window.localStorage.getItem(autoSendGuardKey(lockedEmail)) ?? 0);
   const elapsed = Date.now() - last;
   if (Number.isFinite(last) && elapsed >= 0 && elapsed < AUTO_SEND_WINDOW_MS) {
     return {
@@ -59,7 +59,7 @@ export function ResetPasswordPanel({
 }: Props) {
   const { t } = useI18n();
   const locked = Boolean(lockedEmail);
-  const initial = useRef(autoSendInitial(autoSend, locked)).current;
+  const initial = useRef(autoSendInitial(autoSend, lockedEmail)).current;
   const [email, setEmail] = useState(lockedEmail ?? initialEmail);
   const [step, setStep] = useState<Step>(initial.step);
   const [code, setCode] = useState("");
@@ -103,7 +103,7 @@ export function ResetPasswordPanel({
       setCooldown(60);
       setStep("code");
       try {
-        window.localStorage.setItem(AUTO_SEND_GUARD_KEY, String(Date.now()));
+        window.localStorage.setItem(autoSendGuardKey(value), String(Date.now()));
       } catch {
         // 写入失败仅失去防重发护栏
       }

@@ -592,6 +592,10 @@ test("actual workspace capture flow retains failed drafts, retries only failures
     "./organization-editor": { organizationDraftError },
     "./task-capture": { captureDraftError, capturedTask },
     "@/features/focus/focus-journal": {},
+    "@/features/preferences/preferences-provider": {
+      PreferencesProvider: ({ children }: { children: unknown }) => ({ props: { children } }),
+      usePreferences: () => DEFAULT_PREFERENCES,
+    },
   };
   type Capture = { id: string; title: string; list: "Inbox"; date: string; time?: string };
   const exports: {

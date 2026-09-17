@@ -1,4 +1,4 @@
-import type { VoiceParsed } from "@/types/voice";
+import type { VoiceParsed } from "../../types/voice.ts";
 
 /** 转写/解析的客户端封装：错误折成 message 代号（not_configured 等），由调用方映射 toast。 */
 
@@ -28,13 +28,15 @@ export async function transcribeAudio(
     response = await fetch("/api/voice/transcribe", { method: "POST", body: form, signal });
   } catch (error) {
     if (signal?.aborted) throw error;
-    throw new Error("asr_failed");
+    throw new Error(error instanceof TypeError ? "network_failed" : "asr_failed");
   }
   if (response.status === 401) throw new Error("auth_required");
+  if (response.status === 403) throw new Error("auth_required");
   if (response.status === 503) throw new Error("not_configured");
   if (response.status === 429) throw new Error("rate_limited");
   if (response.status === 504) throw new Error("asr_timeout");
-  if (!response.ok) throw await upstreamError(response, "asr_failed");
+  if (response.status === 400) throw await upstreamError(response, "audio_invalid");
+  if (!response.ok) throw await upstreamError(response, "asr_upstream_failed");
   const data = (await response.json()) as { transcript?: string };
   return (data.transcript ?? "").trim();
 }
@@ -54,7 +56,7 @@ export async function parseTranscript(
     });
   } catch (error) {
     if (signal?.aborted) throw error;
-    throw new Error("parse_failed");
+    throw new Error(error instanceof TypeError ? "network_failed" : "parse_failed");
   }
   if (response.status === 401) throw new Error("auth_required");
   if (response.status === 503) throw new Error("not_configured");

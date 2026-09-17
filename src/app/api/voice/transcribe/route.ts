@@ -10,6 +10,7 @@
 import { guardVoiceRequest } from "@/lib/server/voice-request-guard";
 import { request as httpsRequest } from "node:https";
 import { inspectWav } from "@/lib/audio/inspect-wav";
+import { createClient as createServerClient } from "@/lib/supabase/server";
 
 /** 覆盖未启用 Fluid Compute 时较短的 Vercel 默认时限。 */
 export const maxDuration = 60;
@@ -22,6 +23,21 @@ const ASR_TIMEOUT_MS = 45_000;
 type UpstreamResult = { status: number; body: string };
 
 const MAX_UPSTREAM_RESPONSE_BYTES = 4 * 1024 * 1024;
+
+async function hotwordVocabulary(): Promise<Record<string, number>> {
+  const { data, error } = await (
+    await createServerClient()
+  )
+    .from("voice_hotwords")
+    .select("word,weight")
+    .order("weight", { ascending: false })
+    .order("word", { ascending: true })
+    .limit(20);
+  if (error) throw new Error("hotwords_unavailable");
+  const vocabulary: Record<string, number> = { Inbox: 1, Work: 1, Study: 1, Life: 1 };
+  for (const row of data ?? []) vocabulary[row.word] = Math.min(Math.max(row.weight, 1), 5);
+  return vocabulary;
+}
 
 /**
  * 百炼北京共享域名在部分 Vercel 出口上会让 Node fetch/undici 连接超时。
@@ -107,6 +123,12 @@ export async function POST(request: Request) {
   if (!apiKey) {
     return Response.json({ error: "not_configured" }, { status: 503 });
   }
+  let vocabulary: Record<string, number>;
+  try {
+    vocabulary = await hotwordVocabulary();
+  } catch {
+    return Response.json({ error: "hotwords_unavailable" }, { status: 503 });
+  }
 
   let form: FormData;
   try {
@@ -158,7 +180,7 @@ export async function POST(request: Request) {
       format: "wav",
       sample_rate: "16000",
       // 热词表（替代旧 system 词表用法）：提升清单专名识别
-      vocabulary: { Inbox: 1, Work: 1, Study: 1, Life: 1 },
+      vocabulary,
       ...(language ? { language_hints: [language] } : {}),
     },
   });
@@ -196,14 +218,15 @@ export async function POST(request: Request) {
     }
     // 401/403/400 等上游错误：状态码与错误 code 记入服务端日志与响应 detail，
     // 用于区分 key 无效 / 地域限制 / 参数问题（同样是只记错误元数据）
-    const body = upstream.body;
     let upstreamCode = "";
     try {
-      upstreamCode = String(JSON.parse(body)?.error?.code ?? "") || "";
+      upstreamCode = String(JSON.parse(upstream.body)?.error?.code ?? "") || "";
     } catch {
       upstreamCode = "";
     }
-    console.error(`[voice/transcribe] upstream ${upstream.status}: ${body.slice(0, 300)}`);
+    console.error(
+      `[voice/transcribe] upstream status=${upstream.status}${upstreamCode ? ` code=${upstreamCode}` : ""}`,
+    );
     return Response.json(
       {
         error: "asr_failed",

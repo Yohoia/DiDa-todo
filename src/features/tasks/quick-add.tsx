@@ -1,5 +1,6 @@
 "use client";
 import { useI18n } from "@/features/preferences/preferences-provider";
+import { useTodayKey } from "@/hooks/use-today-key";
 
 import { useDialogFocus } from "@/hooks/use-dialog-focus";
 
@@ -13,7 +14,6 @@ import { workspaceLinks } from "@/components/layout/workspace-nav";
 import { useWorkspace, type QuickAddPreset } from "./workspace-provider";
 import type { TaskList } from "@/types/task";
 import { cn, createId } from "@/lib/utils";
-import { getTodayKey } from "@/lib/date-utils";
 import { parseTranscript } from "./voice-api";
 import { parseQuickCapture, type TaskCaptureDraft } from "./task-capture";
 import { TaskCaptureReview } from "./task-capture-review";
@@ -88,10 +88,11 @@ function QuickAddForm({
   const requestRef = useRef<AbortController | null>(null);
   const [review, setReview] = useState<TaskCaptureDraft[] | null>(preset.captures ?? null);
   const [draftId] = useState(createId);
+  const todayKey = useTodayKey();
   useEffect(() => () => requestRef.current?.abort(), []);
   const quickDraft = parseQuickCapture(
     title,
-    getTodayKey(),
+    todayKey,
     { list: initialList, date: initialDate, time: initialTime },
     draftId,
   );

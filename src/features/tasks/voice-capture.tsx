@@ -43,7 +43,11 @@ export function useVoiceCapture() {
   const requestRef = useRef<AbortController | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const durationSecondsRef = useRef<number | undefined>(undefined);
+  const voiceCaptureRef = useRef(voiceCapture);
+  const confirmVoiceRef = useRef(() => {});
   const [audioLevel, setAudioLevel] = useState(0);
+  voiceCaptureRef.current = voiceCapture;
+  confirmVoiceRef.current = confirmVoice;
 
   useEffect(() => {
     return () => {
@@ -63,6 +67,25 @@ export function useVoiceCapture() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 只随录音态起停定时器
   }, [voiceCapture?.phase]);
+
+  // iOS/Android may stop audio callbacks after backgrounding. Stop and encode
+  // whatever has already been captured before that happens, then continue the
+  // normal upload flow; the manual check button keeps the same path.
+  useEffect(() => {
+    function preserveRecording() {
+      if (
+        document.visibilityState !== "hidden" ||
+        isVoiceDemo() ||
+        busyRef.current ||
+        voiceCaptureRef.current?.phase !== "recording"
+      ) {
+        return;
+      }
+      void confirmVoiceRef.current();
+    }
+    document.addEventListener("visibilitychange", preserveRecording);
+    return () => document.removeEventListener("visibilitychange", preserveRecording);
+  }, []);
 
   /** 麦克风点击入口：prewarm 必须在手势同步段（iOS AudioContext 限制），其余放异步。 */
   function startVoice() {
@@ -91,15 +114,32 @@ export function useVoiceCapture() {
         }
       }
       if (isVoiceDemo()) return;
-      const started = await recorderRef.current?.start(setAudioLevel);
+      const recorder = recorderRef.current;
+      if (!recorder) {
+        setVoiceCapture(null);
+        return;
+      }
+      const started = await recorder.start(setAudioLevel, () => {
+        void confirmVoiceRef.current();
+      });
       if (flow !== flowRef.current) return;
       if (!started) {
         recorderRef.current?.abort();
         setVoiceCapture(null);
       }
-    } catch {
+    } catch (error) {
       if (flow !== flowRef.current) return;
-      notify({ key: "无法访问麦克风" });
+      const name = error instanceof DOMException ? error.name : "";
+      notify({
+        key:
+          name === "NotAllowedError" || name === "SecurityError"
+            ? "无法访问麦克风"
+            : name === "NotFoundError" || name === "OverconstrainedError"
+              ? "未检测到麦克风"
+              : name === "NotReadableError"
+                ? "麦克风被占用"
+                : "语音采集失败",
+      });
       recorderRef.current?.abort();
       setVoiceCapture(null);
     } finally {
@@ -179,7 +219,13 @@ export function useVoiceCapture() {
                   ? "尝试太频繁，请稍后再试"
                   : code === "asr_timeout"
                     ? "识别超时，请再试一次"
-                    : "识别失败，请重试",
+                    : code === "network_failed"
+                      ? "网络连接不可用"
+                      : code === "asr_upstream_failed"
+                        ? "语音上游服务暂时不可用"
+                        : code === "audio_invalid"
+                          ? "录音格式无效"
+                          : "识别失败，请重试",
         });
         requestRef.current = null;
         setVoiceCapture(null);

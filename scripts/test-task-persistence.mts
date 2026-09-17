@@ -25,10 +25,12 @@ function database(
   beforeUpdate?: () => void,
   failSubtaskWrites = false,
   rpc?: { rows: Row[]; count?: number },
+  missingFocusTaskIds: string[] = [],
 ) {
   let taskVersion = 0;
   const rpcCalls: RpcCall[] = [];
   const readRanges: { table: string; from: number; to: number }[] = [];
+  const missingTaskIds = new Set(missingFocusTaskIds);
   return {
     rpcCalls: () => rpcCalls,
     readRanges: () => readRanges,
@@ -59,8 +61,8 @@ function database(
           ordering.push({ key, ascending: options?.ascending !== false });
           return query;
         },
-        upsert(values: Row[]) {
-          upserts = values;
+        upsert(values: Row | Row[]) {
+          upserts = Array.isArray(values) ? values : [values];
           return query;
         },
         delete() {
@@ -88,6 +90,18 @@ function database(
           filters.push((row) => Number(row[key]) <= value);
           return query;
         },
+        lt(key: string, value: string | number) {
+          filters.push((row) =>
+            typeof value === "number"
+              ? Number(row[key]) < value
+              : row[key] !== null && String(row[key]) < value,
+          );
+          return query;
+        },
+        is(key: string, value: unknown) {
+          filters.push((row) => row[key] === value);
+          return query;
+        },
         gte(key: string, value: unknown) {
           filters.push((row) => row[key] !== null && String(row[key]) >= String(value));
           return query;
@@ -107,13 +121,25 @@ function database(
           return query;
         },
         then(resolve: (result: Result) => unknown) {
+          const focusTaskId = String(
+            (inserted ?? (patch && Object.hasOwn(patch, "task_id") ? patch : undefined))?.task_id ??
+              "",
+          );
+          if (table === "focus_sessions" && missingTaskIds.has(focusTaskId)) {
+            return Promise.resolve({
+              data: [],
+              error: { message: "task_id must belong to user_id", code: "23503" },
+            }).then(resolve);
+          }
           if (table === "subtasks" && failSubtaskWrites && (upserts || deleting))
             return Promise.resolve({ data: [], error: { message: "subtask offline" } }).then(
               resolve,
             );
           if (upserts)
             for (const value of upserts) {
-              const existing = (tables[table] ?? []).find((row) => row.id === value.id);
+              const existing = (tables[table] ?? []).find((row) =>
+                value.id ? row.id === value.id : row.user_id === value.user_id,
+              );
               if (existing) Object.assign(existing, value);
               else (tables[table] ??= []).push(value);
             }
@@ -303,6 +329,27 @@ test("single-task reload reads only the owner task and its ordered subtasks", as
   assert.equal(await repository.loadTask("missing"), null);
 });
 
+test("task mutations are owner-scoped in the repository layer", async () => {
+  const owned = taskRow();
+  const foreign = { ...taskRow(), id: "foreign", user_id: "someone-else" };
+  const tables = { tasks: [owned, foreign] };
+  const repository = createRepository(database(tables), "owner");
+
+  await repository.updateTask("foreign", { title: "Escalated" });
+  await repository.deleteTask("foreign");
+  const loaded = await repository.loadTasks();
+
+  assert.deepEqual(
+    loaded.map((task) => task.id),
+    ["task-1"],
+  );
+  assert.equal(foreign.title, "Read");
+  assert.equal(
+    tables.tasks.some((task) => task.id === "foreign"),
+    true,
+  );
+});
+
 test("workspace preload reads active tasks, today's completions and only owned children", async () => {
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Shanghai" });
   const yesterday = new Date(Date.now() - 48 * 60 * 60 * 1000).toLocaleDateString("en-CA", {
@@ -436,6 +483,8 @@ function notification(id: string, userId = "owner"): Row {
     id,
     user_id: userId,
     task_id: `task-${id}`,
+    dedupe_key: `task-${id}`,
+    type: "task_due",
     title: "Reminder",
     read: false,
     remind_at: "2026-09-16T01:00:00Z",
@@ -478,7 +527,7 @@ test("notification pagination preserves older and hidden reminder deduplication 
 test("marking notifications read keeps them visible and never changes another user's rows", async () => {
   const rows = [notification("1"), notification("2"), notification("other", "someone-else")];
   const repository = createRepository(database({ notifications: rows }), "owner");
-  await repository.markTaskNotificationRead("task-other");
+  await repository.markNotificationRead("other");
   assert.equal(rows[2].read, false);
   await repository.markAllNotificationsRead();
   const loaded = await repository.listNotifications();
@@ -528,7 +577,7 @@ test("a losing notification insert can still mark and clear the real row before 
   };
   await repository.createTaskDueNotification(local);
   assert.equal(rows.length, 2);
-  await repository.markTaskNotificationRead(local.taskId);
+  await repository.markNotificationRead("real");
   assert.equal(rows[0].read, true);
   await repository.dismissTaskNotifications([local.taskId]);
   assert.equal(
@@ -776,4 +825,41 @@ test("focus checkpoints replay with one ID without duplicate or shrinking record
   assert.equal(rows[0].completed, true);
   await repository.recordFocusSession({ ...input, id: "session-2" });
   assert.equal(rows.length, 2);
+});
+
+test("focus checkpoints survive cross-device task deletion as orphan facts", async () => {
+  const rows: Row[] = [];
+  const repository = createRepository(
+    database({ focus_sessions: rows }, false, false, undefined, false, undefined, ["deleted-task"]),
+    "owner",
+  );
+  const input = {
+    id: "session-1",
+    taskId: "deleted-task",
+    startedAt: "2026-09-16T00:00:00Z",
+    endedAt: "2026-09-16T00:01:00Z",
+    durationSeconds: 30,
+    completed: false,
+  };
+
+  await repository.recordFocusSession(input);
+  assert.deepEqual(rows, [
+    {
+      id: "session-1",
+      user_id: "owner",
+      task_id: null,
+      mode: "focus",
+      started_at: input.startedAt,
+      ended_at: input.endedAt,
+      duration_seconds: 30,
+      completed: false,
+    },
+  ]);
+
+  const replay = { ...input, durationSeconds: 60, completed: true };
+  await repository.recordFocusSession(replay);
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].task_id, null);
+  assert.equal(rows[0].duration_seconds, 60);
+  assert.equal(rows[0].completed, true);
 });

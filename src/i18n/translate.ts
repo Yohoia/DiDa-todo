@@ -1,7 +1,13 @@
 import type { Locale } from "./config";
 import { messages, type MessageKey } from "./messages";
 export type MessageValues = Record<string, string | number>;
-export function createTranslator(locale: Locale) {
+export function createTranslator(
+  locale: Locale,
+  datePreferences: { timeZone: string; hour12: boolean } = {
+    timeZone: "Asia/Shanghai",
+    hour12: false,
+  },
+) {
   const plurals = new Intl.PluralRules(locale);
   function t(key: MessageKey, values: MessageValues = {}) {
     const entry = messages[key][locale];
@@ -18,11 +24,13 @@ export function createTranslator(locale: Locale) {
   function date(value: string | Date, options: Intl.DateTimeFormatOptions = {}) {
     const parsed =
       typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)
-        ? new Date(`${value}T12:00:00+08:00`)
+        ? new Date(`${value}T12:00:00Z`)
         : new Date(value);
-    return new Intl.DateTimeFormat(locale, { timeZone: "Asia/Shanghai", ...options }).format(
-      parsed,
-    );
+    return new Intl.DateTimeFormat(locale, {
+      timeZone: datePreferences.timeZone,
+      hour12: datePreferences.hour12,
+      ...options,
+    }).format(parsed);
   }
   function number(value: number) {
     return new Intl.NumberFormat(locale).format(value);

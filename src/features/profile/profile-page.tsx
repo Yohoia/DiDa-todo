@@ -1,7 +1,6 @@
 import { getI18n } from "@/i18n/server";
 import Link from "next/link";
-import type { CSSProperties } from "react";
-import { HiAdjustmentsHorizontal, HiClock, HiFire, HiSparkles } from "react-icons/hi2";
+import { HiAdjustmentsHorizontal, HiClock, HiFire, HiSparkles, HiTrophy } from "react-icons/hi2";
 import { SectionLabel } from "@/components/shared/workspace-ui";
 import { AvatarView } from "@/components/shared/avatar-view";
 import { avatarImageSrc, avatarSeed } from "@/lib/avatar";
@@ -25,14 +24,6 @@ export async function ProfilePage() {
   ]);
   const { focusGarden } = profile;
   const planted = focusGarden.plants.length;
-  const goalReached = planted >= focusGarden.weeklyGoal;
-  const remainingMinutes = goalReached
-    ? 0
-    : focusGarden.minutesPerPlant - focusGarden.currentPlantMinutes;
-  const currentProgress = Math.round(
-    (focusGarden.currentPlantMinutes / focusGarden.minutesPerPlant) * 100,
-  );
-  const emptyPlots = Math.max(0, focusGarden.weeklyGoal - planted - (goalReached ? 0 : 1));
   const hours = Math.floor(focusGarden.weeklyMinutes / 60);
   const minutes = focusGarden.weeklyMinutes % 60;
   const focusedTime = locale === "zh-CN" ? `${hours} 小时 ${minutes} 分` : `${hours}h ${minutes}m`;
@@ -99,11 +90,11 @@ export async function ProfilePage() {
         <article className={styles.garden}>
           <div className={styles.gardenHeading}>
             <div>
-              <h3>{t("profile.weeklyGarden")}</h3>
-              <p>{t('"Every 2 hours of deep work grows a new tree."')}</p>
+              <h3>{t("profile.permanentGarden")}</h3>
+              <p>{t("profile.permanentGardenHint")}</p>
             </div>
             <span className={styles.weeklyGoal}>
-              {t("profile.weeklyGoal", { count: planted, goal: focusGarden.weeklyGoal })}
+              {t("profile.plantCount", { count: planted, goal: planted })}
             </span>
           </div>
           <dl className={styles.gardenStats}>
@@ -115,12 +106,12 @@ export async function ProfilePage() {
             <div>
               <HiSparkles size={16} aria-hidden="true" />
               <dt>{t("profile.plantsGrown")}</dt>
-              <dd>{t("profile.plantCount", { count: planted, goal: focusGarden.weeklyGoal })}</dd>
+              <dd>{number(planted)}</dd>
             </div>
             <div>
-              <HiFire size={16} aria-hidden="true" />
-              <dt>{t("profile.currentStreak")}</dt>
-              <dd>{t("profile.dayCount", { count: focusGarden.streakDays })}</dd>
+              <HiTrophy size={16} aria-hidden="true" />
+              <dt>{t("profile.coins")}</dt>
+              <dd>{number(profile.coins)}</dd>
             </div>
           </dl>
           <ol className={styles.plots} aria-label={t("profile.gardenPlots")}>
@@ -136,46 +127,36 @@ export async function ProfilePage() {
                 <small>{date(plant.plantedAt, { month: "numeric", day: "numeric" })}</small>
               </li>
             ))}
-            {!goalReached && (
-              <li className={`${styles.plot} ${styles.growingPlot}`}>
-                <span
-                  className={styles.growingRing}
-                  style={{ "--progress": `${currentProgress * 3.6}deg` } as CSSProperties}
-                >
-                  <span role="img" aria-label={t("profile.growingPlant")}>
-                    🌱
-                  </span>
-                </span>
-                <small>{currentProgress}%</small>
+            {!planted && (
+              <li className={`${styles.plot} ${styles.emptyPlot}`}>
+                <span aria-hidden="true" />
+                <small>{t("profile.firstPlantHint")}</small>
               </li>
             )}
-            {Array.from({ length: emptyPlots }, (_, index) => (
-              <li className={`${styles.plot} ${styles.emptyPlot}`} key={`empty-${index}`}>
-                <span aria-hidden="true" />
-                <small>{t("profile.emptyPlot")}</small>
-              </li>
-            ))}
           </ol>
-          {goalReached ? (
-            <p className={styles.nextTree}>{t("profile.weeklyGoalReached")}</p>
+          {profile.gamificationEnabled ? (
+            <>
+              {profile.achievements.length > 0 && (
+                <ul className={styles.achievements} aria-label={t("profile.achievements")}>
+                  {profile.achievements.map((achievement) => (
+                    <li key={achievement.key}>
+                      <HiTrophy size={14} aria-hidden="true" />
+                      <span>{label(`growth.achievement.${achievement.key}`)}</span>
+                      <small>{date(achievement.earnedAt, { dateStyle: "medium" })}</small>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className={styles.nextTree}>{t("profile.gardenFactSource")}</p>
+            </>
           ) : (
-            <div className={styles.nextTree}>
-              <div className={styles.nextTreeCopy}>
-                <span>{t("profile.nextPlant")}</span>
-                <strong>{t("profile.minutesRemaining", { count: remainingMinutes })}</strong>
-              </div>
-              <div
-                className={styles.gardenProgress}
-                role="progressbar"
-                aria-label={t("profile.nextPlantProgress")}
-                aria-valuemin={0}
-                aria-valuemax={focusGarden.minutesPerPlant}
-                aria-valuenow={focusGarden.currentPlantMinutes}
-              >
-                <span style={{ width: `${currentProgress}%` }} />
-              </div>
-            </div>
+            <p className={styles.nextTree}>{t("profile.gamificationDisabled")}</p>
           )}
+          <div className={styles.streakRow}>
+            <HiFire size={14} aria-hidden="true" />
+            {t("profile.currentStreak")}:
+            <strong>{t("profile.dayCount", { count: focusGarden.streakDays })}</strong>
+          </div>
         </article>
       </section>
     </div>

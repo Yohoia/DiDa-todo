@@ -9,6 +9,7 @@ const TARGET_SAMPLE_RATE = 16_000;
 const MIN_SECONDS = 0.3;
 /** 与服务端 transcribe 路由的时长上限一致 */
 export const MAX_RECORD_SECONDS = 60;
+export const SILENCE_AUTO_STOP_SECONDS = 4;
 
 export class WavRecorder {
   private context: AudioContext | null = null;
@@ -20,7 +21,9 @@ export class WavRecorder {
   private chunks: Float32Array[] = [];
   private seconds = 0;
   private smoothedLevel = 0;
+  private silentSeconds = 0;
   private onLevel: ((level: number) => void) | null = null;
+  private onSilence: (() => void) | null = null;
   private recording = false;
   private starting = false;
   private operation = 0;
@@ -44,7 +47,7 @@ export class WavRecorder {
     return this.recording;
   }
 
-  async start(onLevel?: (level: number) => void): Promise<boolean> {
+  async start(onLevel?: (level: number) => void, onSilence?: () => void): Promise<boolean> {
     if (this.recording || this.starting) return false;
     const operation = ++this.operation;
     this.starting = true;
@@ -86,7 +89,9 @@ export class WavRecorder {
       this.chunks = [];
       this.seconds = 0;
       this.smoothedLevel = 0;
+      this.silentSeconds = 0;
       this.onLevel = onLevel ?? null;
+      this.onSilence = onSilence ?? null;
       this.recording = true;
 
       if (workletReady) {
@@ -157,6 +162,13 @@ export class WavRecorder {
     const factor = measured > this.smoothedLevel ? 0.55 : 0.22;
     this.smoothedLevel += (measured - this.smoothedLevel) * factor;
     if (this.smoothedLevel < 0.025) this.smoothedLevel = 0;
+    const inputSeconds = input.length / sampleRate;
+    this.silentSeconds = nextSilenceSeconds(this.silentSeconds, inputSeconds, this.smoothedLevel);
+    if (this.seconds >= 1 && this.silentSeconds >= SILENCE_AUTO_STOP_SECONDS && this.onSilence) {
+      const onSilence = this.onSilence;
+      this.onSilence = null;
+      onSilence();
+    }
     this.onLevel?.(this.smoothedLevel);
   }
 
@@ -164,9 +176,11 @@ export class WavRecorder {
     this.recording = false;
     this.onLevel?.(0);
     this.onLevel = null;
+    this.onSilence = null;
     this.smoothedLevel = 0;
     this.chunks = [];
     this.seconds = 0;
+    this.silentSeconds = 0;
     if (this.worklet) this.worklet.port.onmessage = null;
     if (this.processor) this.processor.onaudioprocess = null;
     this.worklet?.disconnect();
@@ -189,12 +203,23 @@ function stopStream(stream: MediaStream | null) {
   stream?.getTracks().forEach((track) => track.stop());
 }
 
+export function nextSilenceSeconds(current: number, inputSeconds: number, level: number) {
+  if (level > 0.025) return 0;
+  return Math.max(0, current + inputSeconds);
+}
+
 async function requestMicStream(): Promise<MediaStream> {
   try {
     return await navigator.mediaDevices.getUserMedia({
       audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true },
     });
-  } catch {
+  } catch (error) {
+    if (
+      error instanceof DOMException &&
+      ["NotAllowedError", "SecurityError", "NotFoundError", "NotReadableError"].includes(error.name)
+    ) {
+      throw error;
+    }
     // 个别浏览器对约束挑剔（OverconstrainedError），退回裸申请
     return navigator.mediaDevices.getUserMedia({ audio: true });
   }

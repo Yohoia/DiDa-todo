@@ -10,7 +10,8 @@ import {
   acknowledgeFocusSession,
 } from "../src/features/focus/focus-journal.ts";
 import { inspectWav } from "../src/lib/audio/inspect-wav.ts";
-import { taskDateTime } from "../src/lib/date-utils.ts";
+import { dateKeyWeekday, taskDateTime } from "../src/lib/date-utils.ts";
+import { autoSendGuardKey } from "../src/features/auth/reset-password-guard.ts";
 import { normalizeFocusPatch, canSetTodayFocus } from "../src/features/tasks/task-focus.ts";
 import {
   isOrganizationCandidateCurrent,
@@ -100,6 +101,38 @@ test("task reminders use Shanghai time even when the device timezone changes", (
     if (previous === undefined) delete process.env.TZ;
     else process.env.TZ = previous;
   }
+});
+
+test("date-key weekdays stay stable when the process timezone changes", () => {
+  const previous = process.env.TZ;
+  const keys = [
+    "2026-09-13",
+    "2026-09-14",
+    "2026-09-15",
+    "2026-09-16",
+    "2026-09-17",
+    "2026-09-18",
+    "2026-09-19",
+  ];
+  const weekdays = [0, 1, 2, 3, 4, 5, 6];
+  try {
+    for (const timezone of ["UTC", "America/Los_Angeles", "Pacific/Honolulu", "Asia/Shanghai"]) {
+      process.env.TZ = timezone;
+      assert.deepEqual(
+        keys.map((key) => dateKeyWeekday(key)),
+        weekdays,
+      );
+    }
+  } finally {
+    if (previous === undefined) delete process.env.TZ;
+    else process.env.TZ = previous;
+  }
+  const parseRoute = readFileSync(
+    new URL("../src/app/api/voice/parse/route.ts", import.meta.url),
+    "utf8",
+  );
+  assert.equal(parseRoute.includes("getDay()"), false);
+  assert.ok(parseRoute.includes("dateKeyWeekday(today)"));
 });
 
 test("focus wall-clock handles background time and excludes paused time", () => {
@@ -201,6 +234,19 @@ test("transcription route returns 400 for a truncated format chunk without conta
     process: { env: { DASHSCOPE_API_KEY: "isolated-test-key" } },
     require: (id: string) => {
       if (id.includes("voice-request-guard")) return { guardVoiceRequest: async () => null };
+      if (id.includes("supabase/server"))
+        return {
+          createClient: async () => ({
+            from: () => {
+              const query = {
+                select: () => query,
+                order: () => query,
+                limit: async () => ({ data: [], error: null }),
+              };
+              return query;
+            },
+          }),
+        };
       if (id.includes("inspect-wav")) return { inspectWav };
       if (id === "node:https")
         return {
@@ -329,6 +375,19 @@ test("settings recovery URL cannot select the former direct-password form", () =
     "utf8",
   );
   assert.ok(reset.includes('step !== "password" || verifiedEmailRef.current !== email.trim()'));
+  assert.notEqual(autoSendGuardKey("user-a@example.com"), autoSendGuardKey("user-b@example.com"));
+  assert.equal(autoSendGuardKey("User-A@example.com"), autoSendGuardKey("user-a@example.com"));
+  assert.equal(reset.includes("window.localStorage.getItem(AUTO_SEND_GUARD_KEY)"), false);
+});
+
+test("transcription upstream failures log metadata without response bodies", () => {
+  const transcribe = readFileSync(
+    new URL("../src/app/api/voice/transcribe/route.ts", import.meta.url),
+    "utf8",
+  );
+  assert.equal(transcribe.includes("${body.slice"), false);
+  assert.match(transcribe, /upstream status=\$\{upstream\.status\}/);
+  assert.match(transcribe, /code=\$\{upstreamCode\}/);
 });
 
 test("Inbox exposes undated unfinished tasks without changing the AI day boundary", () => {

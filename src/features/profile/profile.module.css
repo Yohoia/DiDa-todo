@@ -267,6 +267,54 @@
   border-radius: inherit;
   background: var(--brand-gold);
 }
+.achievements {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.achievements li {
+  display: grid;
+  grid-template-columns: 16px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--separator);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--secondary) 45%, var(--card));
+  color: var(--foreground);
+  font-size: 12px;
+}
+.achievements svg {
+  color: var(--brand-gold);
+}
+.achievements span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.achievements small {
+  color: var(--task-muted);
+  font-size: 10px;
+}
+.streakRow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 16px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.streakRow svg {
+  color: var(--brand-gold);
+}
+.streakRow strong {
+  color: var(--foreground);
+  font-weight: 500;
+}
 /* 设置入口：头像行最右侧，与行底部对齐 */
 .settingsLink {
   margin-left: auto;
@@ -324,5 +372,8 @@
   }
   .plots {
     grid-template-columns: repeat(4, 1fr);
+  }
+  .achievements {
+    grid-template-columns: 1fr;
   }
 }

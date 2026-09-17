@@ -1,5 +1,5 @@
 "use client";
-import { useI18n } from "@/features/preferences/preferences-provider";
+import { useI18n, usePreferences } from "@/features/preferences/preferences-provider";
 
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
@@ -8,21 +8,20 @@ import { useWorkspace } from "./workspace-provider";
 import { cn } from "@/lib/utils";
 import styles from "@/styles/workspace.module.css";
 
-function completionDay(completedAt?: string) {
-  return completedAt
-    ? new Date(completedAt).toLocaleDateString("en-CA", { timeZone: "Asia/Shanghai" })
-    : "Earlier";
+function completionDay(completedAt: string | undefined, timeZone: string) {
+  return completedAt ? new Date(completedAt).toLocaleDateString("en-CA", { timeZone }) : "Earlier";
 }
 
 const PAGE_SIZE = 30;
 
 export function CompletedPage() {
   const { t, date: formatDate, locale } = useI18n();
+  const { timeZone, hour12 } = usePreferences();
   const { tasks, toggleTask, deleteTask, notify, loadCompletedTasks } = useWorkspace();
   const completed = tasks
     .filter((task) => task.completed)
     .sort((a, b) => (b.completedAt || "").localeCompare(a.completedAt || ""));
-  const dates = [...new Set(completed.map((task) => completionDay(task.completedAt)))];
+  const dates = [...new Set(completed.map((task) => completionDay(task.completedAt, timeZone)))];
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [offset, setOffset] = useState(0);
@@ -79,7 +78,7 @@ export function CompletedPage() {
           <div className="flex flex-col gap-2">
             <AnimatePresence mode="popLayout">
               {completed
-                .filter((task) => completionDay(task.completedAt) === date)
+                .filter((task) => completionDay(task.completedAt, timeZone) === date)
                 .map((task) => (
                   <motion.div
                     key={task.id}
@@ -98,7 +97,8 @@ export function CompletedPage() {
                           ? new Date(task.completedAt).toLocaleTimeString(locale, {
                               hour: "2-digit",
                               minute: "2-digit",
-                              timeZone: "Asia/Shanghai",
+                              timeZone,
+                              hour12,
                             })
                           : "—"}
                       </p>

@@ -39,7 +39,7 @@ export function NotificationBell() {
 
   function openTask(notification: AppNotification) {
     markNotificationRead(notification.id);
-    selectTask(notification.taskId);
+    if (notification.taskId) selectTask(notification.taskId);
     setOpen(false);
   }
 

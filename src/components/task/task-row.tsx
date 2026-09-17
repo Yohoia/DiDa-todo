@@ -1,6 +1,7 @@
 "use client";
 import { useI18n } from "@/features/preferences/preferences-provider";
-import { getTodayKey, isOverdue } from "@/lib/date-utils";
+import { useTodayKey } from "@/hooks/use-today-key";
+import { isOverdue } from "@/lib/date-utils";
 
 import { HiCheck, HiClock, HiLockClosed, HiOutlineTrash } from "react-icons/hi2";
 import { motion } from "framer-motion";
@@ -36,11 +37,12 @@ export function TaskRow({
   whenMode = "contextual",
 }: Props) {
   const { t, date: formatDate } = useI18n();
+  const todayKey = useTodayKey();
   const isInbox = variant === "inbox";
   const hasSubtasks = task.subtasks.length > 0;
   const hasMeta = task.priority === 1 || task.tags.length > 0 || hasSubtasks;
   const overdue = isOverdue(task.date, task.completed);
-  const isToday = task.date === getTodayKey();
+  const isToday = task.date === todayKey;
   const when = !task.date
     ? t("Any")
     : isToday

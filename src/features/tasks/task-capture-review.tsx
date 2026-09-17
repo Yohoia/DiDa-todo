@@ -3,7 +3,7 @@ import { useRef, useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { Select } from "@/components/ui/select";
-import { useI18n } from "@/features/preferences/preferences-provider";
+import { useI18n, usePreferences } from "@/features/preferences/preferences-provider";
 import type { MessageKey } from "@/i18n/messages";
 import { captureDraftError, type TaskCaptureDraft, type CaptureSaveResult } from "./task-capture";
 import shared from "@/styles/workspace.module.css";
@@ -21,6 +21,7 @@ export function TaskCaptureReview({
   onSave: (drafts: TaskCaptureDraft[]) => Promise<CaptureSaveResult>;
 }) {
   const { t, label } = useI18n();
+  const { timeZone } = usePreferences();
   const [drafts, setDrafts] = useState(initialDrafts);
   const [selected, setSelected] = useState(() => new Set(initialDrafts.map((draft) => draft.id)));
   const [pending, setPending] = useState(false);
@@ -48,7 +49,7 @@ export function TaskCaptureReview({
         <DialogDescription>{t("capture.reviewHint")}</DialogDescription>
         <div className={styles.items}>
           {drafts.map((draft, index) => {
-            const error = captureDraftError(draft);
+            const error = captureDraftError(draft, timeZone);
             return (
               <article className={styles.item} key={draft.id}>
                 <label className={styles.pick}>
@@ -129,7 +130,11 @@ export function TaskCaptureReview({
           <button
             type="button"
             className={shared.button}
-            disabled={pending || !picked.length || picked.some((draft) => captureDraftError(draft))}
+            disabled={
+              pending ||
+              !picked.length ||
+              picked.some((draft) => captureDraftError(draft, timeZone))
+            }
             onClick={async () => {
               if (pendingRef.current) return;
               pendingRef.current = true;

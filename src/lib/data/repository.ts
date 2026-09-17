@@ -17,6 +17,13 @@ export type StoredPreferences = {
   autoBreak: boolean;
   dailyCapacity: number;
   reminders: boolean;
+  dailyFocusGoalMinutes: number;
+  defaultReminderMinutes: number;
+  notificationRetentionDays: number;
+  dailyDigest: boolean;
+  gamificationEnabled: boolean;
+  timeZone: string;
+  hour12: boolean;
 };
 
 export const DEFAULT_PREFERENCES: StoredPreferences = {
@@ -26,6 +33,13 @@ export const DEFAULT_PREFERENCES: StoredPreferences = {
   autoBreak: false,
   dailyCapacity: 8,
   reminders: true,
+  dailyFocusGoalMinutes: 120,
+  defaultReminderMinutes: 0,
+  notificationRetentionDays: 7,
+  dailyDigest: true,
+  gamificationEnabled: true,
+  timeZone: "Asia/Shanghai",
+  hour12: false,
 };
 
 type TaskRow = {
@@ -70,6 +84,13 @@ type PreferencesRow = {
   auto_break: boolean;
   daily_capacity: number;
   reminders: boolean;
+  daily_focus_goal_minutes?: number;
+  default_reminder_minutes?: number;
+  notification_retention_days?: number;
+  daily_digest?: boolean;
+  gamification_enabled?: boolean;
+  time_zone?: string;
+  hour_12?: boolean;
 };
 
 const READ_PAGE_SIZE = 500;
@@ -81,12 +102,13 @@ export type TaskPage = {
   hasMore: boolean;
 };
 
-async function loadAllTaskRows(client: SupabaseClient): Promise<TaskRow[]> {
+async function loadAllTaskRows(client: SupabaseClient, userId: string): Promise<TaskRow[]> {
   const rows: TaskRow[] = [];
   for (let from = 0; ; from += READ_PAGE_SIZE) {
     const { data, error } = await client
       .from("tasks")
       .select("*")
+      .eq("user_id", userId)
       .order("created_at", { ascending: true })
       .order("id", { ascending: true })
       .range(from, from + READ_PAGE_SIZE - 1);
@@ -97,7 +119,11 @@ async function loadAllTaskRows(client: SupabaseClient): Promise<TaskRow[]> {
   }
 }
 
-async function loadWorkspaceTaskRows(client: SupabaseClient, userId: string) {
+async function loadWorkspaceTaskRows(
+  client: SupabaseClient,
+  userId: string,
+  timeZone = "Asia/Shanghai",
+) {
   const activeRows: TaskRow[] = [];
   for (let from = 0; ; from += READ_PAGE_SIZE) {
     const { data, error } = await client
@@ -114,9 +140,7 @@ async function loadWorkspaceTaskRows(client: SupabaseClient, userId: string) {
     if (page.length < READ_PAGE_SIZE) break;
   }
 
-  const todayStart = `${new Date().toLocaleDateString("en-CA", {
-    timeZone: "Asia/Shanghai",
-  })}${DAY_START_SUFFIX}`;
+  const todayStart = `${timeZoneDateKey(timeZone)}${DAY_START_SUFFIX}`;
   const completedToday: TaskRow[] = [];
   for (let from = 0; ; from += READ_PAGE_SIZE) {
     const { data, error } = await client
@@ -138,6 +162,15 @@ async function loadWorkspaceTaskRows(client: SupabaseClient, userId: string) {
     (left, right) =>
       left.created_at.localeCompare(right.created_at) || left.id.localeCompare(right.id),
   );
+}
+
+function timeZoneDateKey(timeZone: string) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
 }
 
 async function loadAllSubtaskRows(
@@ -325,9 +358,12 @@ export type Repository = {
   recordFocusSession(input: FocusSessionRecord): Promise<void>;
   listNotifications(): Promise<AppNotification[]>;
   createTaskDueNotification(notification: AppNotification): Promise<void>;
-  markTaskNotificationRead(taskId: string): Promise<void>;
+  createDailyDigestNotification(notification: AppNotification): Promise<void>;
+  markNotificationRead(id: string): Promise<void>;
   markAllNotificationsRead(): Promise<void>;
   dismissTaskNotifications(taskIds: string[]): Promise<void>;
+  dismissAllNotifications(): Promise<void>;
+  pruneNotifications(retentionDays: number): Promise<void>;
 };
 
 /**
@@ -343,12 +379,13 @@ export function createRepository(client: SupabaseClient, userId: string): Reposi
       throw new Error(error.message);
     },
     async loadTasks() {
-      const taskRows = await loadAllTaskRows(client);
+      const taskRows = await loadAllTaskRows(client, userId);
       return rowsToTasks(client, userId, taskRows);
     },
 
     async loadWorkspaceTasks() {
-      const taskRows = await loadWorkspaceTaskRows(client, userId);
+      const preferences = await repository.loadPreferences();
+      const taskRows = await loadWorkspaceTaskRows(client, userId, preferences.timeZone);
       return rowsToTasks(client, userId, taskRows);
     },
 
@@ -469,7 +506,7 @@ export function createRepository(client: SupabaseClient, userId: string): Reposi
     async updateTask(id, patch) {
       const row = updateColumns(patch);
       if (Object.keys(row).length > 0) {
-        const { error } = await client.from("tasks").update(row).eq("id", id);
+        const { error } = await client.from("tasks").update(row).eq("id", id).eq("user_id", userId);
         if (error) throw new Error(error.message);
       }
       if (patch.subtasks === undefined) return;
@@ -580,7 +617,7 @@ export function createRepository(client: SupabaseClient, userId: string): Reposi
     },
 
     async deleteTask(id) {
-      const { error } = await client.from("tasks").delete().eq("id", id);
+      const { error } = await client.from("tasks").delete().eq("id", id).eq("user_id", userId);
       if (error) throw new Error(error.message);
     },
 
@@ -604,6 +641,13 @@ export function createRepository(client: SupabaseClient, userId: string): Reposi
         autoBreak: row.auto_break,
         dailyCapacity: row.daily_capacity,
         reminders: row.reminders,
+        dailyFocusGoalMinutes: row.daily_focus_goal_minutes ?? 120,
+        defaultReminderMinutes: row.default_reminder_minutes ?? 0,
+        notificationRetentionDays: row.notification_retention_days ?? 7,
+        dailyDigest: row.daily_digest ?? true,
+        gamificationEnabled: row.gamification_enabled ?? true,
+        timeZone: row.time_zone ?? "Asia/Shanghai",
+        hour12: row.hour_12 ?? false,
       };
     },
 
@@ -616,6 +660,21 @@ export function createRepository(client: SupabaseClient, userId: string): Reposi
         ...(patch.autoBreak !== undefined ? { auto_break: patch.autoBreak } : {}),
         ...(patch.dailyCapacity !== undefined ? { daily_capacity: patch.dailyCapacity } : {}),
         ...(patch.reminders !== undefined ? { reminders: patch.reminders } : {}),
+        ...(patch.dailyFocusGoalMinutes !== undefined
+          ? { daily_focus_goal_minutes: patch.dailyFocusGoalMinutes }
+          : {}),
+        ...(patch.defaultReminderMinutes !== undefined
+          ? { default_reminder_minutes: patch.defaultReminderMinutes }
+          : {}),
+        ...(patch.notificationRetentionDays !== undefined
+          ? { notification_retention_days: patch.notificationRetentionDays }
+          : {}),
+        ...(patch.dailyDigest !== undefined ? { daily_digest: patch.dailyDigest } : {}),
+        ...(patch.gamificationEnabled !== undefined
+          ? { gamification_enabled: patch.gamificationEnabled }
+          : {}),
+        ...(patch.timeZone !== undefined ? { time_zone: patch.timeZone } : {}),
+        ...(patch.hour12 !== undefined ? { hour_12: patch.hour12 } : {}),
       });
       if (error) throw new Error(error.message);
     },
@@ -633,37 +692,57 @@ export function createRepository(client: SupabaseClient, userId: string): Reposi
 
     async recordFocusSession({ id, taskId, startedAt, endedAt, durationSeconds, completed }) {
       if (durationSeconds <= 0) return;
-      const row = {
+      const baseRow = {
         id,
         user_id: userId,
-        task_id: taskId,
+        task_id: taskId as string | null,
         mode: "focus",
         started_at: startedAt,
         ended_at: endedAt,
         duration_seconds: Math.round(durationSeconds),
         completed,
       };
-      const { error } = await client.from("focus_sessions").insert(row);
-      if (!error) return;
-      if (error.code !== "23505") throw new Error(error.message);
-      // Replays/checkpoints share an ID. An older checkpoint cannot shrink
-      // an already saved session or create duplicate experience points.
-      let replay = client
-        .from("focus_sessions")
-        .update(row)
-        .eq("id", id)
-        .eq("user_id", userId)
-        .lte("duration_seconds", row.duration_seconds);
-      if (!completed) replay = replay.eq("completed", false);
-      const updated = await replay;
-      if (updated.error) throw new Error(updated.error.message);
+
+      async function writeFocusRow(taskId: string | null) {
+        const row = { ...baseRow, task_id: taskId };
+        const { error } = await client.from("focus_sessions").insert(row);
+        if (!error) return;
+        if (error.code !== "23505") throw error;
+        // Replays/checkpoints share an ID. An older checkpoint cannot shrink
+        // an already saved session or create duplicate experience points.
+        let replay = client
+          .from("focus_sessions")
+          .update(row)
+          .eq("id", id)
+          .eq("user_id", userId)
+          .lte("duration_seconds", row.duration_seconds);
+        if (!completed) replay = replay.eq("completed", false);
+        const updated = await replay;
+        if (updated.error) throw updated.error;
+      }
+
+      try {
+        await writeFocusRow(taskId);
+      } catch (error) {
+        // Another device may delete the task while this checkpoint is queued.
+        // Preserve the focus fact as an orphan, matching on delete set null.
+        const foreignKeyViolation =
+          typeof error === "object" && error !== null && (error as { code?: string }).code;
+        if (taskId !== null && foreignKeyViolation === "23503") {
+          await writeFocusRow(null);
+          return;
+        }
+        throw error;
+      }
     },
 
     async listNotifications() {
       type Row = {
         id: string;
         task_id: string | null;
+        dedupe_key: string | null;
         title: string;
+        type: AppNotification["type"];
         remind_at: string;
         read: boolean;
         created_at: string;
@@ -674,7 +753,7 @@ export function createRepository(client: SupabaseClient, userId: string): Reposi
       for (let from = 0; ; from += READ_PAGE_SIZE) {
         const { data, error } = await client
           .from("notifications")
-          .select("id, task_id, title, remind_at, read, created_at, dismissed_at")
+          .select("id, task_id, dedupe_key, title, remind_at, read, created_at, dismissed_at, type")
           .eq("user_id", userId)
           .order("created_at", { ascending: false })
           .order("id", { ascending: false })
@@ -684,18 +763,17 @@ export function createRepository(client: SupabaseClient, userId: string): Reposi
         rows.push(...page);
         if (page.length < READ_PAGE_SIZE) break;
       }
-      return rows
-        .filter((row) => row.task_id !== null)
-        .map((row) => ({
-          id: row.id,
-          type: "task_due",
-          taskId: row.task_id!,
-          title: row.title,
-          remindAt: row.remind_at,
-          read: row.read,
-          createdAt: row.created_at,
-          dismissedAt: row.dismissed_at ?? undefined,
-        }));
+      return rows.map((row) => ({
+        id: row.id,
+        type: row.type as AppNotification["type"],
+        taskId: row.task_id ?? undefined,
+        dedupeKey: row.dedupe_key ?? undefined,
+        title: row.title,
+        remindAt: row.remind_at,
+        read: row.read,
+        createdAt: row.created_at,
+        dismissedAt: row.dismissed_at ?? undefined,
+      }));
     },
 
     async createTaskDueNotification(notification) {
@@ -704,6 +782,9 @@ export function createRepository(client: SupabaseClient, userId: string): Reposi
         user_id: userId,
         type: notification.type,
         task_id: notification.taskId,
+        dedupe_key:
+          notification.dedupeKey ??
+          (notification.taskId ? `task:${notification.taskId}:${notification.remindAt}` : null),
         title: notification.title,
         remind_at: notification.remindAt,
         read: notification.read,
@@ -712,12 +793,28 @@ export function createRepository(client: SupabaseClient, userId: string): Reposi
       if (error && error.code !== "23505") throw new Error(error.message);
     },
 
-    async markTaskNotificationRead(taskId) {
+    async createDailyDigestNotification(notification) {
+      const { error } = await client.from("notifications").insert({
+        id: notification.id,
+        user_id: userId,
+        type: "daily_digest",
+        task_id: null,
+        dedupe_key: notification.dedupeKey,
+        title: notification.title,
+        remind_at: notification.remindAt,
+        read: notification.read,
+      });
+      if (error && error.code !== "23505") throw new Error(error.message);
+    },
+
+    async markNotificationRead(id) {
+      // Aggregate notifications do not have a task_id, so the row ID is the
+      // stable update key for both notification types.
       const { error } = await client
         .from("notifications")
         .update({ read: true })
         .eq("user_id", userId)
-        .eq("task_id", taskId);
+        .eq("id", id);
       if (error) throw new Error(error.message);
     },
 
@@ -741,6 +838,26 @@ export function createRepository(client: SupabaseClient, userId: string): Reposi
           .in("task_id", taskIds.slice(from, from + READ_PAGE_SIZE));
         if (error) throw new Error(error.message);
       }
+    },
+
+    async dismissAllNotifications() {
+      const { error } = await client
+        .from("notifications")
+        .update({ dismissed_at: new Date().toISOString(), read: true })
+        .eq("user_id", userId)
+        .is("dismissed_at", null);
+      if (error) throw new Error(error.message);
+    },
+
+    async pruneNotifications(retentionDays) {
+      const days = Math.min(Math.max(Math.round(retentionDays), 1), 90);
+      const cutoff = new Date(Date.now() - days * 86_400_000).toISOString();
+      const { error } = await client
+        .from("notifications")
+        .delete()
+        .eq("user_id", userId)
+        .lt("created_at", cutoff);
+      if (error) throw new Error(error.message);
     },
   };
   return repository;

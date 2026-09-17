@@ -9,10 +9,15 @@ export type TaskCaptureDraft = {
   time?: string;
 };
 export type CaptureSaveResult = { savedIds: string[]; failedIds: string[] };
-export function captureDraftError(draft: TaskCaptureDraft): string | null {
+export function captureDraftError(
+  draft: TaskCaptureDraft,
+  timeZone = "Asia/Shanghai",
+): string | null {
   if (!draft.title.trim() || draft.title.trim().length > 200) return "capture.invalidTitle";
   if (!["Inbox", "Work", "Study", "Life"].includes(draft.list)) return "organize.invalidList";
-  if (draft.date && !taskDateTime(draft.date, "00:00")) return "capture.invalidDate";
+  if (draft.date && !taskDateTime(draft.date, "00:00", timeZone)) {
+    return "capture.invalidDate";
+  }
   if (draft.time && !/^([01]\d|2[0-3]):[0-5]\d$/.test(draft.time)) return "organize.invalidTime";
   return null;
 }
@@ -20,6 +25,7 @@ export function capturedTask(
   draft: TaskCaptureDraft,
   pomodoroMinutes: number,
   created = Date.now(),
+  defaultReminderMinutes = 0,
 ): Task {
   return {
     ...draft,
@@ -28,7 +34,10 @@ export function capturedTask(
     tags: [],
     priority: 3,
     estimate: 1,
-    reminder: "None",
+    reminder:
+      draft.date && draft.time && defaultReminderMinutes > 0
+        ? `${defaultReminderMinutes} min before`
+        : "None",
     completed: false,
     created,
     subtasks: [],

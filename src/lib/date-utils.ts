@@ -1,15 +1,59 @@
-/** Date utilities for relative date calculations in the app's display timezone. */
+/** Date utilities for relative date calculations in the user's display timezone. */
 
 export const APP_TIME_ZONE = "Asia/Shanghai";
 
-/** Task wall-clock times are Shanghai times, never the device's timezone. */
-export function taskDateTime(date: string, time: string): Date | null {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) return null;
-  const value = new Date(`${date}T${time}:00+08:00`);
-  return Number.isFinite(value.getTime()) && getTodayKey(value) === date ? value : null;
+export function isValidTimeZone(timeZone: string) {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone }).format();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
-let todayKeyCache: { key: string; expiresAt: number } | null = null;
+function timeZoneOffsetMs(value: Date, timeZone: string) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).formatToParts(value);
+  const part = Object.fromEntries(parts.map((item) => [item.type, item.value]));
+  const asUtc = Date.UTC(
+    Number(part.year),
+    Number(part.month) - 1,
+    Number(part.day),
+    Number(part.hour === "24" ? "0" : part.hour),
+    Number(part.minute),
+    Number(part.second),
+  );
+  return asUtc - value.getTime();
+}
+
+/** Task wall-clock times follow the selected account timezone, never the device. */
+export function taskDateTime(date: string, time: string, timeZone = APP_TIME_ZONE): Date | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) return null;
+  const [year, month, day] = date.split("-").map(Number);
+  const calendar = new Date(Date.UTC(year, month - 1, day));
+  if (
+    calendar.getUTCFullYear() !== year ||
+    calendar.getUTCMonth() !== month - 1 ||
+    calendar.getUTCDate() !== day
+  )
+    return null;
+  const naive = Date.UTC(year, month - 1, day, Number(time.slice(0, 2)), Number(time.slice(3, 5)));
+  const firstOffset = timeZoneOffsetMs(new Date(naive), timeZone);
+  const candidate = new Date(naive - firstOffset);
+  const secondOffset = timeZoneOffsetMs(candidate, timeZone);
+  const value = new Date(naive - secondOffset);
+  return Number.isFinite(value.getTime()) && getTodayKey(value, timeZone) === date ? value : null;
+}
+
+let todayKeyCache: { key: string; timeZone: string; expiresAt: number } | null = null;
 
 /**
  * Return a stable YYYY-MM-DD key for the current app-local calendar day.
@@ -17,19 +61,24 @@ let todayKeyCache: { key: string; expiresAt: number } | null = null;
  * rebuild an Intl.DateTimeFormat on every render; midnight rollover lands
  * within the TTL.
  */
-export function getTodayKey(now?: Date): string {
-  if (!now && todayKeyCache && Date.now() < todayKeyCache.expiresAt) {
+export function getTodayKey(now?: Date, timeZone = APP_TIME_ZONE): string {
+  if (
+    !now &&
+    todayKeyCache &&
+    todayKeyCache.timeZone === timeZone &&
+    Date.now() < todayKeyCache.expiresAt
+  ) {
     return todayKeyCache.key;
   }
   const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: APP_TIME_ZONE,
+    timeZone,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
   }).formatToParts(now ?? new Date());
   const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
   const key = `${value.year}-${value.month}-${value.day}`;
-  if (!now) todayKeyCache = { key, expiresAt: Date.now() + 30_000 };
+  if (!now) todayKeyCache = { key, timeZone, expiresAt: Date.now() + 30_000 };
   return key;
 }
 
@@ -37,6 +86,12 @@ export function getTodayKey(now?: Date): string {
 export function parseDateKey(key: string): { year: number; month: number; day: number } {
   const [year, month, day] = key.split("-").map(Number);
   return { year, month: month - 1, day };
+}
+
+/** Get the calendar weekday (Sunday is 0) without using the process timezone. */
+export function dateKeyWeekday(key: string): number {
+  const { year, month, day } = parseDateKey(key);
+  return new Date(Date.UTC(year, month, day)).getUTCDay();
 }
 
 /** Next Monday strictly after the given day, as YYYY-MM-DD. */
@@ -87,8 +142,8 @@ export function isDemoToday(date: string): boolean {
  * A task becomes overdue after its due day has passed and it is still incomplete.
  * Undated tasks are never considered overdue.
  */
-export function isOverdue(date: string, completed: boolean): boolean {
-  return Boolean(date) && date < getTodayKey() && !completed;
+export function isOverdue(date: string, completed: boolean, timeZone = APP_TIME_ZONE): boolean {
+  return Boolean(date) && date < getTodayKey(undefined, timeZone) && !completed;
 }
 
 /**

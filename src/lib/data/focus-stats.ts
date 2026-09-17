@@ -1,14 +1,21 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { getTodayKey } from "@/lib/date-utils";
 
 export type FocusStats = {
   activity: Record<string, number>;
   completedTasks: number;
   completedTasksThisMonth: number;
+  checkInDaysThisMonth: number;
   focusSeconds: number;
   focusSecondsThisMonth: number;
   focusSecondsThisWeek: number;
+  estimatedSecondsThisMonth: number;
+  actualTaskSecondsThisMonth: number;
+  unlinkedTaskSecondsThisMonth: number;
+  listDistributionThisMonth: Record<string, number>;
+  dailyFocusGoalMinutes: number;
   streakDays: number;
 };
 
@@ -44,22 +51,36 @@ function currentStreak(activity: Record<string, number>, today: string) {
 }
 
 /** 在数据库端聚合不可变事实，避免 PostgREST 默认最多返回 1000 行导致统计漏算。 */
-export async function loadFocusStats(client: SupabaseClient): Promise<FocusStats> {
-  const { data, error } = await client.rpc("get_focus_stats");
+export async function loadFocusStats(
+  client: SupabaseClient,
+  timeZone = "Asia/Shanghai",
+): Promise<FocusStats> {
+  const { data, error } = await client.rpc("get_focus_stats", { p_time_zone: timeZone });
   if (error) throw new Error(error.message);
 
   const payload = (data ?? {}) as Partial<Omit<FocusStats, "streakDays">>;
   const activity = Object.fromEntries(
     Object.entries(payload.activity ?? {}).map(([key, seconds]) => [key, Number(seconds) || 0]),
   );
-  const today = shanghaiDateKey(new Date());
+  const today = getTodayKey(new Date(), timeZone);
   return {
     activity,
     completedTasks: Number(payload.completedTasks) || 0,
     completedTasksThisMonth: Number(payload.completedTasksThisMonth) || 0,
+    checkInDaysThisMonth: Number(payload.checkInDaysThisMonth) || 0,
     focusSeconds: Number(payload.focusSeconds) || 0,
     focusSecondsThisMonth: Number(payload.focusSecondsThisMonth) || 0,
     focusSecondsThisWeek: Number(payload.focusSecondsThisWeek) || 0,
+    estimatedSecondsThisMonth: Number(payload.estimatedSecondsThisMonth) || 0,
+    actualTaskSecondsThisMonth: Number(payload.actualTaskSecondsThisMonth) || 0,
+    unlinkedTaskSecondsThisMonth: Number(payload.unlinkedTaskSecondsThisMonth) || 0,
+    listDistributionThisMonth: Object.fromEntries(
+      Object.entries(payload.listDistributionThisMonth ?? {}).map(([key, count]) => [
+        key,
+        Number(count) || 0,
+      ]),
+    ),
+    dailyFocusGoalMinutes: Number(payload.dailyFocusGoalMinutes) || 120,
     streakDays: currentStreak(activity, today),
   };
 }

@@ -1,12 +1,19 @@
 import "server-only";
 
 import { requireWorkspaceSession } from "@/lib/server/workspace-session";
-import { loadFocusStats, recentDateKeys } from "@/lib/data/focus-stats";
+import { loadFocusStats } from "@/lib/data/focus-stats";
 
 export type ProfilePlant = {
   id: string;
   symbol: string;
   plantedAt: string;
+};
+
+export type ProfileAchievement = {
+  key: string;
+  xp: number;
+  coins: number;
+  earnedAt: string;
 };
 
 export type ProfileData = {
@@ -20,15 +27,39 @@ export type ProfileData = {
   levelTitle: string;
   xp: number;
   nextLevelXp: number;
+  gamificationEnabled: boolean;
+  coins: number;
+  achievements: ProfileAchievement[];
   focusGarden: {
     weeklyMinutes: number;
     streakDays: number;
-    weeklyGoal: number;
-    minutesPerPlant: number;
-    currentPlantMinutes: number;
     plants: ProfilePlant[];
   };
 };
+
+const LEVEL_TITLES = [
+  "Beginner",
+  "Explorer",
+  "Builder",
+  "Architect",
+  "Guardian",
+  "Legend",
+] as const;
+
+function levelTitle(level: number) {
+  return LEVEL_TITLES[Math.min(Math.max(level, 1), LEVEL_TITLES.length) - 1];
+}
+
+function plantSymbol(value: string) {
+  return (
+    {
+      tree: "\u{1F332}",
+      forest: "\u{1F333}",
+      potted: "\u{1FAB4}",
+      leaf: "\u{1F33F}",
+    }[value] ?? "\u{1F332}"
+  );
+}
 
 /**
  * 服务端档案边界：登录用户返回 profiles 表真实数据，并从任务与专注事实表
@@ -36,24 +67,74 @@ export type ProfileData = {
  */
 export async function getProfile(): Promise<ProfileData> {
   const { supabase, user } = await requireWorkspaceSession();
-  const [profile, stats] = await Promise.all([
+  const [profile, preference] = await Promise.all([
     supabase
       .from("profiles")
       .select("display_name, avatar_url, created_at")
       .eq("id", user.id)
       .maybeSingle(),
-    loadFocusStats(supabase),
+    supabase
+      .from("user_preferences")
+      .select("gamification_enabled,time_zone")
+      .eq("user_id", user.id)
+      .maybeSingle(),
   ]);
   if (profile.error) throw new Error("Profile could not be loaded");
+  if (preference.error && preference.error.code !== "PGRST204") {
+    throw new Error("Growth preferences could not be loaded");
+  }
   const row = profile.data;
+  const timeZone = preference.data?.time_zone ?? "Asia/Shanghai";
+  const stats = await loadFocusStats(supabase, timeZone);
 
-  const minutesPerPlant = 120;
-  const weeklyGoal = 8;
   const weeklyMinutes = Math.floor(stats.focusSecondsThisWeek / 60);
-  const planted = Math.min(weeklyGoal, Math.floor(weeklyMinutes / minutesPerPlant));
-  const symbols = ["🌲", "🌳", "🪴", "🌿"];
-  const activeDates = recentDateKeys(7).filter((key) => (stats.activity[key] ?? 0) > 0);
-  const totalXp = stats.completedTasks * 40 + Math.floor(stats.focusSeconds / 60);
+  const gamificationEnabled = preference.data?.gamification_enabled ?? true;
+  let plants: ProfilePlant[] = [];
+  let achievements: ProfileAchievement[] = [];
+  let rewardXp = 0;
+  let coins = 0;
+  if (gamificationEnabled) {
+    const synced = await supabase.rpc("sync_growth_rewards");
+    // A missing RPC means migration 0010 has not reached this environment. The
+    // profile remains readable, but no permanent rewards are fabricated.
+    if (synced.error && synced.error.code !== "PGRST202") {
+      throw new Error("Growth rewards could not be synchronized");
+    }
+    if (!synced.error) {
+      const [plantResult, eventResult] = await Promise.all([
+        supabase
+          .from("growth_plants")
+          .select("id, symbol, planted_at")
+          .eq("user_id", user.id)
+          .order("planted_at", { ascending: true }),
+        supabase
+          .from("growth_events")
+          .select("event_key, event_type, xp, coins, created_at")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: true }),
+      ]);
+      if (plantResult.error) throw new Error("Growth plants could not be loaded");
+      if (eventResult.error) throw new Error("Growth events could not be loaded");
+      plants = (plantResult.data ?? []).map((item) => ({
+        id: item.id,
+        symbol: plantSymbol(item.symbol),
+        plantedAt: item.planted_at,
+      }));
+      achievements = (eventResult.data ?? [])
+        .filter((item) => item.event_type === "achievement")
+        .map((item) => ({
+          key: item.event_key,
+          xp: item.xp,
+          coins: item.coins,
+          earnedAt: item.created_at,
+        }));
+      for (const event of eventResult.data ?? []) {
+        rewardXp += event.xp;
+        coins += event.coins;
+      }
+    }
+  }
+  const totalXp = stats.completedTasks * 40 + Math.floor(stats.focusSeconds / 60) + rewardXp;
   const level = Math.floor(totalXp / 1000) + 1;
 
   return {
@@ -64,20 +145,16 @@ export async function getProfile(): Promise<ProfileData> {
     avatarUrl: row?.avatar_url ?? null,
     joinedAt: (row?.created_at ?? user.created_at).slice(0, 10),
     level,
-    levelTitle: "Architect",
+    levelTitle: levelTitle(level),
     xp: totalXp,
     nextLevelXp: level * 1000,
+    gamificationEnabled,
+    coins,
+    achievements,
     focusGarden: {
       weeklyMinutes,
       streakDays: stats.streakDays,
-      weeklyGoal,
-      minutesPerPlant,
-      currentPlantMinutes: planted >= weeklyGoal ? 0 : weeklyMinutes % minutesPerPlant,
-      plants: Array.from({ length: planted }, (_, index) => ({
-        id: `plant-${index + 1}`,
-        symbol: symbols[index % symbols.length],
-        plantedAt: activeDates[index % Math.max(1, activeDates.length)] ?? recentDateKeys(1)[0],
-      })),
+      plants,
     },
   };
 }

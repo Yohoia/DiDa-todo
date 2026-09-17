@@ -52,6 +52,7 @@ import {
   type TaskWriteEntry,
 } from "./task-write-queue";
 import type { FocusSessionRecord } from "@/types/focus";
+import { PreferencesProvider, usePreferences } from "@/features/preferences/preferences-provider";
 import {
   pendingFocusSessions,
   savePendingFocusSession,
@@ -139,6 +140,11 @@ type WorkspaceState = {
     title: string;
     remindAt: string;
   }) => boolean;
+  recordDailyDigestNotification: (input: {
+    date: string;
+    count: number;
+    remindAt: string;
+  }) => boolean;
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
   clearNotifications: () => void;
@@ -200,6 +206,7 @@ export function WorkspaceProvider({
   const [sessionValid, setSessionValid] = useState(true);
   const sessionValidRef = useRef(true);
   const [realtimeStatus, setRealtimeStatus] = useState<WorkspaceRealtimeStatus>("connecting");
+  const displayPreferences = usePreferences();
   useEffect(() => {
     const { data } = createClient().auth.onAuthStateChange((_event, session) => {
       if (!session || session.user.id !== user.id) {
@@ -254,6 +261,24 @@ export function WorkspaceProvider({
     },
     [ensureSync],
   );
+  // Retention is a hard delete, while Clear only sets a dismissal marker. This
+  // keeps aggregate dedupe records long enough without showing stale messages.
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      await persist((repository) =>
+        repository.pruneNotifications(preferences.notificationRetentionDays),
+      );
+      if (!active) return;
+      const cutoff = Date.now() - preferences.notificationRetentionDays * 86_400_000;
+      updateNotifications((current) =>
+        current.filter((item) => new Date(item.createdAt).getTime() >= cutoff),
+      );
+    })();
+    return () => {
+      active = false;
+    };
+  }, [persist, preferences.notificationRetentionDays]);
   const refreshWorkspace = useCallback(() => {
     if (!sessionValidRef.current) return;
     void ensureSync().refresh();
@@ -506,7 +531,11 @@ export function WorkspaceProvider({
     const previousTasks = tasksRef.current;
     const current = previousTasks.find((task) => task.id === id);
     if (!current) return;
-    const normalized = normalizeFocusPatch(current, patch, getTodayKey());
+    const normalized = normalizeFocusPatch(
+      current,
+      patch,
+      getTodayKey(undefined, preferences.timeZone),
+    );
     if (!normalized) {
       notify({ key: "today.focusTodayOnly" });
       return;
@@ -622,7 +651,10 @@ export function WorkspaceProvider({
         date && time ? { date, hour, minute, duration: 25, label: title.trim() } : undefined,
       priority: 3,
       estimate: 1,
-      reminder: "None",
+      reminder:
+        date && time && preferences.defaultReminderMinutes > 0
+          ? `${preferences.defaultReminderMinutes} min before`
+          : "None",
       completed: false,
       created: Date.now(),
       subtasks: [],
@@ -651,11 +683,16 @@ export function WorkspaceProvider({
   async function saveCapturedTasks(drafts: TaskCaptureDraft[]): Promise<CaptureSaveResult> {
     const result: CaptureSaveResult = { savedIds: [], failedIds: [] };
     for (const draft of drafts) {
-      if (!sessionValidRef.current || captureDraftError(draft)) {
+      if (!sessionValidRef.current || captureDraftError(draft, preferences.timeZone)) {
         result.failedIds.push(draft.id);
         continue;
       }
-      const task = capturedTask(draft, preferences.duration);
+      const task = capturedTask(
+        draft,
+        preferences.duration,
+        Date.now(),
+        preferences.defaultReminderMinutes,
+      );
       setTasks((current) =>
         current.some((item) => item.id === draft.id) ? current : [...current, task],
       );
@@ -712,11 +749,13 @@ export function WorkspaceProvider({
     title: string;
     remindAt: string;
   }) {
-    if (notificationsRef.current.some((item) => item.taskId === taskId)) return false;
+    const dedupeKey = `task:${taskId}:${remindAt}`;
+    if (notificationsRef.current.some((item) => item.dedupeKey === dedupeKey)) return false;
     const notification: AppNotification = {
       id: createId(),
       type: "task_due",
       taskId,
+      dedupeKey,
       title,
       remindAt,
       read: false,
@@ -727,6 +766,32 @@ export function WorkspaceProvider({
     persist((repository) => repository.createTaskDueNotification(notification));
     return true;
   }
+
+  function recordDailyDigestNotification({
+    date,
+    count,
+    remindAt,
+  }: {
+    date: string;
+    count: number;
+    remindAt: string;
+  }) {
+    const dedupeKey = `daily-digest:${date}`;
+    if (notificationsRef.current.some((item) => item.dedupeKey === dedupeKey)) return false;
+    const notification: AppNotification = {
+      id: createId(),
+      type: "daily_digest",
+      dedupeKey,
+      title: count > 0 ? `今天有 ${count} 项安排` : "今天没有已安排事项",
+      remindAt,
+      read: false,
+      createdAt: new Date().toISOString(),
+    };
+    notificationsRef.current = [notification, ...notificationsRef.current];
+    updateNotifications(notificationsRef.current);
+    persist((repository) => repository.createDailyDigestNotification(notification));
+    return true;
+  }
   function markNotificationRead(id: string) {
     const notification = notificationsRef.current.find((item) => item.id === id);
     if (!notification) return;
@@ -734,7 +799,7 @@ export function WorkspaceProvider({
       item.id === id ? { ...item, read: true } : item,
     );
     updateNotifications(notificationsRef.current);
-    persist((repository) => repository.markTaskNotificationRead(notification.taskId));
+    persist((repository) => repository.markNotificationRead(id));
   }
   function markAllNotificationsRead() {
     notificationsRef.current = notificationsRef.current.map((item) => ({ ...item, read: true }));
@@ -743,16 +808,13 @@ export function WorkspaceProvider({
   }
 
   function clearNotifications() {
-    const taskIds = notificationsRef.current
-      .filter((item) => !item.dismissedAt)
-      .map((item) => item.taskId);
-    if (!taskIds.length) return;
+    if (!notificationsRef.current.some((item) => !item.dismissedAt)) return;
     const dismissedAt = new Date().toISOString();
     notificationsRef.current = notificationsRef.current.map((item) =>
       item.dismissedAt ? item : { ...item, dismissedAt, read: true },
     );
     updateNotifications(notificationsRef.current);
-    persist((repository) => repository.dismissTaskNotifications(taskIds));
+    persist((repository) => repository.dismissAllNotifications());
   }
 
   async function signOut() {
@@ -800,6 +862,7 @@ export function WorkspaceProvider({
         preferences,
         notifications: notifications.filter((item) => !item.dismissedAt),
         recordTaskDueNotification,
+        recordDailyDigestNotification,
         markNotificationRead,
         markAllNotificationsRead,
         clearNotifications,
@@ -820,7 +883,14 @@ export function WorkspaceProvider({
         recordFocusSession,
       }}
     >
-      {children}
+      <PreferencesProvider
+        initialLocale={displayPreferences.locale}
+        initialTheme={displayPreferences.theme}
+        initialTimeZone={preferences.timeZone}
+        initialHour12={preferences.hour12}
+      >
+        {children}
+      </PreferencesProvider>
     </WorkspaceContext.Provider>
   );
 }

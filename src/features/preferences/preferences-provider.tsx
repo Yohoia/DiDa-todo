@@ -12,10 +12,13 @@ import {
 import { useRouter } from "next/navigation";
 import { localeCookie, themeCookie, type Locale, type Theme } from "@/i18n/config";
 import { createTranslator } from "@/i18n/translate";
+import { APP_TIME_ZONE } from "@/lib/date-utils";
 
 type Preferences = {
   locale: Locale;
   theme: Theme;
+  timeZone: string;
+  hour12: boolean;
   changingLocale: boolean;
   setLocale: (locale: Locale) => void;
   setTheme: (theme: Theme) => void;
@@ -27,10 +30,14 @@ function saveCookie(name: string, value: string) {
 export function PreferencesProvider({
   initialLocale,
   initialTheme,
+  initialTimeZone = APP_TIME_ZONE,
+  initialHour12 = false,
   children,
 }: {
   initialLocale: Locale;
   initialTheme: Theme;
+  initialTimeZone?: string;
+  initialHour12?: boolean;
   children: ReactNode;
 }) {
   const [locale, updateLocale] = useState(initialLocale);
@@ -46,6 +53,8 @@ export function PreferencesProvider({
       value={{
         locale,
         theme,
+        timeZone: initialTimeZone,
+        hour12: initialHour12,
         changingLocale,
         setLocale: (next) => {
           saveCookie(localeCookie, next);
@@ -69,6 +78,6 @@ export function usePreferences() {
   return context;
 }
 export function useI18n() {
-  const { locale } = usePreferences();
-  return useMemo(() => createTranslator(locale), [locale]);
+  const { locale, timeZone, hour12 } = usePreferences();
+  return useMemo(() => createTranslator(locale, { timeZone, hour12 }), [locale, timeZone, hour12]);
 }

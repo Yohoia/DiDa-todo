@@ -7,6 +7,7 @@ import { useWorkspace } from "@/features/tasks/workspace-provider";
 
 import { playNotificationChime } from "./notification-chime";
 import { taskDateTime } from "@/lib/date-utils";
+import { getTodayKey } from "@/lib/date-utils";
 
 /**
  * 站内任务提醒（无系统通知、无后台任务）：
@@ -25,24 +26,46 @@ function parseOffsetMinutes(reminder: string): number | null {
 
 export function useTaskReminders() {
   const workspace = useWorkspace();
-  const { tasks, preferences, recordTaskDueNotification, notify } = workspace;
+  const { tasks, preferences, recordTaskDueNotification, recordDailyDigestNotification, notify } =
+    workspace;
   const { date } = useI18n();
   // 任务编辑高频触发渲染：ref 镜像让 interval 只依赖全局开关，避免反复重建。
-  const latest = useRef({ tasks, preferences, recordTaskDueNotification, notify, date });
+  const latest = useRef({
+    tasks,
+    preferences,
+    recordTaskDueNotification,
+    recordDailyDigestNotification,
+    notify,
+    date,
+  });
   useEffect(() => {
-    latest.current = { tasks, preferences, recordTaskDueNotification, notify, date };
+    latest.current = {
+      tasks,
+      preferences,
+      recordTaskDueNotification,
+      recordDailyDigestNotification,
+      notify,
+      date,
+    };
   });
 
   useEffect(() => {
     if (!preferences.reminders) return;
     const tick = () => {
       const now = Date.now();
-      const { tasks, preferences, recordTaskDueNotification, notify, date } = latest.current;
+      const {
+        tasks,
+        preferences,
+        recordTaskDueNotification,
+        recordDailyDigestNotification,
+        notify,
+        date,
+      } = latest.current;
       if (!preferences.reminders) return;
       for (const task of tasks) {
         const offset = parseOffsetMinutes(task.reminder);
         if (task.completed || !task.date || !task.time || offset === null) continue;
-        const due = taskDateTime(task.date, task.time);
+        const due = taskDateTime(task.date, task.time, preferences.timeZone);
         if (!due) continue;
         const remindAt = due.getTime() - offset * 60_000;
         if (now < remindAt || now >= remindAt + CATCHUP_WINDOW_MS) continue;
@@ -61,6 +84,27 @@ export function useTaskReminders() {
           },
         });
         if (preferences.sound) playNotificationChime();
+      }
+
+      if (preferences.dailyDigest) {
+        const localHour = Number(
+          new Intl.DateTimeFormat("en-US", {
+            timeZone: preferences.timeZone,
+            hour: "numeric",
+            hour12: false,
+          }).format(now),
+        );
+        if (localHour >= 8) {
+          const today = getTodayKey(new Date(now), preferences.timeZone);
+          const scheduledToday = tasks.filter(
+            (task) => !task.completed && task.date === today,
+          ).length;
+          recordDailyDigestNotification({
+            date: today,
+            count: scheduledToday,
+            remindAt: new Date(now).toISOString(),
+          });
+        }
       }
     };
     tick();

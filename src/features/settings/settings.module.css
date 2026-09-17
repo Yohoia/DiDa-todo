@@ -352,3 +352,150 @@
   align-self: flex-start;
   margin-top: 6px;
 }
+
+.privacyPanel,
+.voicePrivacyPanel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--separator);
+}
+
+.privacyPanel section,
+.voicePrivacyPanel section {
+  min-width: 0;
+}
+
+.privacyPanel h3,
+.voicePrivacyPanel h3 {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.privacyPanel p,
+.voicePrivacyPanel p {
+  margin: 6px 0 12px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.privacyPanel form,
+.voicePrivacyPanel form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.privacyPanel form label,
+.voicePrivacyPanel form label {
+  grid-column: 1 / -1;
+  color: var(--foreground);
+  font-size: 12px;
+}
+
+.privacyPanel input,
+.voicePrivacyPanel input {
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.privacyPanel form p,
+.voicePrivacyPanel form p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--destructive);
+}
+
+.deleteButton,
+.clearVoiceButton {
+  border: 1px solid color-mix(in srgb, var(--destructive) 45%, var(--border));
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--destructive) 8%, transparent);
+  color: var(--destructive);
+  cursor: pointer;
+}
+
+.deleteButton:disabled,
+.clearVoiceButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.voicePrivacyPanel ul,
+.hotwords {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.voicePrivacyPanel li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 28px;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--separator);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--secondary) 35%, var(--card));
+}
+
+.voicePrivacyPanel li span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+.voicePrivacyPanel li small {
+  color: var(--task-muted);
+  font-size: 10px;
+}
+
+.voicePrivacyPanel li button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+
+.voicePrivacyPanel li button:hover:not(:disabled),
+.voicePrivacyPanel li button:focus-visible:not(:disabled) {
+  color: var(--destructive);
+  background: color-mix(in srgb, var(--destructive) 10%, transparent);
+}
+
+.voicePrivacyPanel section > .clearVoiceButton {
+  margin-top: 12px;
+}
+
+.inlineAction {
+  margin-left: 8px;
+  border: none;
+  background: none;
+  color: var(--brand-gold);
+  cursor: pointer;
+}
+
+@media (max-width: 760px) {
+  .privacyPanel,
+  .voicePrivacyPanel {
+    grid-template-columns: 1fr;
+  }
+}

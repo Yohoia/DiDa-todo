@@ -6,6 +6,7 @@ import shared from "@/styles/workspace.module.css";
 import styles from "./insights.module.css";
 import { getInsights, type InsightDay } from "./insights-service";
 import { FocusRhythm, type RhythmDay } from "./focus-rhythm";
+import { AiAdvisorPanel } from "./ai-advisor-panel";
 
 /** 2023-01-02 是周一：用固定锚点生成周一到周日的本地化缩写。 */
 function weekdayLabels(
@@ -19,7 +20,7 @@ function weekdayLabels(
 }
 
 export async function InsightsPage() {
-  const [{ t, date, number }, insights] = await Promise.all([getI18n(), getInsights()]);
+  const [{ t, date, number, label }, insights] = await Promise.all([getI18n(), getInsights()]);
   const hours = Math.round((insights.focusMinutes / 60) * 10) / 10;
 
   const activeDays = insights.days.filter((day) => day.minutes > 0);
@@ -47,6 +48,11 @@ export async function InsightsPage() {
   // 热力图按「周一到周日」分行；首日前补空白让列对齐自然周。
   const firstDate = new Date(`${insights.days[0].date}T12:00:00Z`);
   const leadingEmpty = (firstDate.getUTCDay() + 6) % 7;
+  const goalProgress = Math.min(
+    100,
+    Math.round((insights.focusMinutesThisMonth / insights.dailyFocusGoalMinutes) * 100),
+  );
+  const effortDelta = insights.actualTaskMinutesThisMonth - insights.estimatedMinutesThisMonth;
 
   return (
     <div className={shared.page}>
@@ -90,6 +96,8 @@ export async function InsightsPage() {
         <SectionLabel>{t("Focus Rhythm")}</SectionLabel>
         <FocusRhythm days={rhythmDays} ariaLabel={t("Focus Rhythm")} />
       </section>
+
+      <AiAdvisorPanel history={insights.days} />
 
       <section>
         <SectionLabel>{t("Consistency Map")}</SectionLabel>
@@ -144,7 +152,76 @@ export async function InsightsPage() {
         </div>
       </section>
 
+      <section>
+        <SectionLabel>{t("insights.monthlyFacts")}</SectionLabel>
+        <div className={styles.goalCard}>
+          <div>
+            <strong>{t("insights.dailyFocusGoal")}</strong>
+            <p>{t("insights.goalDefinition")}</p>
+          </div>
+          <div
+            className={styles.goalProgress}
+            role="progressbar"
+            aria-label={t("insights.dailyFocusGoal")}
+            aria-valuemin={0}
+            aria-valuemax={insights.dailyFocusGoalMinutes}
+            aria-valuenow={Math.min(insights.focusMinutesThisMonth, insights.dailyFocusGoalMinutes)}
+          >
+            <span style={{ width: `${goalProgress}%` }} />
+          </div>
+          <dl>
+            <div>
+              <dt>{t("insights.monthFocus")}</dt>
+              <dd>{t("insights.focusMinutes", { count: insights.focusMinutesThisMonth })}</dd>
+            </div>
+            <div>
+              <dt>{t("insights.dailyGoal")}</dt>
+              <dd>{t("insights.focusMinutes", { count: insights.dailyFocusGoalMinutes })}</dd>
+            </div>
+            <div>
+              <dt>{t("insights.checkInDays")}</dt>
+              <dd>{number(insights.checkInDaysThisMonth)}</dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
       <section className={styles.highlights}>
+        <div className={styles.highlight}>
+          <HiTrophy size={18} className={styles.highlightIcon} aria-hidden="true" />
+          <div className={styles.highlightNumber}>
+            {number(insights.estimatedMinutesThisMonth)} /{" "}
+            {number(insights.actualTaskMinutesThisMonth)}
+          </div>
+          <div className={styles.highlightLabel}>{t("insights.estimatedVsActual")}</div>
+          <div className={styles.highlightMeta}>
+            {effortDelta === 0
+              ? t("insights.effortMatched")
+              : t("insights.effortDelta", {
+                  count: Math.abs(effortDelta),
+                  direction:
+                    effortDelta > 0 ? t("insights.overEstimate") : t("insights.underEstimate"),
+                })}
+          </div>
+        </div>
+        <div className={styles.highlight}>
+          <HiSparkles size={18} className={styles.highlightIcon} aria-hidden="true" />
+          <div className={styles.highlightNumber}>
+            {["Work", "Study", "Life", "Inbox"]
+              .map((list) => `${label(list)} ${number(insights.listDistribution[list] ?? 0)}`)
+              .join(" / ")}
+          </div>
+          <div className={styles.highlightLabel}>{t("insights.listDistribution")}</div>
+          <div className={styles.highlightMeta}>{t("insights.completedThisMonth")}</div>
+        </div>
+        <div className={styles.highlight}>
+          <HiFire size={18} className={styles.highlightIcon} aria-hidden="true" />
+          <div className={styles.highlightNumber}>
+            {t("insights.focusMinutes", { count: insights.unlinkedFocusMinutesThisMonth })}
+          </div>
+          <div className={styles.highlightLabel}>{t("insights.unlinkedFocus")}</div>
+          <div className={styles.highlightMeta}>{t("insights.unlinkedFocusHint")}</div>
+        </div>
         <div className={styles.highlight}>
           <HiTrophy size={18} className={styles.highlightIcon} aria-hidden="true" />
           <div className={styles.highlightNumber}>

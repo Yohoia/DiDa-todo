@@ -320,8 +320,8 @@ export const messages = {
     en: "Confirm clear",
   },
   "notifications.retentionHint": {
-    "zh-CN": "通知不会自动过期；已读仍保留，可手动清空。",
-    en: "Notifications do not expire. Read notifications stay until you clear them.",
+    "zh-CN": "超过保留期的通知会删除；清空只隐藏，不会重复提醒。",
+    en: "Notifications expire after retention; clearing hides them without repeated reminders.",
   },
   全部已读: {
     "zh-CN": "全部已读",
@@ -1326,6 +1326,360 @@ export const messages = {
   "insights.focusMinutes": {
     "zh-CN": "{count} 分钟",
     en: "{count} min",
+  },
+  "insights.monthlyFacts": {
+    "zh-CN": "月度目标与事实",
+    en: "Monthly Goals and Facts",
+  },
+  "insights.dailyFocusGoal": {
+    "zh-CN": "每日专注目标",
+    en: "Daily Focus Goal",
+  },
+  "insights.goalDefinition": {
+    "zh-CN": "按账户时区的日历日聚合；打卡定义为当天有专注记录或完成至少一项任务。",
+    en: "Aggregated by the account time zone. A check-in means focus activity or at least one completed task.",
+  },
+  "insights.monthFocus": {
+    "zh-CN": "本月专注",
+    en: "This Month",
+  },
+  "insights.dailyGoal": {
+    "zh-CN": "每日目标",
+    en: "Daily Goal",
+  },
+  "insights.checkInDays": {
+    "zh-CN": "打卡天数",
+    en: "Check-in Days",
+  },
+  "insights.estimatedVsActual": {
+    "zh-CN": "预估 / 实际",
+    en: "Estimated / Actual",
+  },
+  "insights.effortMatched": {
+    "zh-CN": "实际耗时与预估一致",
+    en: "Actual effort matched estimates",
+  },
+  "insights.effortDelta": {
+    "zh-CN": "实际比预估{direction} {count} 分钟",
+    en: "Actual effort was {direction} estimate by {count} min",
+  },
+  "insights.overEstimate": {
+    "zh-CN": "超出",
+    en: "over",
+  },
+  "insights.underEstimate": {
+    "zh-CN": "少于",
+    en: "under",
+  },
+  "insights.listDistribution": {
+    "zh-CN": "清单分布",
+    en: "List Distribution",
+  },
+  "insights.completedThisMonth": {
+    "zh-CN": "本月完成任务",
+    en: "Tasks completed this month",
+  },
+  "insights.unlinkedFocus": {
+    "zh-CN": "未关联专注",
+    en: "Unlinked Focus",
+  },
+  "insights.unlinkedFocusHint": {
+    "zh-CN": "未绑定任务的专注事实",
+    en: "Focus facts not linked to a task",
+  },
+  "settings.dailyFocusGoal": {
+    "zh-CN": "每日专注目标",
+    en: "Daily focus goal",
+  },
+  "settings.dailyFocusGoalDescription": {
+    "zh-CN": "统计页按上海日历日展示目标达成情况。",
+    en: "The insights page measures progress by Shanghai calendar day.",
+  },
+  "settings.defaultReminder": {
+    "zh-CN": "默认提醒",
+    en: "Default reminder",
+  },
+  "settings.defaultReminderDescription": {
+    "zh-CN": "新建带日期和时间的事项时自动应用。",
+    en: "Applied automatically to new items with a date and time.",
+  },
+  "settings.minutesBefore": {
+    "zh-CN": "{count} 分钟前",
+    en: "{count} min before",
+  },
+  "settings.atStartTime": {
+    "zh-CN": "开始时",
+    en: "At start time",
+  },
+  "settings.gamification": {
+    "zh-CN": "成长体系",
+    en: "Growth system",
+  },
+  "settings.gamificationDescription": {
+    "zh-CN": "控制植物、金币、成就与相关经验值展示。",
+    en: "Control plants, coins, achievements, and their experience points.",
+  },
+  "settings.dailyDigest": {
+    "zh-CN": "每日摘要",
+    en: "Daily digest",
+  },
+  "settings.dailyDigestDescription": {
+    "zh-CN": "每天 8 点后生成一次当日安排摘要。",
+    en: "Create one daily-plan digest after 8 AM.",
+  },
+  "settings.notificationRetention": {
+    "zh-CN": "通知保留期",
+    en: "Notification retention",
+  },
+  "settings.notificationRetentionDescription": {
+    "zh-CN": "到期通知会被硬删除；清空只是隐藏并保留去重记录。",
+    en: "Expired notifications are deleted; clearing hides them while keeping dedupe records.",
+  },
+  "settings.retentionDays": {
+    "zh-CN": "{count} 天",
+    en: "{count} days",
+  },
+  "settings.timeZone": {
+    "zh-CN": "时区",
+    en: "Time zone",
+  },
+  "settings.timeZoneDescription": {
+    "zh-CN": "统一用于日历、提醒、相对日期、完成归档与统计边界。",
+    en: "Used consistently by calendar, reminders, relative dates, completion archives, and statistics.",
+  },
+  "settings.hourFormat": {
+    "zh-CN": "时间格式",
+    en: "Time format",
+  },
+  "settings.hourFormatDescription": {
+    "zh-CN": "选择 12 小时制或 24 小时制；不会修改已保存任务。",
+    en: "Choose 12-hour or 24-hour display; saved tasks are unchanged.",
+  },
+  "settings.12Hour": {
+    "zh-CN": "12 小时制",
+    en: "12-hour",
+  },
+  "settings.24Hour": {
+    "zh-CN": "24 小时制",
+    en: "24-hour",
+  },
+  "profile.permanentGarden": {
+    "zh-CN": "永久专注花园",
+    en: "Permanent Focus Garden",
+  },
+  "profile.permanentGardenHint": {
+    "zh-CN": "每累计 120 分钟专注，种下一株永久植物。",
+    en: "Every 120 minutes of focus grows one permanent plant.",
+  },
+  "profile.coins": {
+    "zh-CN": "金币",
+    en: "Coins",
+  },
+  "profile.achievements": {
+    "zh-CN": "成就",
+    en: "Achievements",
+  },
+  "profile.firstPlantHint": {
+    "zh-CN": "专注后解锁",
+    en: "Unlock with focus",
+  },
+  "profile.gardenFactSource": {
+    "zh-CN": "植物与奖励来自专注事实账本，重复加载不会重复发放。",
+    en: "Plants and rewards come from an immutable focus ledger and cannot be minted twice.",
+  },
+  "profile.gamificationDisabled": {
+    "zh-CN": "成长体系已关闭，专注记录仍会完整保存。",
+    en: "The growth system is off; focus records are still saved.",
+  },
+  "growth.achievement.first-focus": {
+    "zh-CN": "第一次专注",
+    en: "First Focus",
+  },
+  "growth.achievement.focus-10-hours": {
+    "zh-CN": "专注十小时",
+    en: "Ten Focus Hours",
+  },
+  "growth.achievement.tasks-50": {
+    "zh-CN": "完成五十项",
+    en: "Fifty Tasks",
+  },
+  "growth.achievement.focus-streak-7": {
+    "zh-CN": "连续专注七天",
+    en: "Seven-Day Streak",
+  },
+  "growth.achievement.plants-10": {
+    "zh-CN": "十株植物",
+    en: "Ten Plants",
+  },
+  "advisor.title": {
+    "zh-CN": "AI 任务助理",
+    en: "AI Task Advisor",
+  },
+  "advisor.description": {
+    "zh-CN": "生成子任务、独立耗时预估、容量判断与周回顾；应用前可逐项修改。",
+    en: "Generate subtasks, independent estimates, capacity advice, and a weekly review; edit before applying.",
+  },
+  "advisor.generate": {
+    "zh-CN": "生成建议",
+    en: "Generate advice",
+  },
+  "advisor.previewHint": {
+    "zh-CN": "预览并调整建议；应用不会修改任务日期或时间。",
+    en: "Preview and adjust suggestions; applying never changes task dates or times.",
+  },
+  "advisor.loading": {
+    "zh-CN": "正在分析今天的任务与最近节奏…",
+    en: "Analyzing today's tasks and recent rhythm...",
+  },
+  "advisor.capacityCount": {
+    "zh-CN": "预估 {count} 个番茄钟 / 容量 {capacity} 项",
+    en: "{count} pomodoros / {capacity}-task capacity",
+  },
+  "advisor.subtasks": {
+    "zh-CN": "子任务（每行一条）",
+    en: "Subtasks (one per line)",
+  },
+  "advisor.keepSubtasks": {
+    "zh-CN": "该任务已有子任务，应用时保留现有子任务。",
+    en: "This task already has subtasks; applying keeps them.",
+  },
+  "advisor.weeklyReview": {
+    "zh-CN": "周回顾",
+    en: "Weekly Review",
+  },
+  "advisor.wins": {
+    "zh-CN": "进展",
+    en: "Wins",
+  },
+  "advisor.risks": {
+    "zh-CN": "风险",
+    en: "Risks",
+  },
+  "advisor.nextActions": {
+    "zh-CN": "下一步",
+    en: "Next Actions",
+  },
+  "advisor.apply": {
+    "zh-CN": "应用勾选建议",
+    en: "Apply selected",
+  },
+  "advisor.applied": {
+    "zh-CN": "已应用 {count} 项建议",
+    en: "Applied {count} suggestions",
+  },
+  "account.exportTitle": {
+    "zh-CN": "导出我的数据",
+    en: "Export my data",
+  },
+  "account.exportDescription": {
+    "zh-CN":
+      "导出任务、子任务、偏好、通知、专注、语音转写、热词与成长事实；不包含密码、会话或 API 凭据。",
+    en: "Export tasks, subtasks, preferences, notifications, focus, voice transcripts, hotwords, and growth facts; passwords, sessions, and API credentials are excluded.",
+  },
+  "account.exportButton": {
+    "zh-CN": "下载 JSON",
+    en: "Download JSON",
+  },
+  "account.deleteTitle": {
+    "zh-CN": "删除账号",
+    en: "Delete account",
+  },
+  "account.deleteDescription": {
+    "zh-CN":
+      "立即删除账号及任务、专注、语音转写、热词、通知和成长数据。安全审计只保留用户 ID、时间与结果，不保留业务内容。",
+    en: "Immediately deletes the account plus tasks, focus, voice transcripts, hotwords, notifications, and growth data. Security audit keeps only user ID, time, and outcome, never business content.",
+  },
+  "account.deleteConfirmEmail": {
+    "zh-CN": "输入当前登录邮箱确认",
+    en: "Type your login email to confirm",
+  },
+  "account.deleteButton": {
+    "zh-CN": "永久删除账号",
+    en: "Delete permanently",
+  },
+  "account.deleteNotConfigured": {
+    "zh-CN": "服务端未配置删除特权密钥，请联系部署管理员。",
+    en: "The server deletion key is not configured. Contact the deployment administrator.",
+  },
+  "account.deleteFailed": {
+    "zh-CN": "删除失败，账号数据未被成功删除，请稍后重试。",
+    en: "Deletion failed and the account was not deleted. Try again later.",
+  },
+  "voice.historyTitle": {
+    "zh-CN": "语音历史",
+    en: "Voice history",
+  },
+  "voice.historyDescription": {
+    "zh-CN": "只保存转写文本和解析结果，不保存原始音频。可单条删除或清空。",
+    en: "Only transcripts and parsed results are saved; original audio is not retained. Delete one or clear all.",
+  },
+  "voice.historyLoadFailed": {
+    "zh-CN": "语音历史读取失败。",
+    en: "Voice history could not be loaded.",
+  },
+  "voice.emptyHistory": {
+    "zh-CN": "暂无语音历史。",
+    en: "No voice history yet.",
+  },
+  "voice.taskCount": {
+    "zh-CN": "{count} 项",
+    en: "{count} items",
+  },
+  "voice.deleteOne": {
+    "zh-CN": "删除这条语音历史",
+    en: "Delete this voice history item",
+  },
+  "voice.clearHistory": {
+    "zh-CN": "清空语音历史",
+    en: "Clear voice history",
+  },
+  "voice.hotwordsTitle": {
+    "zh-CN": "识别热词",
+    en: "Recognition hotwords",
+  },
+  麦克风被占用: {
+    "zh-CN": "麦克风被其他应用占用，请关闭后重试",
+    en: "Another app is using the microphone. Close it and try again",
+  },
+  语音采集失败: {
+    "zh-CN": "语音采集失败，请重试",
+    en: "Audio capture failed. Please try again",
+  },
+  网络连接不可用: {
+    "zh-CN": "网络连接不可用，请检查后重试",
+    en: "Network unavailable. Check the connection and try again",
+  },
+  语音上游服务暂时不可用: {
+    "zh-CN": "语音上游服务暂时不可用，请稍后再试",
+    en: "The speech upstream is temporarily unavailable. Try again later",
+  },
+  录音格式无效: {
+    "zh-CN": "录音格式无效，请重新录入",
+    en: "The recording format is invalid. Record again",
+  },
+  "voice.hotwordsDescription": {
+    "zh-CN": "为项目名、人名或常用词设置 1–5 权重，语音转写时随请求发送。",
+    en: "Set weight 1-5 for projects, names, or common terms to send with transcription requests.",
+  },
+  "voice.hotwordLabel": {
+    "zh-CN": "热词",
+    en: "Hotword",
+  },
+  "voice.hotwordWeight": {
+    "zh-CN": "热词权重",
+    en: "Hotword weight",
+  },
+  "voice.deleteHotword": {
+    "zh-CN": "删除热词 {word}",
+    en: "Delete hotword {word}",
+  },
+  "voice.retry": {
+    "zh-CN": "重试",
+    en: "Retry",
+  },
+  "voice.loading": {
+    "zh-CN": "正在加载…",
+    en: "Loading...",
   },
   "Best Day": {
     "zh-CN": "单日最高",

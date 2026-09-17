@@ -28,12 +28,25 @@ acceptance against the live project.
 
 ## Notification lifecycle
 
-Notifications do not expire automatically. Reading only marks a notification as read. Clearing
-the notification center persists `dismissed_at`, hides both read and unread notifications, and
-keeps the original task reminder record for deduplication after refresh or catch-up scanning.
-Deleting a task cascades to its notification. Notification inserts and task reassignments must
-reference a task owned by the authenticated user (migration `0006`). Deploy this migration before
-releasing the updated notification UI.
+Reading only marks a notification as read. Clearing persists `dismissed_at` and hides the current
+rows without deleting their dedupe keys. Since migration `0010`, task reminders deduplicate on
+`(user_id, dedupe_key)` where a task key includes the task and reminder time; rescheduling can
+create the next reminder while catch-up scans cannot resurrect the old one. The workspace prunes
+rows older than the account retention preference. Deleting a task cascades to its notifications.
+Notification inserts and task reassignments must reference a task owned by the authenticated user.
+
+## Insights, growth, account, and preferences (0010-0011)
+
+Migration `0010` adds focus-goal and notification preferences, permanent growth events/plants, and
+the database-side insight aggregation. Migration `0011` validates account time zones, adds the
+12/24-hour preference, scopes statistics and recurrence dates to the account time zone, and keeps
+a minimal private account-deletion audit after Auth user deletion. Account export uses RLS-backed
+reads and excludes credentials; account deletion itself requires the server-side service-role
+configuration and never exposes that key to the browser.
+
+Both migrations are pending deployment until the corresponding `main` workflow finishes. The
+in-memory PostgreSQL suite executes every migration from `0001` through `0011` and verifies the
+RLS, dedupe, month-boundary, reward idempotency, preference validation, and cascade behavior.
 
 ## Automatic production deployment
 
