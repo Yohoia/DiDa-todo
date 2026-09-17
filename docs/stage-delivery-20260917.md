@@ -128,7 +128,8 @@ Insights 增加独立 AI 顾问入口，输入当天未完成任务与最近专�
 - 2026-09-17 追加历史标签回归：完成页按 `completed_at` 的上海日期动态格式化，不再包含 `9月8/9/10日` 示例文案；ESLint、tsc、i18n、阶段一回归与格式检查通过。
 - 专注回归覆盖暂停、恢复、长休息、自动切换及实际 Timer 的到零保存/退出去重；使用模拟时钟和隔离记录，不改生产事项。
 - 新增 CI 构建后匿名 HTTP/RSC 验证步骤；使用无凭据占位配置。`d0030e5` 触发的 run #34 已通过 check 与生产迁移作业；`774bea9` 触发的 run #35 也全部通过，且公开 annotations 为空，未再出现 Node 20 弃用警告。
+- `c853195` 触发的 CI run #38 已通过。`check` 与 `Deploy Supabase migrations` 均成功，`0010` 与 `0011` 已由生产迁移作业执行。
 - 尚未进行收费 AI、真实麦克风、真实改密/换绑或删除账号操作。真实端到端验收需要独立账号/环境和对应授权。
   创建/删除等完整离线能力仍是 SYNC-01 后续边界；`0008_workspace_realtime.sql`、`0009_task_search.sql` 已部署目标库，真实双设备、断网重连、trigram 索引与大数据量搜索尚未验收，当前实现不能称为完整离线同步。
 
-2026-09-17 最终本地检查：`eslint . --max-warnings=0`、`next typegen`、`tsc --noEmit`、`prettier --check .`、i18n 回归与 `next build --webpack` 通过；本地 Node 回归 101 项中 100 项通过，1 项需真实 HTTP 服务的用例按设计跳过。此前隔离构建与 375px 宽度实查记录仍有效；测试用服务已停止。此记录不代表远端 CI、0010/0011 数据库迁移或收费服务已执行。
+2026-09-17 最终本地检查：`eslint . --max-warnings=0`、`next typegen`、`tsc --noEmit`、`prettier --check .`、i18n 回归与 `next build --webpack` 通过；UTC 环境下本地 Node 回归 101 项中 100 项通过，1 项需真实 HTTP 服务的用例按设计跳过。此前隔离构建与 375px 宽度实查记录仍有效；测试用服务已停止。此记录不代表收费服务或真机/双设备验收已执行。
