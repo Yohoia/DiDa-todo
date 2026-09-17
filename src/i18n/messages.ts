@@ -1215,18 +1215,6 @@ export const messages = {
     "zh-CN": "9 月 4 日，星期五",
     en: "FRIDAY, SEP 4",
   },
-  "Today · Sep 9": {
-    "zh-CN": "今天 · 9 月 9 日",
-    en: "Today · Sep 9",
-  },
-  "Tomorrow · Sep 10": {
-    "zh-CN": "明天 · 9 月 10 日",
-    en: "Tomorrow · Sep 10",
-  },
-  "Yesterday · Sep 8": {
-    "zh-CN": "昨天 · 9 月 8 日",
-    en: "Yesterday · Sep 8",
-  },
   跳转到主要内容: {
     "zh-CN": "跳转到主要内容",
     en: "Skip to main content",

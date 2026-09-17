@@ -14,7 +14,17 @@ interval to the first date after today (Asia/Shanghai), rather than creating a b
 Changing an instance does not rewrite history or an already created successor. Deleting one
 instance does not cascade through the chain. See [stage delivery](../docs/stage-delivery-20260917.md).
 The application disables repeat controls when the columns are absent; real database errors still
-surface as errors. Local migration tests do not mean the production migration has been deployed.
+surface as errors. Production migration deployment succeeded in GitHub Actions run 34, while
+repeating-task behavior still needs target-environment acceptance.
+
+## Workspace Realtime and search (0008-0009)
+
+`0008_workspace_realtime.sql` adds the four workspace tables to `supabase_realtime` and sets their
+replica identity to full rows for account-filtered Realtime delivery. `0009_task_search.sql`
+creates the account-scoped `search_tasks` RPC and trigram indexes when the Supabase `extensions`
+schema is available. Both migrations were deployed by GitHub Actions run 34. Real multi-device,
+disconnect/reconnect, large-result search, and target RPC/index behavior still require explicit
+acceptance against the live project.
 
 ## Notification lifecycle
 

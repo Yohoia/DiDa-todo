@@ -411,6 +411,18 @@ test("Inbox keeps existing capture and AI date boundaries without redundant quic
   assert.ok(inbox.includes("<AiOrganizeDialog"));
 });
 
+test("completed history labels use completion dates instead of fixture strings", () => {
+  const completed = readFileSync(
+    new URL("../src/features/tasks/completed-page.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.ok(completed.includes("function completionDay"));
+  assert.ok(completed.includes("date: formatDate"));
+  assert.ok(completed.includes("formatDate(date"));
+  for (const removed of ["2026-09-08", "Sep 8", "Sep 9", "Sep 10", "label(date)"])
+    assert.equal(completed.includes(removed), false);
+});
+
 test("quick capture interprets only explicit dates and times in Chinese and English", () => {
   const preset = { list: "Inbox" as const };
   const chinese = parseQuickCapture("明天下午三点半开会", "2026-09-17", preset, "capture-1");

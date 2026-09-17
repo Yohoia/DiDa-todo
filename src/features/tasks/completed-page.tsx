@@ -17,7 +17,7 @@ function completionDay(completedAt?: string) {
 const PAGE_SIZE = 30;
 
 export function CompletedPage() {
-  const { t, label, locale } = useI18n();
+  const { t, date: formatDate, locale } = useI18n();
   const { tasks, toggleTask, deleteTask, notify, loadCompletedTasks } = useWorkspace();
   const completed = tasks
     .filter((task) => task.completed)
@@ -72,7 +72,9 @@ export function CompletedPage() {
       {dates.map((date) => (
         <section key={date}>
           <SectionLabel>
-            {date === "2026-09-08" ? t("Yesterday · Sep 8") : label(date)}
+            {date === "Earlier"
+              ? t("Earlier")
+              : formatDate(date, { year: "numeric", month: "short", day: "numeric" })}
           </SectionLabel>
           <div className="flex flex-col gap-2">
             <AnimatePresence mode="popLayout">
