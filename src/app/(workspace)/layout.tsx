@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { WorkspaceProvider, type WorkspaceUser } from "@/features/tasks/workspace-provider";
 import { WorkspaceNav } from "@/components/layout/workspace-nav";
 import { WorkspaceOverlays } from "@/features/tasks/workspace-overlays";
+import { WorkspaceSyncStatus } from "@/features/tasks/workspace-sync-status";
 import { PageTransition } from "@/components/layout/page-transition";
 import { requireWorkspaceSession } from "@/lib/server/workspace-session";
 import { createRepository } from "@/lib/data/repository";
@@ -16,7 +17,7 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
   const repository = createRepository(supabase, user.id);
   const [loadedTasks, loadedPreferences, profile, loadedNotifications, recurrenceAvailable] =
     await Promise.all([
-      repository.loadTasks(),
+      repository.loadWorkspaceTasks(),
       repository.loadPreferences(),
       supabase.from("profiles").select("display_name").eq("id", user.id).maybeSingle(),
       repository.listNotifications(),
@@ -40,6 +41,7 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
         </a>
         <div className={styles.utilityBar}>
           <Brand className={styles.utilityBrand} compact />
+          <WorkspaceSyncStatus />
         </div>
         <main id="workspace-main">
           <PageTransition>{children}</PageTransition>

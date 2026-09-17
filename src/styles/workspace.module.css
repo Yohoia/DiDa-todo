@@ -319,6 +319,34 @@
 .utilityBrand {
   color: var(--foreground);
 }
+.syncStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 30px;
+  padding: 3px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted-foreground);
+  background: color-mix(in srgb, var(--card) 82%, transparent);
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.syncDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 14%, transparent);
+}
+.syncStatusConnected {
+  color: #25845d;
+}
+.syncStatusReconnecting {
+  color: var(--destructive);
+}
 @media (max-width: 600px) {
   .utilityBar {
     margin: -10px auto 24px;

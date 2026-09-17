@@ -5,7 +5,17 @@ import { taskCompletionPatch } from "../src/features/tasks/task-completion.ts";
 import { organizationPatch } from "../src/lib/data/task-organization.ts";
 
 type Row = Record<string, unknown>;
-type Result = { data: Row[]; error: { message: string; code?: string } | null };
+type Result = {
+  data: Row[];
+  error: { message: string; code?: string } | null;
+  count?: number | null;
+};
+
+type RpcCall = {
+  fn: string;
+  args: Record<string, unknown>;
+  options: { count?: string } | undefined;
+};
 
 /** 内存数据库替身：验证真实仓库发出的筛选和更新，而不是重复实现业务逻辑。 */
 function database(
@@ -13,19 +23,53 @@ function database(
   failUpdates = false,
   failReads = false,
   beforeUpdate?: () => void,
+  failSubtaskWrites = false,
+  rpc?: { rows: Row[]; count?: number },
 ) {
+  let taskVersion = 0;
+  const rpcCalls: RpcCall[] = [];
+  const readRanges: { table: string; from: number; to: number }[] = [];
   return {
+    rpcCalls: () => rpcCalls,
+    readRanges: () => readRanges,
+    rpc(fn: string, args: Record<string, unknown>, options?: { count?: string }) {
+      rpcCalls.push({ fn, args, options });
+      return Promise.resolve({
+        data: rpc?.rows ?? [],
+        error: null,
+        count: rpc?.count ?? (rpc?.rows ?? []).length,
+      });
+    },
     from(table: string) {
       let patch: Row | undefined;
       let inserted: Row | undefined;
+      let upserts: Row[] | undefined;
+      let deleting = false;
+      const ordering: { key: string; ascending: boolean }[] = [];
+      let countOption: string | undefined;
       let start = 0;
       let end = Infinity;
       const filters: ((row: Row) => boolean)[] = [];
       const query = {
-        select() {
+        select(_columns?: string, options?: { count?: string }) {
+          countOption = options?.count;
           return query;
         },
-        order() {
+        order(key: string, options?: { ascending?: boolean; nullsFirst?: boolean }) {
+          ordering.push({ key, ascending: options?.ascending !== false });
+          return query;
+        },
+        upsert(values: Row[]) {
+          upserts = values;
+          return query;
+        },
+        delete() {
+          deleting = true;
+          return query;
+        },
+        not(key: string, _operator: string, value: string) {
+          const values = value.slice(1, -1).split(",");
+          filters.push((row) => !values.includes(String(row[key])));
           return query;
         },
         update(value: Row) {
@@ -44,6 +88,10 @@ function database(
           filters.push((row) => Number(row[key]) <= value);
           return query;
         },
+        gte(key: string, value: unknown) {
+          filters.push((row) => row[key] !== null && String(row[key]) >= String(value));
+          return query;
+        },
         async maybeSingle() {
           const result = await query;
           return { ...result, data: result.data[0] ?? null };
@@ -55,9 +103,20 @@ function database(
         range(from: number, to: number) {
           start = from;
           end = to;
+          readRanges.push({ table, from, to });
           return query;
         },
         then(resolve: (result: Result) => unknown) {
+          if (table === "subtasks" && failSubtaskWrites && (upserts || deleting))
+            return Promise.resolve({ data: [], error: { message: "subtask offline" } }).then(
+              resolve,
+            );
+          if (upserts)
+            for (const value of upserts) {
+              const existing = (tables[table] ?? []).find((row) => row.id === value.id);
+              if (existing) Object.assign(existing, value);
+              else (tables[table] ??= []).push(value);
+            }
           if (inserted) {
             const value = inserted;
             const existing = (tables[table] ?? []).some((row) =>
@@ -76,12 +135,32 @@ function database(
           const rows = (tables[table] ?? []).filter((row) =>
             filters.every((filter) => filter(row)),
           );
+          rows.sort((a, b) => {
+            for (const { key, ascending } of ordering) {
+              const delta =
+                typeof a[key] === "number" && typeof b[key] === "number"
+                  ? Number(a[key]) - Number(b[key])
+                  : String(a[key]).localeCompare(String(b[key]));
+              if (delta) return ascending ? delta : -delta;
+            }
+            return 0;
+          });
+          if (deleting) tables[table] = (tables[table] ?? []).filter((row) => !rows.includes(row));
           if (patch && failUpdates)
             return Promise.resolve({ data: [], error: { message: "offline" } }).then(resolve);
           if (!patch && !inserted && failReads)
             return Promise.resolve({ data: [], error: { message: "read offline" } }).then(resolve);
-          if (patch) rows.forEach((row) => Object.assign(row, patch));
-          return Promise.resolve({ data: rows.slice(start, end + 1), error: null }).then(resolve);
+          if (patch)
+            rows.forEach((row) => {
+              Object.assign(row, patch);
+              // Mirror the tasks_set_updated_at trigger for compare-and-set tests.
+              if (table === "tasks") row.updated_at = `version-${++taskVersion}`;
+            });
+          return Promise.resolve({
+            data: rows.slice(start, end + 1),
+            error: null,
+            ...(countOption === "exact" ? { count: rows.length } : {}),
+          }).then(resolve);
         },
       };
       return query;
@@ -137,6 +216,221 @@ test("omitting time preserves it; setting and clearing date/schedule persist cor
   assert.equal((await repository.loadTasks())[0].schedule, undefined);
 });
 
+test("versioned task updates reject stale versions and return fresh versions", async () => {
+  const row = taskRow();
+  const repository = createRepository(database({ tasks: [row] }), "owner");
+  const [snapshot] = await repository.loadTasks();
+  const stale = { ...snapshot };
+  const first = await repository.updateTaskVersioned(snapshot.id, snapshot.updatedAt, {
+    title: "First edit",
+  });
+  assert.ok(first?.updatedAt);
+  assert.equal(first?.updatedAt, row.updated_at);
+  assert.equal(
+    await repository.updateTaskVersioned(stale.id, stale.updatedAt, { title: "Losing edit" }),
+    null,
+  );
+  assert.equal(row.title, "First edit");
+  const [reloaded] = await repository.loadTasks();
+  const second = await repository.updateTaskVersioned(reloaded.id, reloaded.updatedAt, {
+    title: "Second edit",
+  });
+  assert.ok(second?.updatedAt);
+  assert.notEqual(second?.updatedAt, first?.updatedAt);
+  assert.equal(row.title, "Second edit");
+  // A locally created task has no version yet; its first write adopts the row version.
+  const local = { ...taskRow(), id: "local", updated_at: undefined };
+  const localRepository = createRepository(database({ tasks: [local] }), "owner");
+  const [localSnapshot] = await localRepository.loadTasks();
+  const adopted = await localRepository.updateTaskVersioned(localSnapshot.id, undefined, {
+    title: "Adopted",
+  });
+  assert.ok(adopted?.updatedAt);
+  assert.equal(local.title, "Adopted");
+});
+
+test("versioned subtask-only writes reuse the detail writer without bumping the task version", async () => {
+  const row = taskRow();
+  const tables = { tasks: [row], subtasks: [] };
+  const repository = createRepository(database(tables), "owner");
+  const [snapshot] = await repository.loadTasks();
+  const result = await repository.updateTaskVersioned(snapshot.id, snapshot.updatedAt, {
+    subtasks: [{ id: "sub-1", title: "New", completed: false }],
+  });
+  assert.deepEqual(result, { updatedAt: snapshot.updatedAt });
+  assert.equal(row.updated_at, snapshot.updatedAt);
+  assert.equal(tables.subtasks.length, 1);
+});
+
+test("single-task reload reads only the owner task and its ordered subtasks", async () => {
+  const row = taskRow();
+  const foreign = { ...taskRow(), id: "foreign", user_id: "someone-else" };
+  const tables = {
+    tasks: [row, foreign],
+    subtasks: [
+      {
+        id: "sub-2",
+        task_id: "task-1",
+        user_id: "owner",
+        title: "Second",
+        completed: false,
+        position: 1,
+      },
+      {
+        id: "sub-1",
+        task_id: "task-1",
+        user_id: "owner",
+        title: "First",
+        completed: false,
+        position: 0,
+      },
+      {
+        id: "foreign-sub",
+        task_id: "foreign",
+        user_id: "someone-else",
+        title: "No",
+        completed: false,
+        position: 0,
+      },
+    ],
+  };
+  const repository = createRepository(database(tables), "owner");
+  const task = await repository.loadTask("task-1");
+  assert.deepEqual(
+    task?.subtasks.map((subtask) => subtask.title),
+    ["First", "Second"],
+  );
+  assert.equal(await repository.loadTask("missing"), null);
+});
+
+test("workspace preload reads active tasks, today's completions and only owned children", async () => {
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Shanghai" });
+  const yesterday = new Date(Date.now() - 48 * 60 * 60 * 1000).toLocaleDateString("en-CA", {
+    timeZone: "Asia/Shanghai",
+  });
+  const active = taskRow();
+  const completedToday = {
+    ...taskRow(),
+    id: "today",
+    completed: true,
+    completed_at: `${today}T10:00:00+08:00`,
+  };
+  const completedEarlier = {
+    ...taskRow(),
+    id: "archive",
+    completed: true,
+    completed_at: `${yesterday}T10:00:00+08:00`,
+  };
+  const foreign = {
+    ...taskRow(),
+    id: "foreign",
+    user_id: "someone-else",
+  };
+  const tables = {
+    tasks: [active, completedToday, completedEarlier, foreign],
+    subtasks: [
+      {
+        id: "owned",
+        task_id: "today",
+        user_id: "owner",
+        title: "Owned",
+        completed: false,
+        position: 0,
+      },
+      {
+        id: "foreign-child",
+        task_id: "foreign",
+        user_id: "someone-else",
+        title: "Foreign child",
+        completed: false,
+        position: 0,
+      },
+    ],
+  };
+  const repository = createRepository(database(tables), "owner");
+  const loaded = await repository.loadWorkspaceTasks();
+  assert.deepEqual(
+    loaded.map((task) => task.id),
+    ["task-1", "today"],
+  );
+  assert.deepEqual(loaded[1].subtasks, [{ id: "owned", title: "Owned", completed: false }]);
+});
+
+test("completed history uses exact counts and server-side range pagination", async () => {
+  const rows = Array.from({ length: 35 }, (_, index) => ({
+    ...taskRow(),
+    id: `search-${String(index).padStart(2, "0")}`,
+    completed: true,
+    completed_at: "2026-09-16T12:00:00Z",
+  }));
+  const client = database({ tasks: rows, subtasks: [] });
+  const repository = createRepository(client, "owner");
+  const firstPage = await repository.loadCompletedTasks(0, 30);
+  const secondPage = await repository.loadCompletedTasks(30, 30);
+  assert.equal(firstPage.total, 35);
+  assert.equal(firstPage.tasks.length, 30);
+  assert.equal(firstPage.hasMore, true);
+  assert.equal(secondPage.total, 35);
+  assert.deepEqual(
+    secondPage.tasks.map((task) => task.id),
+    ["search-30", "search-31", "search-32", "search-33", "search-34"],
+  );
+  assert.equal(secondPage.hasMore, false);
+  assert.deepEqual(
+    client.readRanges().filter((range) => range.table === "tasks"),
+    [
+      { table: "tasks", from: 0, to: 29 },
+      { table: "tasks", from: 30, to: 59 },
+    ],
+  );
+});
+
+test("date-specific history reads every server page with stable ordering", async () => {
+  const rows = Array.from({ length: 505 }, (_, index) => ({
+    ...taskRow(),
+    id: `date-${String(index).padStart(3, "0")}`,
+  }));
+  const client = database({ tasks: rows, subtasks: [] });
+  const repository = createRepository(client, "owner");
+  const loaded = await repository.loadTasksByDate("2026-09-16");
+  assert.equal(loaded.length, 505);
+  assert.deepEqual(
+    client.readRanges().filter((range) => range.table === "tasks"),
+    [
+      { table: "tasks", from: 0, to: 499 },
+      { table: "tasks", from: 500, to: 999 },
+    ],
+  );
+});
+
+test("task search sends matching RPC names with bounded pagination and exact count", async () => {
+  const rows = [
+    { ...taskRow(), id: "search-1", title: "Keyword title" },
+    { ...taskRow(), id: "search-2", description: "Keyword description" },
+  ];
+  const client = database({ tasks: rows, subtasks: [] }, false, false, undefined, false, {
+    rows: rows.map((row, index) => ({ task: row, total_count: index === 0 ? 3 : null })),
+    count: 3,
+  });
+  const repository = createRepository(client, "owner");
+  const page = await repository.searchTasks("  keyword  ", 0, 500);
+  assert.deepEqual(client.rpcCalls(), [
+    {
+      fn: "search_tasks",
+      args: { p_query: "keyword", p_limit: 50, p_offset: 0 },
+      options: { count: "exact" },
+    },
+  ]);
+  assert.deepEqual(
+    page.tasks.map((task) => task.id),
+    ["search-1", "search-2"],
+  );
+  assert.equal(page.total, 3);
+  assert.equal(page.hasMore, true);
+  await repository.searchTasks("   ");
+  assert.equal(client.rpcCalls().length, 1);
+});
+
 function notification(id: string, userId = "owner"): Row {
   return {
     id,
@@ -173,7 +467,7 @@ test("notification pagination preserves older and hidden reminder deduplication 
   const repository = createRepository(database({ notifications: rows }), "owner");
   const loaded = await repository.listNotifications();
   assert.equal(loaded.length, 505);
-  assert.ok(loaded[504].dismissedAt);
+  assert.ok(loaded.find((item) => item.taskId === rows[504].task_id)?.dismissedAt);
   await repository.dismissTaskNotifications(loaded.map((item) => item.taskId));
   assert.equal(
     (await repository.listNotifications()).filter((item) => !item.dismissedAt).length,
@@ -271,20 +565,53 @@ test("AI organization persists only unchanged, unfinished tasks owned by the use
   const repository = createRepository(database({ tasks: [row] }), "owner");
   const [snapshot] = await repository.loadTasks();
   row.title = "Edited elsewhere";
-  assert.equal(await repository.applyTaskOrganization(snapshot, { priority: 1 }), false);
+  assert.equal(await repository.applyTaskOrganization(snapshot, { priority: 1 }), null);
   assert.equal(row.priority, 3);
   row.title = snapshot.title;
   row.completed = true;
-  assert.equal(await repository.applyTaskOrganization(snapshot, { priority: 1 }), false);
+  assert.equal(await repository.applyTaskOrganization(snapshot, { priority: 1 }), null);
   row.completed = false;
   row.user_id = "someone-else";
-  assert.equal(await repository.applyTaskOrganization(snapshot, { priority: 1 }), false);
+  assert.equal(await repository.applyTaskOrganization(snapshot, { priority: 1 }), null);
   row.user_id = "owner";
-  assert.equal(
-    await repository.applyTaskOrganization(snapshot, { priority: 1, tags: ["Read"] }),
-    true,
-  );
+  const applied = await repository.applyTaskOrganization(snapshot, {
+    priority: 1,
+    tags: ["Read"],
+  });
+  assert.ok(applied?.updatedAt);
   assert.equal((await repository.loadTasks())[0].priority, 1);
+});
+
+test("AI human content edits persist with metadata and keep original dates after reload", async () => {
+  const row = { ...taskRow(), description: "Old description" };
+  const repository = createRepository(database({ tasks: [row] }), "owner");
+  const [snapshot] = await repository.loadTasks();
+  const patch = organizationPatch(
+    {
+      id: snapshot.id,
+      list: "Work",
+      tags: ["Edited"],
+      time: snapshot.time ?? null,
+      priority: 1,
+      estimate: 3,
+      reason: "",
+      title: "Revised task",
+      description: "",
+    },
+    snapshot,
+  );
+  assert.ok((await repository.applyTaskOrganization(snapshot, patch))?.updatedAt);
+  const [reloaded] = await repository.loadTasks();
+  assert.equal(reloaded.title, "Revised task");
+  assert.equal(reloaded.description, "");
+  assert.equal(reloaded.date, snapshot.date);
+  assert.equal(reloaded.time, snapshot.time);
+  assert.equal(reloaded.priority, 1);
+  assert.equal(reloaded.list, "Work");
+  assert.deepEqual(reloaded.tags, ["Edited"]);
+  assert.equal(reloaded.schedule?.label, "Revised task");
+  assert.equal(await repository.applyTaskOrganization(snapshot, { title: "Stale edit" }), null);
+  assert.equal(row.title, "Revised task");
 });
 
 test("AI compare-and-set rejects a task edited between the read and write", async () => {
@@ -297,9 +624,112 @@ test("AI compare-and-set rejects a task edited between the read and write", asyn
     "owner",
   );
   const [snapshot] = await repository.loadTasks();
-  assert.equal(await repository.applyTaskOrganization(snapshot, { priority: 1 }), false);
+  assert.equal(await repository.applyTaskOrganization(snapshot, { priority: 1 }), null);
   assert.equal(row.priority, 3);
   assert.equal(row.date, "2026-09-17");
+});
+
+test("full AI details save reminders, recurrence, lock and ordered subtasks using the existing detail writer", async () => {
+  const row = taskRow();
+  const tables = {
+    tasks: [row],
+    subtasks: [
+      { id: "old", task_id: row.id, user_id: "owner", title: "Old", completed: false, position: 0 },
+      {
+        id: "keep",
+        task_id: row.id,
+        user_id: "owner",
+        title: "Keep",
+        completed: false,
+        position: 1,
+      },
+      {
+        id: "other",
+        task_id: "other-task",
+        user_id: "other-owner",
+        title: "Foreign",
+        completed: false,
+        position: 0,
+      },
+    ],
+  };
+  const repository = createRepository(database(tables), "owner");
+  const [snapshot] = await repository.loadTasks();
+  const subtasks = [
+    { id: "keep", title: "Keep edited", completed: true },
+    { id: "new", title: "New", completed: false },
+  ];
+  const patch = organizationPatch(
+    {
+      id: snapshot.id,
+      list: "Study",
+      tags: [],
+      time: snapshot.time ?? null,
+      priority: 3,
+      estimate: 2,
+      reason: "",
+      reminder: "20 min before",
+      repeatIntervalDays: 7,
+      frozen: true,
+      subtasks,
+    },
+    snapshot,
+  );
+  assert.ok((await repository.applyTaskOrganization(snapshot, patch))?.updatedAt);
+  const [reloaded] = await repository.loadTasks();
+  assert.equal(reloaded.reminder, "20 min before");
+  assert.equal(reloaded.repeatIntervalDays, 7);
+  assert.equal(reloaded.frozen, true);
+  assert.deepEqual(reloaded.subtasks, subtasks);
+  assert.equal(
+    tables.subtasks.some((item) => item.id === "old"),
+    false,
+  );
+  assert.equal(tables.subtasks.find((item) => item.id === "other")?.title, "Foreign");
+  const cleared = organizationPatch(
+    {
+      id: reloaded.id,
+      list: "Study",
+      tags: [],
+      time: reloaded.time ?? null,
+      priority: 3,
+      estimate: 2,
+      reason: "",
+      repeatIntervalDays: undefined,
+      subtasks: [],
+    },
+    reloaded,
+  );
+  assert.ok((await repository.applyTaskOrganization(reloaded, cleared))?.updatedAt);
+  const [empty] = await repository.loadTasks();
+  assert.equal(empty.repeatIntervalDays, undefined);
+  assert.deepEqual(empty.subtasks, []);
+  assert.equal(tables.subtasks.length, 1);
+});
+
+test("full AI details skip changed child snapshots and propagate subtask write failures", async () => {
+  const row = taskRow();
+  const child = {
+    id: "child",
+    task_id: row.id,
+    user_id: "owner",
+    title: "Original",
+    completed: false,
+    position: 0,
+  };
+  const tables = { tasks: [row], subtasks: [child] };
+  const repository = createRepository(database(tables), "owner");
+  const [snapshot] = await repository.loadTasks();
+  child.title = "Changed elsewhere";
+  assert.equal(await repository.applyTaskOrganization(snapshot, { subtasks: [] }), null);
+  assert.equal(child.title, "Changed elsewhere");
+  child.title = "Original";
+  const failing = createRepository(database(tables, false, false, undefined, true), "owner");
+  await assert.rejects(
+    failing.applyTaskOrganization(snapshot, { subtasks: [] }),
+    /subtask offline/,
+  );
+  assert.equal(tables.subtasks.length, 1);
 });
 
 test("AI extracted time and its derived schedule stay consistent after reload", async () => {
@@ -319,7 +749,7 @@ test("AI extracted time and its derived schedule stay consistent after reload", 
     snapshot,
     45,
   );
-  assert.equal(await repository.applyTaskOrganization(snapshot, patch), true);
+  assert.ok((await repository.applyTaskOrganization(snapshot, patch))?.updatedAt);
   const [reloaded] = await repository.loadTasks();
   assert.equal(reloaded.time, "14:30");
   assert.deepEqual(reloaded.schedule, patch.schedule);

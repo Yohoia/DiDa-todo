@@ -1,0 +1,128 @@
+import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
+
+export type WorkspaceRealtimeStatus = "connecting" | "connected" | "reconnecting" | "offline";
+
+type RealtimeSource = Pick<SupabaseClient, "channel" | "removeChannel">;
+
+const RETRY_DELAYS_MS = [1_000, 2_000, 4_000, 8_000, 15_000];
+const REFRESH_DEBOUNCE_MS = 200;
+
+/** Realtime events are change signals, not a trusted source of complete rows. */
+export function createWorkspaceRealtime({
+  getClient,
+  userId,
+  onStatus,
+  requestRefresh,
+  onError,
+  refreshDebounceMs = REFRESH_DEBOUNCE_MS,
+  retryDelaysMs = RETRY_DELAYS_MS,
+}: {
+  getClient: () => RealtimeSource;
+  userId: string;
+  onStatus: (status: WorkspaceRealtimeStatus) => void;
+  requestRefresh: () => void;
+  onError?: (error: unknown) => void;
+  refreshDebounceMs?: number;
+  retryDelaysMs?: number[];
+}) {
+  let active = true;
+  let generation = 0;
+  let attempts = 0;
+  let channel: RealtimeChannel | null = null;
+  let refreshTimer: ReturnType<typeof setTimeout> | undefined;
+  let retryTimer: ReturnType<typeof setTimeout> | undefined;
+
+  const setStatus = (status: WorkspaceRealtimeStatus) => {
+    if (active) onStatus(status);
+  };
+
+  const clearRefresh = () => {
+    if (refreshTimer) clearTimeout(refreshTimer);
+    refreshTimer = undefined;
+  };
+
+  const handleChange = () => {
+    if (!active) return;
+    clearRefresh();
+    refreshTimer = setTimeout(() => {
+      refreshTimer = undefined;
+      if (active) requestRefresh();
+    }, refreshDebounceMs);
+  };
+
+  const removeChannel = (closing: RealtimeChannel) => {
+    void getClient()
+      .removeChannel(closing)
+      .catch((error: unknown) => {
+        if (active) onError?.(error);
+      });
+  };
+
+  const reconnect = () => {
+    if (!active) return;
+    setStatus("reconnecting");
+    if (channel) {
+      removeChannel(channel);
+      channel = null;
+    }
+    const delay = retryDelaysMs[Math.min(attempts, retryDelaysMs.length - 1)] ?? 1_000;
+    attempts++;
+    if (retryTimer) clearTimeout(retryTimer);
+    retryTimer = setTimeout(() => {
+      retryTimer = undefined;
+      if (active) connect();
+    }, delay);
+  };
+
+  const connect = () => {
+    if (!active) return;
+    generation++;
+    const currentGeneration = generation;
+    setStatus("connecting");
+    let current = getClient().channel(`workspace:${userId}:${currentGeneration}`, {
+      config: {
+        private: true,
+        postgres_changes_options: { wait: true },
+      },
+    });
+    for (const table of ["tasks", "subtasks", "user_preferences", "notifications"] as const) {
+      current = current.on(
+        "postgres_changes",
+        { event: "*", schema: "public", table, filter: `user_id=eq.${userId}` },
+        () => handleChange(),
+      );
+    }
+    channel = current;
+    current.subscribe((status, error) => {
+      if (!active || currentGeneration !== generation) return;
+      if (status === "SUBSCRIBED") {
+        attempts = 0;
+        setStatus("connected");
+        requestRefresh();
+        return;
+      }
+      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+        onError?.(error ?? new Error(`Realtime ${status}`));
+        reconnect();
+        return;
+      }
+      if (status === "CLOSED") reconnect();
+    });
+  };
+
+  connect();
+
+  return {
+    stop() {
+      if (!active) return;
+      onStatus("offline");
+      active = false;
+      generation++;
+      clearRefresh();
+      if (retryTimer) clearTimeout(retryTimer);
+      retryTimer = undefined;
+      if (channel) removeChannel(channel);
+      channel = null;
+    },
+  };
+}

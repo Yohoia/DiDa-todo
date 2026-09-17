@@ -19,14 +19,20 @@ import {
   createRepository,
   type Repository,
   type StoredPreferences as Preferences,
+  type TaskPage,
 } from "@/lib/data/repository";
 import { createClient } from "@/lib/supabase/client";
 import { LOGIN_REQUIRED_URL } from "@/lib/workspace-access";
 import { createWorkspaceSync } from "./workspace-sync";
+import { createWorkspaceRealtime, type WorkspaceRealtimeStatus } from "./workspace-realtime";
 import { taskCompletionPatch } from "./task-completion";
 import { getTodayKey } from "@/lib/date-utils";
 import { normalizeFocusPatch } from "./task-focus";
-import { isOrganizationCandidateCurrent, organizationPatch } from "@/lib/data/task-organization";
+import {
+  isOrganizationCandidateCurrent,
+  organizationPatch,
+  hasOrganizationDetailEdits,
+} from "@/lib/data/task-organization";
 import type { TaskOrganizationDraft } from "@/types/task-organization";
 import { organizationDraftError } from "./organization-editor";
 import {
@@ -35,6 +41,16 @@ import {
   type TaskCaptureDraft,
   type CaptureSaveResult,
 } from "./task-capture";
+import {
+  acknowledgeTaskWrite,
+  applyTaskPatch,
+  applyTaskPatches,
+  enqueueTaskWrite,
+  pendingTaskWrites,
+  taskPatchMatches,
+  updateTaskWriteVersion,
+  type TaskWriteEntry,
+} from "./task-write-queue";
 import type { FocusSessionRecord } from "@/types/focus";
 import {
   pendingFocusSessions,
@@ -43,6 +59,41 @@ import {
 } from "@/features/focus/focus-journal";
 
 type Notice = { key: MessageKey; values?: MessageValues };
+const TASK_WRITE_DEBOUNCE_MS = 500;
+const TASK_WRITE_RETRY_MS = 3_000;
+const URGENT_TASK_FIELDS = [
+  "completed",
+  "completedAt",
+  "subtasks",
+  "frozen",
+  "repeatIntervalDays",
+] as const;
+
+function sameTaskWrite(left: TaskWriteEntry, right: TaskWriteEntry): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function mergeTaskPage(
+  userId: string,
+  current: Task[],
+  incoming: Task[],
+  replaceDate?: string,
+): Task[] {
+  const pending = pendingTaskWrites(userId);
+  const incomingIds = new Set(incoming.map((task) => task.id));
+  const retained = replaceDate
+    ? current.filter(
+        (task) =>
+          task.date !== replaceDate ||
+          incomingIds.has(task.id) ||
+          pending.some((entry) => entry.taskId === task.id),
+      )
+    : current;
+  const byId = new Map(retained.map((task) => [task.id, task] as const));
+  for (const task of incoming) byId.set(task.id, task);
+  return applyTaskPatches([...byId.values()], pending);
+}
+
 export type QuickAddPreset = {
   list: TaskList;
   date?: string;
@@ -93,6 +144,11 @@ type WorkspaceState = {
   clearNotifications: () => void;
   notice: Notice | null;
   notify: (message: Notice | null) => void;
+  /** Realtime connection state; data snapshots still go through the serial sync queue. */
+  realtimeStatus: WorkspaceRealtimeStatus;
+  loadCompletedTasks: (offset?: number, limit?: number) => Promise<TaskPage>;
+  loadTasksForDate: (date: string) => Promise<Task[]>;
+  searchTasks: (query: string, offset?: number, limit?: number) => Promise<TaskPage>;
   user: WorkspaceUser;
   signOut: () => Promise<void>;
   /** 语音确认后留档（voice_captures）。 */
@@ -122,8 +178,10 @@ export function WorkspaceProvider({
   user: WorkspaceUser;
   recurrenceAvailable: boolean;
 }) {
-  const [tasks, updateTasks] = useState(initialTasks);
-  const tasksRef = useRef(initialTasks);
+  const [tasks, updateTasks] = useState(() =>
+    applyTaskPatches(initialTasks, pendingTaskWrites(user.id)),
+  );
+  const tasksRef = useRef(tasks);
   // Update the mirror synchronously: async AI checks must see edits before
   // React's next render, without side effects in state updater callbacks.
   const setTasks = useCallback((next: Task[] | ((current: Task[]) => Task[])) => {
@@ -141,6 +199,7 @@ export function WorkspaceProvider({
   const [notifications, updateNotifications] = useState(initialNotifications);
   const [sessionValid, setSessionValid] = useState(true);
   const sessionValidRef = useRef(true);
+  const [realtimeStatus, setRealtimeStatus] = useState<WorkspaceRealtimeStatus>("connecting");
   useEffect(() => {
     const { data } = createClient().auth.onAuthStateChange((_event, session) => {
       if (!session || session.user.id !== user.id) {
@@ -162,32 +221,210 @@ export function WorkspaceProvider({
   // 保证「先取消旧 One Thing 再置新的」这类有顺序依赖的写入不违反唯一索引。
   const repositoryRef = useRef<Repository | null>(null);
   const syncRef = useRef<ReturnType<typeof createWorkspaceSync> | null>(null);
+  const ensureSync = useCallback(() => {
+    syncRef.current ??= createWorkspaceSync({
+      getRepository: () => (repositoryRef.current ??= createRepository(createClient(), user.id)),
+      isActive: () => sessionValidRef.current,
+      getSupplementalTaskIds: () =>
+        tasksRef.current.filter((task) => task.completed).map((task) => task.id),
+      onSnapshot: (snapshot) => {
+        setTasks(applyTaskPatches(snapshot.tasks, pendingTaskWrites(user.id)));
+        updatePreferences(snapshot.preferences);
+        notificationsRef.current = snapshot.notifications;
+        updateNotifications(snapshot.notifications);
+      },
+      onError: (error, recovery) => {
+        console.error(recovery ? "sync recovery failed:" : "sync failed:", error);
+        notify({
+          key:
+            error instanceof Error && error.message === "organization_conflict"
+              ? "organize.conflict"
+              : error instanceof Error && error.message === "task_conflict"
+                ? "sync.conflict"
+                : "sync.failed",
+        });
+      },
+    });
+    return syncRef.current;
+  }, [setTasks, user.id]);
   const persist = useCallback(
     (action: (repository: Repository) => Promise<void>) => {
       if (!sessionValidRef.current) return Promise.resolve();
-      syncRef.current ??= createWorkspaceSync({
-        getRepository: () => (repositoryRef.current ??= createRepository(createClient(), user.id)),
-        isActive: () => sessionValidRef.current,
-        onSnapshot: (snapshot) => {
-          setTasks(snapshot.tasks);
-          updatePreferences(snapshot.preferences);
-          notificationsRef.current = snapshot.notifications;
-          updateNotifications(snapshot.notifications);
-        },
-        onError: (error, recovery) => {
-          console.error(recovery ? "sync recovery failed:" : "sync failed:", error);
-          notify({
-            key:
-              error instanceof Error && error.message === "organization_conflict"
-                ? "organize.conflict"
-                : "sync.failed",
-          });
-        },
-      });
-      return syncRef.current.enqueue(action);
+      return ensureSync().enqueue(action);
     },
-    [user.id, setTasks],
+    [ensureSync],
   );
+  const refreshWorkspace = useCallback(() => {
+    if (!sessionValidRef.current) return;
+    void ensureSync().refresh();
+  }, [ensureSync]);
+
+  const runTaskPageRead = useCallback(
+    async (read: (repository: Repository) => Promise<TaskPage>): Promise<TaskPage> => {
+      let page: TaskPage | undefined;
+      await persist(async (repository) => {
+        page = await read(repository);
+      });
+      return page ?? { tasks: [], total: 0, hasMore: false };
+    },
+    [persist],
+  );
+
+  const loadCompletedTasks = useCallback(
+    async (offset?: number, limit?: number) => {
+      const page = await runTaskPageRead((repository) =>
+        repository.loadCompletedTasks(offset, limit),
+      );
+      if (page.tasks.length) setTasks((current) => mergeTaskPage(user.id, current, page.tasks));
+      return page;
+    },
+    [runTaskPageRead, setTasks, user.id],
+  );
+
+  const loadTasksForDate = useCallback(
+    async (date: string) => {
+      let tasks: Task[] = [];
+      await persist(async (repository) => {
+        tasks = await repository.loadTasksByDate(date);
+      });
+      setTasks((current) => mergeTaskPage(user.id, current, tasks, date));
+      return tasks;
+    },
+    [persist, setTasks, user.id],
+  );
+
+  const searchTasks = useCallback(
+    async (query: string, offset?: number, limit?: number) => {
+      const page = await runTaskPageRead((repository) =>
+        repository.searchTasks(query, offset, limit),
+      );
+      if (page.tasks.length) setTasks((current) => mergeTaskPage(user.id, current, page.tasks));
+      return page;
+    },
+    [runTaskPageRead, setTasks, user.id],
+  );
+
+  const flushingRef = useRef(false);
+  const queueActiveRef = useRef(true);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  const flushTaskWrites = useCallback(async () => {
+    if (flushingRef.current || !queueActiveRef.current || !sessionValidRef.current) return;
+    flushingRef.current = true;
+    let transientFailure = false;
+    try {
+      while (sessionValidRef.current) {
+        const entry = pendingTaskWrites(user.id)[0];
+        if (!entry) break;
+        await persist(async (repository) => {
+          let result = await repository.updateTaskVersioned(
+            entry.taskId,
+            entry.expectedUpdatedAt,
+            entry.patch,
+          );
+          if (!result) {
+            const server = await repository.loadTask(entry.taskId);
+            if (!server || !taskPatchMatches(server, entry.patch)) {
+              acknowledgeTaskWrite(user.id, entry);
+              throw new Error("task_conflict");
+            }
+            result = { updatedAt: server.updatedAt };
+          }
+          const child = entry.createRepeatChild
+            ? await repository.loadRepeatChild(entry.taskId)
+            : null;
+          acknowledgeTaskWrite(user.id, entry);
+          updateTaskWriteVersion(user.id, entry.taskId, result.updatedAt);
+          if (result.updatedAt) {
+            setTasks((current) =>
+              current.map((task) =>
+                task.id === entry.taskId ? { ...task, updatedAt: result.updatedAt } : task,
+              ),
+            );
+          }
+          if (child && sessionValidRef.current) {
+            setTasks((current) =>
+              current.some((task) => task.id === child.id) ? current : [...current, child],
+            );
+          }
+        });
+        const nextEntry = pendingTaskWrites(user.id)[0];
+        if (nextEntry && sameTaskWrite(nextEntry, entry)) {
+          transientFailure = true;
+          break;
+        }
+      }
+    } finally {
+      flushingRef.current = false;
+      const pending = pendingTaskWrites(user.id);
+      if (
+        (transientFailure || pending.length > 0) &&
+        queueActiveRef.current &&
+        sessionValidRef.current
+      ) {
+        if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = setTimeout(() => {
+          retryTimerRef.current = undefined;
+          void flushTaskWrites();
+        }, TASK_WRITE_RETRY_MS);
+      }
+    }
+  }, [persist, setTasks, user.id]);
+
+  const scheduleTaskWriteFlush = useCallback(
+    (immediate = false) => {
+      if (!queueActiveRef.current || !sessionValidRef.current) return;
+      if (retryTimerRef.current) {
+        clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = undefined;
+      }
+      if (immediate) {
+        if (debounceTimerRef.current) {
+          clearTimeout(debounceTimerRef.current);
+          debounceTimerRef.current = undefined;
+        }
+        void flushTaskWrites();
+        return;
+      }
+      debounceTimerRef.current ??= setTimeout(() => {
+        debounceTimerRef.current = undefined;
+        void flushTaskWrites();
+      }, TASK_WRITE_DEBOUNCE_MS);
+    },
+    [flushTaskWrites],
+  );
+
+  useEffect(() => {
+    queueActiveRef.current = true;
+    scheduleTaskWriteFlush(true);
+    const flushWhenVisible = () => {
+      if (document.visibilityState === "visible") scheduleTaskWriteFlush(true);
+    };
+    window.addEventListener("online", flushWhenVisible);
+    document.addEventListener("visibilitychange", flushWhenVisible);
+    return () => {
+      queueActiveRef.current = false;
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+      debounceTimerRef.current = undefined;
+      retryTimerRef.current = undefined;
+      window.removeEventListener("online", flushWhenVisible);
+      document.removeEventListener("visibilitychange", flushWhenVisible);
+    };
+  }, [scheduleTaskWriteFlush]);
+
+  useEffect(() => {
+    const client = createClient();
+    const realtime = createWorkspaceRealtime({
+      getClient: () => client,
+      userId: user.id,
+      onStatus: setRealtimeStatus,
+      requestRefresh: refreshWorkspace,
+      onError: (error) => console.error("realtime failed:", error),
+    });
+    return () => realtime.stop();
+  }, [refreshWorkspace, user.id]);
 
   const recordFocusSession = useCallback(
     (input: FocusSessionRecord) => {
@@ -204,6 +441,62 @@ export function WorkspaceProvider({
   useEffect(() => {
     for (const input of pendingFocusSessions(user.id)) recordFocusSession(input);
   }, [user.id, recordFocusSession]);
+
+  const writeTaskDirectly = useCallback(
+    (taskId: string, patch: Partial<Task>) => {
+      void persist(async (repository) => {
+        const live = tasksRef.current.find((task) => task.id === taskId);
+        if (!live) return;
+        const result = await repository.updateTaskVersioned(taskId, live.updatedAt, patch);
+        if (!result) throw new Error("task_conflict");
+        updateTaskWriteVersion(user.id, taskId, result.updatedAt);
+        if (result.updatedAt) {
+          setTasks((current) =>
+            current.map((task) =>
+              task.id === taskId ? { ...task, updatedAt: result.updatedAt } : task,
+            ),
+          );
+        }
+      });
+    },
+    [persist, setTasks, user.id],
+  );
+
+  const writeOneThingDirectly = useCallback(
+    (taskId: string, patch: Partial<Task>, previousFeaturedIds: string[]) => {
+      void persist(async (repository) => {
+        for (const otherId of previousFeaturedIds) {
+          const live = tasksRef.current.find((task) => task.id === otherId);
+          if (!live) continue;
+          const result = await repository.updateTaskVersioned(otherId, live.updatedAt, {
+            featured: false,
+          });
+          if (!result) throw new Error("task_conflict");
+          updateTaskWriteVersion(user.id, otherId, result.updatedAt);
+          if (result.updatedAt) {
+            setTasks((current) =>
+              current.map((task) =>
+                task.id === otherId ? { ...task, updatedAt: result.updatedAt } : task,
+              ),
+            );
+          }
+        }
+        const live = tasksRef.current.find((task) => task.id === taskId);
+        if (!live) return;
+        const result = await repository.updateTaskVersioned(taskId, live.updatedAt, patch);
+        if (!result) throw new Error("task_conflict");
+        updateTaskWriteVersion(user.id, taskId, result.updatedAt);
+        if (result.updatedAt) {
+          setTasks((current) =>
+            current.map((task) =>
+              task.id === taskId ? { ...task, updatedAt: result.updatedAt } : task,
+            ),
+          );
+        }
+      });
+    },
+    [persist, setTasks, user.id],
+  );
 
   function updateTask(id: string, patch: Partial<Task>) {
     if (Object.hasOwn(patch, "repeatIntervalDays") && !recurrenceAvailable) {
@@ -225,50 +518,32 @@ export function WorkspaceProvider({
           return { ...task, featured: false };
         }
         if (task.id !== id) return task;
-
-        const nextDate = patch.date !== undefined ? patch.date : task.date;
-        const timeChanged = Object.hasOwn(patch, "time");
-        // An explicit clock time can exist on an undated capture. Only clearing
-        // the date deliberately removes it; unrelated edits must preserve it.
-        const nextTime = patch.date === "" ? undefined : timeChanged ? patch.time : task.time;
-        let schedule = task.schedule;
-
-        if (timeChanged || (!schedule && nextDate && nextTime)) {
-          if (nextTime && nextDate) {
-            const [hour, minute] = nextTime.split(":").map(Number);
-            schedule = {
-              date: nextDate,
-              hour,
-              minute,
-              duration: task.schedule?.duration ?? Math.max(25, task.estimate * 25),
-              label: patch.title ?? task.title,
-            };
-          } else {
-            schedule = undefined;
-          }
-        } else if (schedule) {
-          schedule = nextDate
-            ? {
-                ...schedule,
-                ...(patch.title ? { label: patch.title } : {}),
-                ...(patch.date !== undefined ? { date: patch.date } : {}),
-              }
-            : undefined;
-        }
-
-        return { ...task, ...patch, time: nextTime, schedule };
+        return applyTaskPatch(task, patch);
       }),
     );
-    // 置新 One Thing 前先排队取消旧的（tasks 里仍 featured 的其他任务）
+
+    // One Thing 的唯一索引要求先取消旧值再设置新值，不能进入按任务合并的队列。
     if (patch.featured === true) {
-      for (const other of previousTasks) {
-        if (other.featured && other.id !== id) {
-          const otherId = other.id;
-          persist((repository) => repository.updateTask(otherId, { featured: false }));
-        }
-      }
+      scheduleTaskWriteFlush(true);
+      writeOneThingDirectly(
+        id,
+        patch,
+        previousTasks.filter((task) => task.featured && task.id !== id).map((task) => task.id),
+      );
+      return;
     }
-    persist((repository) => repository.updateTask(id, patch));
+    if (patch.featured !== undefined) {
+      scheduleTaskWriteFlush(true);
+      writeTaskDirectly(id, patch);
+      return;
+    }
+    enqueueTaskWrite(user.id, {
+      id: createId(),
+      taskId: id,
+      expectedUpdatedAt: current.updatedAt,
+      patch,
+    });
+    scheduleTaskWriteFlush(URGENT_TASK_FIELDS.some((field) => Object.hasOwn(patch, field)));
   }
 
   async function applyTaskOrganization(expected: Task[], suggestions: TaskOrganizationDraft[]) {
@@ -280,11 +555,13 @@ export function WorkspaceProvider({
         continue;
       }
       const original = byId.get(suggestion.id);
+      const checkDetails = hasOrganizationDetailEdits(suggestion);
       if (
         !original ||
         !isOrganizationCandidateCurrent(
           original,
           tasksRef.current.find((task) => task.id === suggestion.id),
+          checkDetails,
         )
       ) {
         result.skipped++;
@@ -296,12 +573,13 @@ export function WorkspaceProvider({
           !isOrganizationCandidateCurrent(
             original,
             tasksRef.current.find((task) => task.id === original.id),
+            checkDetails,
           )
         ) {
           result.skipped++;
           return;
         }
-        let applied: boolean;
+        let applied: { updatedAt?: string } | null;
         try {
           applied = await repository.applyTaskOrganization(original, patch);
         } catch (error) {
@@ -312,12 +590,16 @@ export function WorkspaceProvider({
           result.skipped++;
           throw new Error("organization_conflict");
         }
+        const updatedAt = applied.updatedAt;
         result.applied++;
         setTasks((current) =>
           current.map((task) => {
-            if (task.id !== original.id || !isOrganizationCandidateCurrent(original, task))
+            if (
+              task.id !== original.id ||
+              !isOrganizationCandidateCurrent(original, task, checkDetails)
+            )
               return task;
-            return { ...task, ...patch };
+            return { ...task, ...patch, ...(updatedAt ? { updatedAt } : {}) };
           }),
         );
       });
@@ -354,17 +636,17 @@ export function WorkspaceProvider({
     const task = tasksRef.current.find((item) => item.id === id);
     if (!task) return;
     const patch = taskCompletionPatch(task);
-    setTasks((current) => current.map((item) => (item.id === id ? { ...item, ...patch } : item)));
-    persist(async (repository) => {
-      await repository.updateTask(id, patch);
-      if (patch.completed && task.repeatIntervalDays) {
-        const child = await repository.loadRepeatChild(id);
-        if (child && sessionValidRef.current)
-          setTasks((current) =>
-            current.some((item) => item.id === child.id) ? current : [...current, child],
-          );
-      }
+    setTasks((current) =>
+      current.map((item) => (item.id === id ? applyTaskPatch(item, patch) : item)),
+    );
+    enqueueTaskWrite(user.id, {
+      id: createId(),
+      taskId: id,
+      expectedUpdatedAt: task.updatedAt,
+      patch,
+      createRepeatChild: patch.completed && !!task.repeatIntervalDays,
     });
+    scheduleTaskWriteFlush(true);
   }
   async function saveCapturedTasks(drafts: TaskCaptureDraft[]): Promise<CaptureSaveResult> {
     const result: CaptureSaveResult = { savedIds: [], failedIds: [] };
@@ -402,9 +684,15 @@ export function WorkspaceProvider({
       subtask.id === subtaskId ? { ...subtask, completed: !subtask.completed } : subtask,
     );
     setTasks((current) =>
-      current.map((item) => (item.id === taskId ? { ...item, subtasks } : item)),
+      current.map((item) => (item.id === taskId ? applyTaskPatch(item, { subtasks }) : item)),
     );
-    persist((repository) => repository.updateTask(taskId, { subtasks }));
+    enqueueTaskWrite(user.id, {
+      id: createId(),
+      taskId,
+      expectedUpdatedAt: task.updatedAt,
+      patch: { subtasks },
+    });
+    scheduleTaskWriteFlush(true);
   }
   function deleteTask(id: string) {
     setTasks((current) => current.filter((task) => task.id !== id));
@@ -521,6 +809,10 @@ export function WorkspaceProvider({
         },
         notice,
         notify,
+        realtimeStatus,
+        loadCompletedTasks,
+        loadTasksForDate,
+        searchTasks,
         user,
         signOut,
         recordVoiceCapture: (input) =>

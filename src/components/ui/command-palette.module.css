@@ -131,6 +131,11 @@
   color: var(--muted-foreground);
   font-size: 12px;
 }
+.loadMore {
+  justify-content: center;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
 .itemMeta {
   flex: none;
   display: inline-flex;

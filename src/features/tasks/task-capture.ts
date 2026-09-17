@@ -86,22 +86,34 @@ export function parseQuickCapture(
     date = explicit[0];
     title = title.replace(explicit[0], "");
   }
+  const periodClock = title.match(/(上午|下午|晚上|凌晨|中午)\s*([01]?\d|2[0-3]):([0-5]\d)/);
   const clock = title.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/);
   const spoken = title.match(
     /(上午|下午|晚上|凌晨|中午)([零一二三四五六七八九十两\d]+)点(半|一刻|三刻|[零一二三四五六七八九十两\d]+分)?/,
   );
+  const adjustPeriodHour = (period: string, hour: number) => {
+    if (["下午", "晚上", "中午"].includes(period) && hour < 12) return hour + 12;
+    // 中午/下午 12 点按正午处理；上午/凌晨/晚上 12 点是午夜或凌晨零点。
+    if (hour === 12 && ["上午", "凌晨", "晚上"].includes(period)) return 0;
+    return hour;
+  };
   const english = title.match(/\b(0?[1-9]|1[0-2])(?::([0-5]\d))?\s*(am|pm)\b/i);
   if (english) {
     extractedTime = true;
     const hour = (Number(english[1]) % 12) + (english[3].toLowerCase() === "pm" ? 12 : 0);
     time = `${String(hour).padStart(2, "0")}:${english[2] ?? "00"}`;
     title = title.replace(english[0], "");
+  } else if (periodClock) {
+    extractedTime = true;
+    const hour = adjustPeriodHour(periodClock[1], Number(periodClock[2]));
+    time = `${String(hour).padStart(2, "0")}:${periodClock[3]}`;
+    title = title.replace(periodClock[0], "");
   } else if (clock) {
     extractedTime = true;
     time = `${clock[1].padStart(2, "0")}:${clock[2]}`;
     title = title.replace(clock[0], "");
   } else if (spoken) {
-    let hour = chineseNumber(spoken[2]);
+    const hour = adjustPeriodHour(spoken[1], chineseNumber(spoken[2]));
     const minute =
       spoken[3] === "半"
         ? 30
@@ -112,8 +124,6 @@ export function parseQuickCapture(
             : spoken[3]
               ? chineseNumber(spoken[3].slice(0, -1))
               : 0;
-    if (["下午", "晚上", "中午"].includes(spoken[1]) && hour < 12) hour += 12;
-    if (["上午", "凌晨"].includes(spoken[1]) && hour === 12) hour = 0;
     if (hour >= 0 && hour < 24 && minute >= 0 && minute < 60) {
       extractedTime = true;
       time = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;

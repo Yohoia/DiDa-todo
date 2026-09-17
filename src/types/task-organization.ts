@@ -21,4 +21,11 @@ export type TaskOrganizationSuggestion = {
 export type TaskOrganizationDraft = Omit<TaskOrganizationSuggestion, "list"> & {
   list: TaskList;
   timeEdited?: boolean;
+  /** Human-only content changes; AI suggestions do not rewrite task content. */
+  title?: string;
+  description?: string;
+  reminder?: string;
+  repeatIntervalDays?: number;
+  frozen?: boolean;
+  subtasks?: Task["subtasks"];
 };

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useRef } from "react";
-import { HiSparkles } from "react-icons/hi2";
+import { HiOutlineAdjustmentsHorizontal } from "react-icons/hi2";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { useI18n } from "@/features/preferences/preferences-provider";
 import type { Task } from "@/types/task";
@@ -20,6 +20,7 @@ export function AiOrganizeDialog({
   date,
   tasks,
   pomodoroMinutes,
+  recurrenceAvailable,
   onApply,
 }: {
   open: boolean;
@@ -27,9 +28,10 @@ export function AiOrganizeDialog({
   date: string;
   tasks: Task[];
   pomodoroMinutes: number;
+  recurrenceAvailable: boolean;
   onApply: (suggestions: TaskOrganizationDraft[]) => Promise<void>;
 }) {
-  const { t, locale, date: formatDate } = useI18n();
+  const { t, locale } = useI18n();
   const [phase, setPhase] = useState<Phase>("loading");
   const [suggestions, setSuggestions] = useState<TaskOrganizationSuggestion[]>([]);
   const [drafts, setDrafts] = useState<Record<string, TaskOrganizationDraft>>({});
@@ -86,7 +88,6 @@ export function AiOrganizeDialog({
     .filter((item) => selected.has(item.id))
     .map((item) => drafts[item.id] ?? item);
   const invalidSelection = selectedSuggestions.some((draft) => organizationDraftError(draft));
-  const dayLabel = formatDate(date, { year: "numeric", month: "long", day: "numeric" });
   const errorMessage =
     errorCode === "auth_required"
       ? t("请先登录后再使用 AI 整理")
@@ -109,18 +110,15 @@ export function AiOrganizeDialog({
         closeButtonClassName={shared.close}
       >
         <div className={styles.heading}>
-          <span className={styles.sparkle} aria-hidden="true">
-            <HiSparkles size={18} />
-          </span>
-          <div>
-            <DialogTitle className={styles.title}>{t("AI 整理当天待办")}</DialogTitle>
-            <DialogDescription className={styles.description}>
-              {t("正在整理 {date} 的 {count} 项未完成待办", {
-                date: dayLabel,
-                count: String(tasks.length),
-              })}
-            </DialogDescription>
-          </div>
+          <HiOutlineAdjustmentsHorizontal
+            className={styles.headingIcon}
+            size={20}
+            aria-hidden="true"
+          />
+          <DialogTitle className={styles.title}>{t("AI 整理")}</DialogTitle>
+          <DialogDescription className="sr-only">
+            {t("organize.accessibleDescription")}
+          </DialogDescription>
         </div>
 
         {currentPhase === "loading" && (
@@ -152,10 +150,6 @@ export function AiOrganizeDialog({
 
         {currentPhase === "ready" && (
           <>
-            <div className={styles.summary} role="status">
-              <span>{t("已生成 {count} 项整理建议", { count: String(suggestions.length) })}</span>
-              <span>{t("organize.reviewHint")}</span>
-            </div>
             <div className={styles.results}>
               {suggestions.map((suggestion) => {
                 const task = taskById.get(suggestion.id);
@@ -165,6 +159,7 @@ export function AiOrganizeDialog({
                   <OrganizationDraftRow
                     key={`${suggestion.id}-${attempt}-${locale}-${pomodoroMinutes}`}
                     task={task}
+                    recurrenceAvailable={recurrenceAvailable}
                     original={suggestion}
                     draft={drafts[suggestion.id] ?? suggestion}
                     checked={checked}
@@ -201,6 +196,7 @@ export function AiOrganizeDialog({
               <button
                 type="button"
                 className={styles.apply}
+                aria-busy={applying}
                 disabled={applying || invalidSelection || !selectedSuggestions.length}
                 onClick={async () => {
                   if (applyingRef.current) return;
@@ -217,10 +213,7 @@ export function AiOrganizeDialog({
                   }
                 }}
               >
-                <HiSparkles size={14} aria-hidden="true" />
-                {applying
-                  ? t("organize.saving")
-                  : t("应用 {count} 项整理", { count: String(selectedSuggestions.length) })}
+                {t("organize.apply")}
               </button>
             </footer>
           </>

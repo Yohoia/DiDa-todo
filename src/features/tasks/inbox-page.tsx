@@ -30,9 +30,11 @@ export function InboxPage() {
     deleteTask,
     selectTask,
     preferences,
+    recurrenceAvailable,
     notify,
     focusId,
     voiceCapture,
+    loadTasksForDate,
   } = useWorkspace();
   const todayKey = useTodayKey();
   const [selected, setSelected] = useState(todayKey);
@@ -41,6 +43,7 @@ export function InboxPage() {
   const [captureOpen, setCaptureOpen] = useState(false);
   const [organizeOpen, setOrganizeOpen] = useState(false);
   const [organizeCandidates, setOrganizeCandidates] = useState<typeof tasks>([]);
+  const [dateLoading, setDateLoading] = useState(false);
 
   // 「/」随手呼出捕获弹窗（不打断正在输入的其它控件）
   useEffect(() => {
@@ -72,6 +75,16 @@ export function InboxPage() {
     () => new Set(tasks.filter((task) => task.date).map((task) => task.date)),
     [tasks],
   );
+  useEffect(() => {
+    if (selected === todayKey) return;
+    let cancelled = false;
+    void loadTasksForDate(selected).finally(() => {
+      if (!cancelled) setDateLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [loadTasksForDate, selected, todayKey]);
   const dayTasks = tasks
     .filter((task) => task.date === selected)
     .sort((a, b) => {
@@ -88,10 +101,15 @@ export function InboxPage() {
     month: "long",
     day: "numeric",
   })} · ${formatDate(selected, { weekday: "long" })}`;
-  const hasDayTasks = dayTasks.length > 0;
+  const hasDayTasks = dayTasks.length > 0 || dateLoading;
   const unscheduled = tasks
     .filter((task) => !task.date && !task.completed)
     .sort((a, b) => a.priority - b.priority || a.created - b.created);
+
+  const selectDay = (date: string) => {
+    setSelected(date);
+    setDateLoading(date !== todayKey);
+  };
 
   // 捕获成功后跳到最终日期并高亮新条目，失败保留输入供重试。
   const handleCapture = async (draft: TaskCaptureDraft) => {
@@ -164,7 +182,7 @@ export function InboxPage() {
       </PageHeader>
       <DayCalendar
         selectedKey={selected}
-        onSelect={setSelected}
+        onSelect={selectDay}
         firstDay={preferences.firstDay}
         datesWithTodos={datesWithTodos}
       />
@@ -214,18 +232,22 @@ export function InboxPage() {
                     transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
                   >
                     <AnimatePresence mode="popLayout" initial={false}>
-                      {dayTasks.map((task) => (
-                        <TaskRow
-                          key={task.id}
-                          task={task}
-                          highlight={task.id === justAddedId}
-                          onOpen={() => selectTask(task.id)}
-                          onToggle={() => toggleTask(task.id)}
-                          onToggleSubtask={(subtaskId) => toggleSubtask(task.id, subtaskId)}
-                          onDelete={() => deleteTask(task.id)}
-                          whenMode="time"
-                        />
-                      ))}
+                      {dateLoading ? (
+                        <p className={shared.muted}>{t("正在加载这一天…")}</p>
+                      ) : (
+                        dayTasks.map((task) => (
+                          <TaskRow
+                            key={task.id}
+                            task={task}
+                            highlight={task.id === justAddedId}
+                            onOpen={() => selectTask(task.id)}
+                            onToggle={() => toggleTask(task.id)}
+                            onToggleSubtask={(subtaskId) => toggleSubtask(task.id, subtaskId)}
+                            onDelete={() => deleteTask(task.id)}
+                            whenMode="time"
+                          />
+                        ))
+                      )}
                     </AnimatePresence>
                   </motion.div>
                 )}
@@ -265,6 +287,7 @@ export function InboxPage() {
           date={selected}
           tasks={organizeCandidates}
           pomodoroMinutes={preferences.duration}
+          recurrenceAvailable={recurrenceAvailable}
           onApply={applyOrganization}
         />
       )}

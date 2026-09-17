@@ -16,11 +16,12 @@
     "typecheck": "next typegen && tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "pnpm lint && pnpm typecheck && pnpm test:i18n && pnpm test:auth-security && pnpm test:task-persistence && pnpm test:workspace-sync && pnpm test:review-regressions && pnpm test:stage-one && pnpm test:stage-two && pnpm format:check",
+    "check": "pnpm lint && pnpm typecheck && pnpm test:i18n && pnpm test:auth-security && pnpm test:task-persistence && pnpm test:workspace-sync && pnpm test:workspace-realtime && pnpm test:review-regressions && pnpm test:stage-one && pnpm test:stage-two && pnpm format:check",
     "test:i18n": "node scripts/test-i18n.mjs",
     "test:auth-security": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test scripts/test-auth-security.mts",
     "test:task-persistence": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test scripts/test-task-persistence.mts",
     "test:workspace-sync": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test scripts/test-workspace-sync.mts",
+    "test:workspace-realtime": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test scripts/test-workspace-realtime.mts",
     "test:review-regressions": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test scripts/test-review-regressions.mts",
     "test:stage-one": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test scripts/test-stage-one.mts",
     "test:stage-two": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --experimental-strip-types --test scripts/test-stage-two.mts"

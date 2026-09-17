@@ -6,7 +6,7 @@
   overflow: hidden;
   padding: 0;
   gap: 0;
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--card);
@@ -15,38 +15,26 @@
 .heading {
   display: flex;
   align-items: center;
-  gap: 13px;
-  padding: 24px 26px 20px;
+  gap: 10px;
+  padding: 22px 26px;
+  padding-right: 56px;
   border-bottom: 1px solid var(--separator);
 }
 
-.sparkle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 38px;
-  height: 38px;
+.headingIcon {
   flex: 0 0 auto;
-  border-radius: 10px;
-  color: #221a08;
-  background: linear-gradient(145deg, #f4dda2, var(--brand-gold));
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--brand-gold) 24%, transparent);
+  color: var(--brand-gold);
 }
 
 .title {
   font-family: var(--font-serif);
-  font-size: 21px;
+  font-size: 20px;
   font-weight: 500;
-}
-
-.description {
-  margin-top: 5px;
-  color: var(--muted-foreground);
-  font-size: 12px;
 }
 
 .loading,
 .error {
+  grid-row: 2 / -1;
   min-height: 280px;
   padding: 56px 24px;
   display: flex;
@@ -87,22 +75,6 @@
   margin-top: 12px;
 }
 
-.summary {
-  padding: 12px 26px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  color: var(--muted-foreground);
-  background: color-mix(in srgb, var(--brand-gold) 7%, transparent);
-  font-size: 11px;
-}
-
-.summary span:first-child {
-  color: var(--foreground);
-  font-weight: 600;
-}
-
 .results {
   min-height: 0;
   overflow-y: auto;
@@ -111,7 +83,7 @@
 
 .result {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   padding: 16px 0;
   border-bottom: 1px solid var(--separator);
 }
@@ -121,22 +93,44 @@
 }
 
 .check {
-  width: 19px;
-  height: 19px;
+  width: 32px;
+  height: 32px;
   flex: 0 0 auto;
-  margin-top: 1px;
+  margin-top: -5px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  color: #221a08;
-  background: var(--card);
+  border-radius: 50%;
+  background: transparent;
 }
-
-.check[aria-checked="true"] {
+.checkMark {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--muted-foreground);
+  border-radius: 50%;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
+}
+.check[aria-checked="true"] .checkMark {
   border-color: var(--brand-gold);
   background: var(--brand-gold);
+  color: var(--on-gold);
+}
+.check:hover:not(:disabled) .checkMark {
+  border-color: var(--brand-gold);
+}
+.check:focus-visible,
+.editIcon:focus-visible {
+  outline: 2px solid var(--brand-gold);
+  outline-offset: 2px;
+}
+.check:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .resultBody {
@@ -200,6 +194,12 @@
   color: var(--muted-foreground);
   font-size: 11px;
 }
+.resultBody .taskDescription {
+  margin-top: -3px;
+  margin-bottom: 9px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
 
 .actions {
   display: flex;
@@ -228,17 +228,6 @@
   background: var(--brand-gold);
 }
 
-.rowHeading {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-}
-.source {
-  color: var(--muted-foreground);
-  font-size: 11px;
-  flex-shrink: 0;
-}
 .editActions {
   display: flex;
   gap: 16px;
@@ -251,37 +240,40 @@
 .editActions button:hover:not(:disabled) {
   color: var(--brand-gold);
 }
-.editor {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-top: 12px;
-  padding: 14px;
-  background: var(--muted);
-  border: 1px solid var(--border);
-}
-.editor label,
-.editorField {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 6px;
+.editIcon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-top: -5px;
+  border-radius: 5px;
   color: var(--muted-foreground);
-  font-size: 12px;
 }
-.editor input {
-  min-width: 0;
-  min-height: 36px;
-  padding: 6px 8px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--card);
-  color: var(--foreground);
-  font-size: 14px;
+.editIcon:hover:not(:disabled),
+.editIcon:focus-visible {
+  color: var(--brand-gold);
+  background: var(--task-accent-light);
 }
-.tagsField,
-.editorHint {
-  grid-column: 1 / -1;
+.editIcon:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.detailOverlay {
+  z-index: 212;
+  background: rgb(0 0 0 / 30%);
+}
+.detailDrawer {
+  z-index: 214;
+}
+.detailActions {
+  margin-top: auto;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 20px;
+  border-top: 1px solid var(--separator);
 }
 .resultBody .validation {
   color: var(--destructive);
@@ -297,25 +289,12 @@
 }
 
 @media (max-width: 600px) {
-  .editor {
-    grid-template-columns: 1fr;
-  }
-  .rowHeading {
-    flex-wrap: wrap;
-    gap: 0;
-  }
   .dialog {
     height: 88dvh;
   }
   .heading,
   .actions {
     padding-inline: 20px;
-  }
-  .summary {
-    padding-inline: 20px;
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 3px;
   }
   .results {
     padding-inline: 20px;

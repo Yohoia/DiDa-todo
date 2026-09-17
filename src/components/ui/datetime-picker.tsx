@@ -41,10 +41,13 @@ export function DateTimePicker({
   value,
   onChange,
   className,
+  dateLocked = false,
 }: {
   value: DateTimeValue;
   onChange: (value: DateTimeValue) => void;
   className?: string;
+  /** AI organization may adjust time but must keep the original task day. */
+  dateLocked?: boolean;
 }) {
   const { t, date: formatDate } = useI18n();
   const [open, setOpen] = useState(false);
@@ -113,7 +116,7 @@ export function DateTimePicker({
     const finalMonth = clamp(Number(month) || now.getMonth() + 1, 1, 12);
     const finalDay = clamp(Number(day) || now.getDate(), 1, daysInMonth(finalYear, finalMonth));
     onChange({
-      date: toISODate(new Date(finalYear, finalMonth - 1, finalDay)),
+      date: dateLocked ? value.date : toISODate(new Date(finalYear, finalMonth - 1, finalDay)),
       time: withTime ? `${pad(wheel.hour)}:${pad(wheel.minute)}` : undefined,
     });
     setOpen(false);
@@ -149,48 +152,53 @@ export function DateTimePicker({
           sideOffset={8}
           onOpenAutoFocus={(event) => event.preventDefault()}
         >
-          <div className={styles.dateRow}>
-            <input
-              ref={yearRef}
-              className={cn(styles.dateInput, styles.year)}
-              inputMode="numeric"
-              placeholder="YYYY"
-              aria-label={t("年")}
-              value={year}
-              onFocus={(event) => event.target.select()}
-              onChange={(event) => handleYear(event.target.value)}
-            />
-            <span className={styles.slash} aria-hidden="true">
-              /
-            </span>
-            <input
-              ref={monthRef}
-              className={styles.dateInput}
-              inputMode="numeric"
-              placeholder="MM"
-              aria-label={t("月")}
-              value={month}
-              onFocus={(event) => event.target.select()}
-              onChange={(event) => handleMonth(event.target.value)}
-              onBlur={padOnBlur(setMonth)}
-              onKeyDown={(event) => focusPrevious(event, "year")}
-            />
-            <span className={styles.slash} aria-hidden="true">
-              /
-            </span>
-            <input
-              ref={dayRef}
-              className={styles.dateInput}
-              inputMode="numeric"
-              placeholder="DD"
-              aria-label={t("日")}
-              value={day}
-              onFocus={(event) => event.target.select()}
-              onChange={(event) => handleDay(event.target.value)}
-              onBlur={padOnBlur(setDay)}
-              onKeyDown={(event) => focusPrevious(event, "month")}
-            />
-          </div>
+          {
+            <div className={styles.dateRow}>
+              <input
+                ref={yearRef}
+                disabled={dateLocked}
+                className={cn(styles.dateInput, styles.year)}
+                inputMode="numeric"
+                placeholder="YYYY"
+                aria-label={t("年")}
+                value={year}
+                onFocus={(event) => event.target.select()}
+                onChange={(event) => handleYear(event.target.value)}
+              />
+              <span className={styles.slash} aria-hidden="true">
+                /
+              </span>
+              <input
+                ref={monthRef}
+                disabled={dateLocked}
+                className={styles.dateInput}
+                inputMode="numeric"
+                placeholder="MM"
+                aria-label={t("月")}
+                value={month}
+                onFocus={(event) => event.target.select()}
+                onChange={(event) => handleMonth(event.target.value)}
+                onBlur={padOnBlur(setMonth)}
+                onKeyDown={(event) => focusPrevious(event, "year")}
+              />
+              <span className={styles.slash} aria-hidden="true">
+                /
+              </span>
+              <input
+                ref={dayRef}
+                disabled={dateLocked}
+                className={styles.dateInput}
+                inputMode="numeric"
+                placeholder="DD"
+                aria-label={t("日")}
+                value={day}
+                onFocus={(event) => event.target.select()}
+                onChange={(event) => handleDay(event.target.value)}
+                onBlur={padOnBlur(setDay)}
+                onKeyDown={(event) => focusPrevious(event, "month")}
+              />
+            </div>
+          }
           <div className={styles.wheelCaptions}>
             <span className={styles.wheelCaption}>{t("时")}</span>
             {/* Ghost colon keeps the captions on the same grid as the wheels. */}

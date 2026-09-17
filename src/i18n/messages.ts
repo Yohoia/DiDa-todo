@@ -79,6 +79,28 @@ export const messages = {
   "organize.humanAdjusted": { "zh-CN": "人工已调整", en: "Adjusted by you" },
   "organize.aiSuggestion": { "zh-CN": "AI 建议", en: "AI suggestion" },
   "organize.adjust": { "zh-CN": "调整细节", en: "Adjust details" },
+  "organize.editTask": { "zh-CN": "调整任务：{title}", en: "Adjust task: {title}" },
+  "organize.apply": { "zh-CN": "应用", en: "Apply" },
+  "organize.applyBeforeActions": {
+    "zh-CN": "请先应用整理，再从任务详情执行此操作。",
+    en: "Apply organization first, then perform this action from task details.",
+  },
+  "organize.invalidDetails": {
+    "zh-CN": "请检查重复设置、提醒和子任务内容。",
+    en: "Check recurrence, reminders and subtasks.",
+  },
+  "organize.accessibleDescription": {
+    "zh-CN": "查看并编辑所选日期的任务整理草稿。",
+    en: "Review and edit task organization drafts for the selected day.",
+  },
+  "organize.invalidTitle": {
+    "zh-CN": "请填写任务标题，最多 200 个字符。",
+    en: "Enter a task title, up to 200 characters.",
+  },
+  "organize.invalidDescription": {
+    "zh-CN": "任务描述最多 50 个字符。",
+    en: "Use up to 50 characters for the description.",
+  },
   "organize.collapse": { "zh-CN": "收起编辑", en: "Collapse editor" },
   "organize.restoreAi": { "zh-CN": "恢复 AI 建议", en: "Restore AI suggestion" },
   "organize.tagsHint": {
@@ -1617,6 +1639,26 @@ export const messages = {
     "zh-CN": "没有匹配的任务",
     en: "No matching tasks",
   },
+  "正在搜索…": {
+    "zh-CN": "正在搜索…",
+    en: "Searching…",
+  },
+  显示更多: {
+    "zh-CN": "显示更多",
+    en: "Show more",
+  },
+  "正在加载…": {
+    "zh-CN": "正在加载…",
+    en: "Loading…",
+  },
+  加载更多: {
+    "zh-CN": "加载更多",
+    en: "Load more",
+  },
+  "正在加载这一天…": {
+    "zh-CN": "正在加载这一天…",
+    en: "Loading this day…",
+  },
   选择: {
     "zh-CN": "选择",
     en: "to select",
@@ -1882,6 +1924,22 @@ export const messages = {
   "sync.failed": {
     "zh-CN": "同步失败，正在尝试恢复云端状态。请检查连接后重试。",
     en: "Sync failed — trying to restore cloud state. Check your connection and try again.",
+  },
+  "sync.realtime.connected": {
+    "zh-CN": "实时同步",
+    en: "Live sync",
+  },
+  "sync.realtime.connecting": {
+    "zh-CN": "同步连接中",
+    en: "Connecting sync",
+  },
+  "sync.realtime.reconnecting": {
+    "zh-CN": "同步重连中",
+    en: "Reconnecting sync",
+  },
+  "sync.conflict": {
+    "zh-CN": "检测到其他设备的修改，已保留云端最新内容。请基于最新任务重试修改。",
+    en: "Changes detected on another device. The latest cloud version was kept; retry your edit.",
   },
   "邮箱或密码不正确。": {
     "zh-CN": "邮箱或密码不正确。",

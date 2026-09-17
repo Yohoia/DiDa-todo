@@ -10,18 +10,23 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { TaskLockButton } from "@/components/task/task-lock-button";
 import { useWorkspace } from "@/features/tasks/workspace-provider";
 import { cn } from "@/lib/utils";
-import type { TaskList } from "@/types/task";
+import type { Task, TaskList } from "@/types/task";
 import styles from "./command-palette.module.css";
 
 const LISTS: TaskList[] = ["Inbox", "Work", "Study", "Life"];
+const SEARCH_PAGE_SIZE = 30;
 
 /** DocSearch-style task search palette, opened with Cmd/Ctrl+K. */
 export function CommandPalette() {
   const { t, label, date: formatDate } = useI18n();
   const focusReturn = useDialogFocus();
-  const { tasks, searchOpen, setSearchOpen, selectTask, selectedId, focusId, updateTask } =
+  const { searchOpen, setSearchOpen, selectTask, selectedId, focusId, updateTask, searchTasks } =
     useWorkspace();
   const [query, setQuery] = useState("");
+  const [results, setResults] = useState<Task[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [offset, setOffset] = useState(0);
   // 最近搜索：仅在选中某条结果时记入本次关键词（会话内有效，去重置顶，最多 5 条）
   const [history, setHistory] = useState<string[]>([]);
   const recordSearch = (term: string) => {
@@ -33,8 +38,63 @@ export function CommandPalette() {
   const [prevOpen, setPrevOpen] = useState(searchOpen);
   if (prevOpen !== searchOpen) {
     setPrevOpen(searchOpen);
-    if (searchOpen) setQuery("");
+    if (searchOpen) {
+      setQuery("");
+      setResults([]);
+      setSearching(false);
+      setHasMore(false);
+      setOffset(0);
+    }
   }
+
+  useEffect(() => {
+    const term = query.trim();
+    if (!term) return;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      setSearching(true);
+      void searchTasks(term, 0, SEARCH_PAGE_SIZE)
+        .then((page) => {
+          if (cancelled) return;
+          setResults(page.tasks);
+          setHasMore(page.hasMore);
+          setOffset(page.tasks.length);
+        })
+        .finally(() => {
+          if (!cancelled) setSearching(false);
+        });
+    }, 220);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [query, searchTasks]);
+
+  const loadMore = async () => {
+    const term = query.trim();
+    if (!term || !hasMore) return;
+    const nextOffset = offset;
+    setSearching(true);
+    try {
+      const page = await searchTasks(term, nextOffset, SEARCH_PAGE_SIZE);
+      setResults((current) => {
+        const byId = new Map(current.map((task) => [task.id, task] as const));
+        for (const task of page.tasks) byId.set(task.id, task);
+        return [...byId.values()];
+      });
+      setHasMore(page.hasMore);
+      setOffset(nextOffset + page.tasks.length);
+    } finally {
+      setSearching(false);
+    }
+  };
+  const queryChanged = (value: string) => {
+    setQuery(value);
+    setResults([]);
+    setHasMore(false);
+    setOffset(0);
+    setSearching(!!value.trim());
+  };
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -73,7 +133,7 @@ export function CommandPalette() {
             <Command.Input
               className={styles.input}
               value={query}
-              onValueChange={setQuery}
+              onValueChange={queryChanged}
               placeholder={t("搜索任务…")}
               maxLength={120}
               autoFocus
@@ -82,7 +142,7 @@ export function CommandPalette() {
           </div>
           <Command.List className={styles.list}>
             <Command.Empty className={styles.empty}>
-              {query ? t("没有匹配的任务") : t("暂无搜索记录")}
+              {query ? (searching ? t("正在搜索…") : t("没有匹配的任务")) : t("暂无搜索记录")}
             </Command.Empty>
             {/* 未输入关键词：只展示最近搜索，不罗列全部任务 */}
             {!query && history.length > 0 && (
@@ -111,7 +171,7 @@ export function CommandPalette() {
             )}
             {query &&
               LISTS.map((list) => {
-                const group = tasks.filter((task) => task.list === list);
+                const group = results.filter((task) => task.list === list);
                 if (!group.length) return null;
                 return (
                   <Command.Group key={list} heading={label(list)} className={styles.group}>
@@ -153,6 +213,15 @@ export function CommandPalette() {
                   </Command.Group>
                 );
               })}
+            {query && hasMore && (
+              <Command.Item
+                className={cn(styles.item, styles.loadMore)}
+                value="__load-more-search-results__"
+                onSelect={() => void loadMore()}
+              >
+                {searching ? t("正在搜索…") : t("显示更多")}
+              </Command.Item>
+            )}
           </Command.List>
           <footer className={styles.footer}>
             <div className={styles.hints}>

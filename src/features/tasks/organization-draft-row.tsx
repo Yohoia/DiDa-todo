@@ -1,17 +1,14 @@
 "use client";
 
-import { useId, useState } from "react";
-import { HiCheck } from "react-icons/hi2";
-import { Select } from "@/components/ui/select";
+import { useState } from "react";
+import { HiCheck, HiOutlinePencil } from "react-icons/hi2";
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { useI18n } from "@/features/preferences/preferences-provider";
 import type { Task } from "@/types/task";
 import type { TaskOrganizationDraft, TaskOrganizationSuggestion } from "@/types/task-organization";
 import type { MessageKey } from "@/i18n/messages";
-import {
-  isOrganizationEdited,
-  organizationDraftError,
-  parseOrganizationTags,
-} from "./organization-editor";
+import { isOrganizationEdited, organizationDraftError } from "./organization-editor";
+import { OrganizationTaskDetail } from "./organization-task-detail";
 import styles from "./ai-organize-dialog.module.css";
 
 export function OrganizationDraftRow({
@@ -20,6 +17,7 @@ export function OrganizationDraftRow({
   draft,
   checked,
   disabled,
+  recurrenceAvailable,
   onToggle,
   onChange,
 }: {
@@ -28,14 +26,15 @@ export function OrganizationDraftRow({
   draft: TaskOrganizationDraft;
   checked: boolean;
   disabled: boolean;
+  recurrenceAvailable: boolean;
   onToggle: () => void;
   onChange: (draft: TaskOrganizationDraft) => void;
 }) {
   const { t, label } = useI18n();
-  const id = useId();
   const [editing, setEditing] = useState(false);
-  const [tagInput, setTagInput] = useState(draft.tags.join(", "));
-  const edited = isOrganizationEdited(original, draft);
+  const edited = isOrganizationEdited(original, draft, task);
+  const title = draft.title ?? task.title;
+  const description = draft.description ?? task.description;
   const error = organizationDraftError(draft);
   return (
     <article className={styles.result}>
@@ -43,20 +42,18 @@ export function OrganizationDraftRow({
         type="button"
         role="checkbox"
         aria-checked={checked}
-        aria-label={t("应用任务整理：{title}", { title: task.title })}
+        aria-label={t("应用任务整理：{title}", { title })}
         className={styles.check}
         disabled={disabled}
         onClick={onToggle}
       >
-        {checked && <HiCheck size={12} aria-hidden="true" />}
+        <span className={styles.checkMark}>
+          {checked && <HiCheck size={12} aria-hidden="true" />}
+        </span>
       </button>
       <div className={styles.resultBody}>
-        <div className={styles.rowHeading}>
-          <h3>{task.title}</h3>
-          <span className={styles.source}>
-            {edited ? t("organize.humanAdjusted") : t("organize.aiSuggestion")}
-          </span>
-        </div>
+        <h3>{title}</h3>
+        {description && <p className={styles.taskDescription}>{description}</p>}
         <div className={styles.meta}>
           <span>{draft.time ?? t("随时")}</span>
           <span>{label(draft.list)}</span>
@@ -69,98 +66,11 @@ export function OrganizationDraftRow({
           ))}
         </div>
         {original.reason && <p>{original.reason}</p>}
-        <div className={styles.editActions}>
-          <button
-            type="button"
-            aria-expanded={editing}
-            aria-controls={`${id}-editor`}
-            disabled={disabled}
-            onClick={() => setEditing(!editing)}
-          >
-            {editing ? t("organize.collapse") : t("organize.adjust")}
-          </button>
-          {edited && (
-            <button
-              type="button"
-              disabled={disabled}
-              onClick={() => {
-                onChange({ ...original });
-                setTagInput(original.tags.join(", "));
-              }}
-            >
+        {edited && (
+          <div className={styles.editActions}>
+            <button type="button" disabled={disabled} onClick={() => onChange({ ...original })}>
               {t("organize.restoreAi")}
             </button>
-          )}
-        </div>
-        {editing && (
-          <div id={`${id}-editor`} className={styles.editor}>
-            <label htmlFor={`${id}-time`}>
-              {t("Time")}
-              <input
-                id={`${id}-time`}
-                type="time"
-                value={draft.time ?? ""}
-                disabled={disabled}
-                onChange={(event) =>
-                  onChange({ ...draft, time: event.target.value || null, timeEdited: true })
-                }
-              />
-            </label>
-            <div className={styles.editorField}>
-              <span>{t("List")}</span>
-              <Select
-                value={draft.list}
-                ariaLabel={t("List")}
-                disabled={disabled}
-                options={(["Inbox", "Work", "Study", "Life"] as const).map((value) => ({
-                  value,
-                  label: label(value),
-                }))}
-                onValueChange={(list) => onChange({ ...draft, list })}
-              />
-            </div>
-            <div className={styles.editorField}>
-              <span>{t("Priority")}</span>
-              <Select
-                value={String(draft.priority)}
-                ariaLabel={t("Priority")}
-                disabled={disabled}
-                options={([1, 2, 3] as const).map((value) => ({
-                  value: String(value),
-                  label: `P${value}`,
-                }))}
-                onValueChange={(priority) =>
-                  onChange({ ...draft, priority: Number(priority) as 1 | 2 | 3 })
-                }
-              />
-            </div>
-            <label htmlFor={`${id}-estimate`}>
-              {t("Estimate")}
-              <input
-                id={`${id}-estimate`}
-                type="number"
-                min={1}
-                max={16}
-                step={1}
-                value={Number.isFinite(draft.estimate) ? draft.estimate : ""}
-                disabled={disabled}
-                onChange={(event) => onChange({ ...draft, estimate: event.target.valueAsNumber })}
-              />
-            </label>
-            <label className={styles.tagsField} htmlFor={`${id}-tags`}>
-              {t("Tags")}
-              <input
-                id={`${id}-tags`}
-                value={tagInput}
-                disabled={disabled}
-                placeholder={t("organize.tagsHint")}
-                onChange={(event) => {
-                  setTagInput(event.target.value);
-                  onChange({ ...draft, tags: parseOrganizationTags(event.target.value) });
-                }}
-              />
-            </label>
-            <p className={styles.editorHint}>{t("organize.draftHint")}</p>
           </div>
         )}
         {checked && error && (
@@ -169,6 +79,31 @@ export function OrganizationDraftRow({
           </p>
         )}
       </div>
+      <Dialog open={editing} onOpenChange={setEditing}>
+        <DialogTrigger asChild>
+          <button
+            type="button"
+            className={styles.editIcon}
+            aria-label={t("organize.editTask", { title })}
+            title={t("organize.adjust")}
+            disabled={disabled}
+          >
+            <HiOutlinePencil size={16} aria-hidden="true" />
+          </button>
+        </DialogTrigger>
+        {editing && (
+          <OrganizationTaskDetail
+            task={task}
+            recurrenceAvailable={recurrenceAvailable}
+            draft={draft}
+            onCancel={() => setEditing(false)}
+            onSave={(next) => {
+              onChange(next);
+              setEditing(false);
+            }}
+          />
+        )}
+      </Dialog>
     </article>
   );
 }

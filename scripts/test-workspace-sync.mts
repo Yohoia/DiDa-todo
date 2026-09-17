@@ -8,6 +8,15 @@ import {
 import type { Repository } from "../src/lib/data/repository.ts";
 import type { Task } from "../src/types/task.ts";
 import { getTodayTasks } from "../src/features/tasks/today-tasks.ts";
+import {
+  acknowledgeTaskWrite,
+  applyTaskPatches,
+  enqueueTaskWrite,
+  pendingTaskWrites,
+  taskPatchMatches,
+  updateTaskWriteVersion,
+  type TaskWriteEntry,
+} from "../src/features/tasks/task-write-queue.ts";
 
 const todayKey = "2026-09-17";
 function todayTask(id: string, patch: Partial<Task> = {}): Task {
@@ -120,8 +129,14 @@ function deferred<T>() {
 }
 
 function repository(overrides: Partial<Repository> = {}): Repository {
+  const loadTasks = overrides.loadTasks ?? (async () => []);
   return {
-    loadTasks: async () => [],
+    loadTasks,
+    loadWorkspaceTasks: async () => loadTasks(),
+    loadCompletedTasks: async () => ({ tasks: [], total: 0, hasMore: false }),
+    loadTasksByDate: async () => [],
+    loadTasksByIds: async () => [],
+    searchTasks: async () => ({ tasks: [], total: 0, hasMore: false }),
     loadPreferences: async () => ({
       firstDay: "Monday",
       sound: true,
@@ -134,6 +149,119 @@ function repository(overrides: Partial<Repository> = {}): Repository {
     ...overrides,
   } as Repository;
 }
+
+function storage(initial: Record<string, string> = {}) {
+  const values = new Map(Object.entries(initial));
+  return {
+    getItem: (key: string) => values.get(key) ?? null,
+    setItem: (key: string, value: string) => values.set(key, value),
+    removeItem: (key: string) => values.delete(key),
+  };
+}
+
+function writeEntry(
+  taskId: string,
+  patch: Partial<Task>,
+  expectedUpdatedAt?: string,
+): TaskWriteEntry {
+  return { id: `write-${taskId}-${JSON.stringify(patch)}`, taskId, expectedUpdatedAt, patch };
+}
+
+test("task writes coalesce per task and stay isolated by account", () => {
+  const owner = storage();
+  enqueueTaskWrite("owner", writeEntry("task-1", { title: "First" }, "version-1"), owner);
+  enqueueTaskWrite("owner", writeEntry("task-1", { title: "Second", frozen: true }), owner);
+  enqueueTaskWrite("owner", writeEntry("task-2", { title: "Other" }), owner);
+  enqueueTaskWrite("guest", writeEntry("task-1", { title: "Guest" }), owner);
+
+  const pending = pendingTaskWrites("owner", owner);
+  assert.deepEqual(
+    pending.map((entry) => [entry.taskId, entry.patch.title, entry.expectedUpdatedAt]),
+    [
+      ["task-1", "Second", "version-1"],
+      ["task-2", "Other", undefined],
+    ],
+  );
+  assert.equal(pending[0].patch.frozen, true);
+  assert.deepEqual(
+    pendingTaskWrites("guest", owner).map((entry) => entry.patch.title),
+    ["Guest"],
+  );
+});
+
+test("task write storage survives clean acknowledgements but not unsafe ones", () => {
+  const owner = storage();
+  const first = enqueueTaskWrite("owner", writeEntry("task-1", { title: "First" }, "v1"), owner)[0];
+  const inFlight = pendingTaskWrites("owner", owner)[0];
+  enqueueTaskWrite("owner", writeEntry("task-1", { title: "Second" }), owner);
+  acknowledgeTaskWrite("owner", inFlight, owner);
+  assert.equal(pendingTaskWrites("owner", owner).length, 1);
+  assert.equal(pendingTaskWrites("owner", owner)[0].patch.title, "Second");
+
+  acknowledgeTaskWrite("owner", first, owner);
+  const exact = pendingTaskWrites("owner", owner)[0];
+  acknowledgeTaskWrite("owner", exact, owner);
+  assert.deepEqual(pendingTaskWrites("owner", owner), []);
+  assert.equal(owner.getItem("dida-task-writes:owner"), null);
+});
+
+test("bad task-write storage degrades to optimistic-only editing", () => {
+  const failing = {
+    getItem: () => {
+      throw new Error("blocked");
+    },
+    setItem: () => {
+      throw new Error("quota");
+    },
+    removeItem: () => undefined,
+  };
+  assert.deepEqual(pendingTaskWrites("owner", failing), []);
+  assert.doesNotThrow(() =>
+    enqueueTaskWrite("owner", writeEntry("task-1", { title: "x" }), failing),
+  );
+});
+
+test("successful versions advance follow-up writes and pending edits rehydrate snapshots", () => {
+  const owner = storage();
+  const base = todayTask("task-1", { updatedAt: "v1", title: "Cloud" });
+  enqueueTaskWrite("owner", writeEntry("task-1", { title: "Edited" }, "v1"), owner);
+  updateTaskWriteVersion("owner", "task-1", "v2", owner);
+  assert.equal(pendingTaskWrites("owner", owner)[0].expectedUpdatedAt, "v2");
+
+  const hydrated = applyTaskPatches([base], pendingTaskWrites("owner", owner));
+  assert.equal(hydrated[0].title, "Edited");
+  assert.equal(hydrated[0].updatedAt, "v1");
+});
+
+test("idempotence checks compare task details without treating cleared values as present", () => {
+  const task = todayTask("task-1", {
+    title: "Read",
+    date: "2026-09-18",
+    time: "14:30",
+    schedule: { date: "2026-09-18", hour: 14, minute: 30, duration: 25, label: "Read" },
+    repeatIntervalDays: 2,
+    frozen: true,
+    completedAt: "2026-09-17T10:00:00Z",
+    subtasks: [{ id: "sub-1", title: "Page", completed: false }],
+  });
+  assert.ok(taskPatchMatches(task, { title: "Read", time: "14:30", frozen: true }));
+  assert.ok(
+    taskPatchMatches(task, {
+      completedAt: task.completedAt,
+      repeatIntervalDays: 2,
+      subtasks: task.subtasks,
+      schedule: {
+        date: "2026-09-18",
+        hour: 14,
+        minute: 30,
+        duration: 25,
+        label: "different label is derived",
+      },
+    }),
+  );
+  assert.equal(taskPatchMatches(task, { time: undefined, repeatIntervalDays: undefined }), false);
+  assert.equal(taskPatchMatches(task, { date: "" }), false);
+});
 
 test("successful writes execute serially without reloading optimistic state", async () => {
   const gate = deferred<void>();
@@ -159,6 +287,67 @@ test("successful writes execute serially without reloading optimistic state", as
   gate.resolve();
   await Promise.all([first, last]);
   assert.deepEqual(order, [1, 2, 3]);
+});
+
+test("realtime refresh waits for queued writes and applies one final snapshot", async () => {
+  const gate = deferred<void>();
+  const started = deferred<void>();
+  const order: string[] = [];
+  let reads = 0;
+  let snapshots = 0;
+  const sync = createWorkspaceSync({
+    getRepository: () =>
+      repository({
+        loadTasks: async () => {
+          order.push(`read-${++reads}`);
+          return [];
+        },
+      }),
+    isActive: () => true,
+    onSnapshot: () => {
+      snapshots++;
+    },
+    onError: () => assert.fail("unexpected refresh error"),
+  });
+  const write = sync.enqueue(async () => {
+    order.push("write");
+    started.resolve();
+    await gate.promise;
+  });
+  const refresh = sync.refresh();
+  await started.promise;
+  assert.deepEqual(order, ["write"]);
+  gate.resolve();
+  await Promise.all([write, refresh]);
+  assert.deepEqual(order, ["write", "read-1"]);
+  assert.equal(snapshots, 1);
+});
+
+test("overlapping realtime refreshes discard stale snapshots", async () => {
+  const gate = deferred<Task[]>();
+  let reads = 0;
+  let snapshots = 0;
+  const sync = createWorkspaceSync({
+    getRepository: () =>
+      repository({
+        loadTasks: async () => {
+          reads++;
+          if (reads === 1) return gate.promise;
+          return [];
+        },
+      }),
+    isActive: () => true,
+    onSnapshot: () => {
+      snapshots++;
+    },
+    onError: () => assert.fail("unexpected refresh error"),
+  });
+  const first = sync.refresh();
+  const last = sync.refresh();
+  gate.resolve([]);
+  await Promise.all([first, last]);
+  assert.equal(reads, 2);
+  assert.equal(snapshots, 1);
 });
 
 test("new edits during recovery discard the stale snapshot and recover after the last write", async () => {

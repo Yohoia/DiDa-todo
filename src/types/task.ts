@@ -16,6 +16,8 @@ export type Subtask = { id: string; title: string; completed: boolean };
 export type Task = {
   // Core identity
   id: string;
+  /** Server row version used for compare-and-set writes; absent until first reload. */
+  updatedAt?: string;
   title: string;
   description: string;
 
