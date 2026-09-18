@@ -13,6 +13,78 @@ function walk(node: unknown): Element[] {
   return [element, ...walk(element.props.children)];
 }
 
+test("daily goal renders today's activity independently of monthly accumulation", async () => {
+  const jsx = (type: unknown, props: Record<string, unknown>) => ({ type, props });
+  const exports: { InsightsPage?: () => Promise<Element> } = {};
+  const facts = {
+    days: Array.from({ length: 42 }, (_, index) => ({
+      date: `2026-08-${String((index % 28) + 1).padStart(2, "0")}`,
+      minutes: 0,
+      completed: 0,
+      level: 0,
+    })),
+    focusMinutes: 120,
+    focusMinutesThisMonth: 120,
+    focusMinutesToday: 0,
+    dailyFocusGoalMinutes: 120,
+    completedTasks: 0,
+    streakDays: 0,
+    actualTaskMinutesThisMonth: 0,
+    estimatedMinutesThisMonth: 0,
+    listDistribution: {},
+    checkInDaysThisMonth: 0,
+    unlinkedFocusMinutesThisMonth: 0,
+  };
+  const modules: Record<string, unknown> = {
+    "react/jsx-runtime": { jsx, jsxs: jsx, Fragment: "fragment" },
+    "react-icons/hi2": {},
+    "@/i18n/server": {
+      getI18n: async () => ({
+        t: (key: string) => key,
+        date: () => "date",
+        number: (value: number) => String(value),
+        label: (value: string) => value,
+      }),
+    },
+    "@/components/shared/workspace-ui": { PageHeader: "header", SectionLabel: "label" },
+    "@/styles/workspace.module.css": { default: {} },
+    "./insights.module.css": { default: {} },
+    "./insights-service": { getInsights: async () => facts },
+    "./focus-rhythm": { FocusRhythm: "rhythm" },
+    "./ai-advisor-panel": { AiAdvisorPanel: "advisor" },
+  };
+  vm.runInNewContext(
+    ts.transpileModule(
+      readFileSync(new URL("../src/features/insights/insights-page.tsx", import.meta.url), "utf8"),
+      {
+        compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
+      },
+    ).outputText,
+    {
+      exports,
+      require: (id: string) => {
+        assert.ok(Object.hasOwn(modules, id), id);
+        return modules[id];
+      },
+    },
+  );
+  const progress = walk(await exports.InsightsPage!()).find(
+    (node) => node.props.role === "progressbar",
+  )!;
+  assert.equal(progress.props["aria-valuenow"], 0);
+  assert.equal(
+    (progress.props.children as Element).props.style &&
+      ((progress.props.children as Element).props.style as { width: string }).width,
+    "0%",
+  );
+  facts.focusMinutesToday = 30;
+  const updated = walk(await exports.InsightsPage!()).find(
+    (node) => node.props.role === "progressbar",
+  )!;
+  assert.equal(updated.props["aria-valuenow"], 30);
+  assert.equal(((updated.props.children as Element).props.style as { width: string }).width, "25%");
+});
+
 test("advisor keeps edited drafts through task snapshots, sends real history, and waits for save", async () => {
   const slots: unknown[] = [];
   let cursor = 0;
