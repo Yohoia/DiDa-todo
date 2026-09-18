@@ -47,6 +47,10 @@ Vercel 后台独立核对：团队 `Yohoia`（路径 `/yohoia`）中的 `dida-to
 
 部署后复测同一组导航：URL 提交时间降至 66–92ms；慢路由在约 64ms 显示骨架，Profile 真实内容约 1.2s 完成，浏览器控制台无错误。数据加载耗时仍取决于服务端查询，但页面反馈不再迟滞。
 
+后续提交 `2f3f0d6` 进一步减少真实等待：代理、页面会话与语音请求边界改用已签名 JWT `getClaims()` 校验，现代非对称签名通常使用缓存 JWKS 本地验证，旧对称密钥仍自动回退 Auth 服务；Today / Inbox / Archive 使用完整预取，因为三页任务事实来自已挂载的 WorkspaceProvider，不会缓存旧任务。Insights / Profile 仍按需请求服务端事实，避免统计和成长档案过期。本地生产服务匿名页面、RSC 与 API 权限 6 项通过，仓库全量 107 项测试通过。
+
+`2f3f0d6` 部署后复测：Today / Inbox / Archive 首个标题约 77–101ms 出现，不再进入等待骨架；Profile 约 0.9s；Insights 冷实例约 2.5s，热实例约 0.82–1.25s。页面保持实时同步，浏览器控制台无错误。剩余等待集中在 Insights/Profile 的数据库事实与成长奖励同步，不属于路由壳或动画延迟。
+
 ## 账号删除修复与生产验收
 
 - 经用户明确授权，将现有 Supabase default 服务端 Secret Key 保存为新 Vercel Production 的 `SUPABASE_SERVICE_ROLE_KEY`（Secret）。密钥未写入代码、文件或报告。
