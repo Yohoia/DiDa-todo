@@ -158,7 +158,7 @@ test("account deletion audits outcomes and marks failed deletes", async () => {
 test("actual PostgreSQL stage-three rules protect account, growth, insights, and voice data", async (t) => {
   const db = new PGlite();
   try {
-    await db.exec(`create role anon; create role authenticated; create schema auth;
+    await db.exec(`create role anon; create role authenticated; create role supabase_auth_admin; create schema auth;
       create table auth.users (id uuid primary key, email text, raw_user_meta_data jsonb default '{}', created_at timestamptz default now());
       create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;`);
     const directory = new URL("../supabase/migrations/", import.meta.url);
@@ -184,6 +184,18 @@ test("actual PostgreSQL stage-three rules protect account, growth, insights, and
       "insert into tasks(user_id,title,list,completed,completed_at) values ($1,'Deleted','Life',true,now())",
       [deleted],
     );
+
+    const deletedTask = await db.query<{ id: string }>("select id from tasks where user_id=$1", [
+      deleted,
+    ]);
+    await db.query("insert into subtasks(task_id,user_id,title) values ($1,$2,'Cascade child')", [
+      deletedTask.rows[0]!.id,
+      deleted,
+    ]);
+    // Exercise an FK cascade whose restricted child-table owner cannot update tasks.
+    await db.exec(`grant usage on schema auth to supabase_auth_admin;
+      alter table auth.users owner to supabase_auth_admin;
+      alter table subtasks owner to supabase_auth_admin;`);
 
     await db.exec("set role authenticated;");
     await db.query("select set_config('request.jwt.claim.sub',$1,false)", [owner]);
@@ -255,6 +267,8 @@ test("actual PostgreSQL stage-three rules protect account, growth, insights, and
         const afterDirect = await read();
         assert.notEqual(afterDirect.updated_at, before.updated_at);
         assert.equal((await save(before.updated_at, {}, children)).rows.length, 0);
+        await db.query("delete from subtasks where id=$1", [childId]);
+        assert.notEqual((await read()).updated_at, afterDirect.updated_at);
         await db.query("delete from tasks where id=$1", [row.id]);
       },
     );
@@ -422,7 +436,17 @@ test("actual PostgreSQL stage-three rules protect account, growth, insights, and
           /permission denied/,
         );
         await db.exec("reset role;");
+        await db.exec("set role supabase_auth_admin;");
+        await assert.rejects(
+          db.query("update tasks set title='Forbidden' where user_id=$1", [deleted]),
+          /permission denied/,
+        );
         await db.query("delete from auth.users where id=$1", [deleted]);
+        await db.exec("reset role;");
+        assert.equal(
+          (await db.query("select id from subtasks where user_id=$1", [deleted])).rows.length,
+          0,
+        );
         assert.equal(
           (await db.query("select id from tasks where user_id=$1", [deleted])).rows.length,
           0,
