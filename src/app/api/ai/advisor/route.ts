@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { normalizeAiAdvisorResult } from "@/lib/server/ai-advisor-result";
-import { guardVoiceRequest } from "@/lib/server/voice-request-guard";
+import { consumeVoiceQuota, guardVoiceRequest } from "@/lib/server/voice-request-guard";
 import { MAX_AI_ADVISOR_TASKS } from "@/types/ai-advisor";
 
 export const maxDuration = 30;
@@ -154,6 +154,7 @@ export async function POST(request: Request) {
   const rejected = await guardVoiceRequest(request, {
     scope: "parse",
     maxBodyBytes: 64 * 1024,
+    chargeQuota: false,
   });
   if (rejected) return rejected;
   if (!resolveProvider().apiKey) {
@@ -167,6 +168,8 @@ export async function POST(request: Request) {
   }
   const input = RequestSchema.safeParse(body);
   if (!input.success) return Response.json({ error: "bad_request" }, { status: 400 });
+  const quotaRejected = await consumeVoiceQuota("parse");
+  if (quotaRejected) return quotaRejected;
 
   try {
     for (let attempt = 0; attempt < 2; attempt++) {

@@ -82,6 +82,40 @@ export function getTodayKey(now?: Date, timeZone = APP_TIME_ZONE): string {
   return key;
 }
 
+/**
+ * Return the earliest UTC instant belonging to a timezone's current local day.
+ * Probing offsets around both the current and nominal-wall-clock instants also
+ * handles DST transitions that fall at or across local midnight.
+ */
+export function timeZoneDayStart(timeZone: string, now = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+  const wall = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+  const dateKey = `${wall.year}-${wall.month}-${wall.day}`;
+  const nominalMidnight = Date.UTC(Number(wall.year), Number(wall.month) - 1, Number(wall.day));
+
+  const probes = [
+    now.getTime() - 86_400_000,
+    now.getTime(),
+    now.getTime() + 86_400_000,
+    nominalMidnight - 86_400_000,
+    nominalMidnight,
+    nominalMidnight + 86_400_000,
+  ];
+  const candidates = probes
+    .map((value) => nominalMidnight - timeZoneOffsetMs(new Date(value), timeZone))
+    .filter((value) => getTodayKey(new Date(value), timeZone) === dateKey);
+
+  if (!candidates.length) {
+    throw new Error(`Unable to resolve the start of day in ${timeZone}`);
+  }
+  return new Date(Math.min(...candidates)).toISOString();
+}
+
 /** Parse a YYYY-MM-DD key into calendar parts (month is 0-11). */
 export function parseDateKey(key: string): { year: number; month: number; day: number } {
   const [year, month, day] = key.split("-").map(Number);

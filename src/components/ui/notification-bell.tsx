@@ -118,23 +118,32 @@ export function NotificationBell() {
             </p>
           ) : (
             <ul className={styles.list}>
-              {notifications.map((notification) => (
-                <li key={notification.id}>
-                  <button
-                    type="button"
-                    className={styles.item}
-                    onClick={() => openTask(notification)}
-                  >
-                    <span className={styles.dot} data-unread={!notification.read || undefined} />
-                    <span className={styles.itemBody}>
-                      <span className={styles.itemTitle}>{notification.title}</span>
-                      <span className={styles.itemTime}>
-                        {relativeTime(notification.createdAt, locale)}
+              {notifications.map((notification) => {
+                const count = notification.dailyDigest?.count;
+                const title =
+                  count === undefined
+                    ? notification.title
+                    : count > 0
+                      ? t("notifications.dailyDigestPlanned", { count })
+                      : t("notifications.dailyDigestEmpty");
+                return (
+                  <li key={notification.id}>
+                    <button
+                      type="button"
+                      className={styles.item}
+                      onClick={() => openTask(notification)}
+                    >
+                      <span className={styles.dot} data-unread={!notification.read || undefined} />
+                      <span className={styles.itemBody}>
+                        <span className={styles.itemTitle}>{title}</span>
+                        <span className={styles.itemTime}>
+                          {relativeTime(notification.createdAt, locale)}
+                        </span>
                       </span>
-                    </span>
-                  </button>
-                </li>
-              ))}
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           )}
           <p className={styles.retentionHint}>{t("notifications.retentionHint")}</p>

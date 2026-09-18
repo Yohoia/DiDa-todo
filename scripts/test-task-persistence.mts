@@ -555,6 +555,23 @@ test("notification pagination preserves older and hidden reminder deduplication 
   );
 });
 
+test("daily digest persistence keeps display metadata for localization", async () => {
+  const tables = { notifications: [] };
+  const repository = createRepository(database(tables), "owner");
+  await repository.createDailyDigestNotification({
+    id: "digest-1",
+    type: "daily_digest",
+    dedupeKey: "daily-digest:2026-09-18",
+    title: "Stored snapshot",
+    dailyDigest: { count: 3 },
+    remindAt: "2026-09-18T00:00:00Z",
+    read: false,
+    createdAt: "2026-09-18T00:00:00Z",
+  });
+  assert.deepEqual(tables.notifications[0].metadata, { count: 3 });
+  assert.deepEqual((await repository.listNotifications())[0].dailyDigest, { count: 3 });
+});
+
 test("marking notifications read keeps them visible and never changes another user's rows", async () => {
   const rows = [notification("1"), notification("2"), notification("other", "someone-else")];
   const repository = createRepository(database({ notifications: rows }), "owner");

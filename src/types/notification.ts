@@ -7,6 +7,8 @@ export type AppNotification = {
   dedupeKey?: string;
   /** 任务标题快照（任务后续改名不影响已生成的通知可读性） */
   title: string;
+  /** 聚合通知展示所需的稳定数据，避免把界面语言固化进事实行。 */
+  dailyDigest?: { count: number };
   /** 应提醒的时间（ISO 字符串） */
   remindAt: string;
   read: boolean;

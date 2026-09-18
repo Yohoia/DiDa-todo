@@ -10,7 +10,7 @@ import {
   acknowledgeFocusSession,
 } from "../src/features/focus/focus-journal.ts";
 import { inspectWav } from "../src/lib/audio/inspect-wav.ts";
-import { dateKeyWeekday, taskDateTime } from "../src/lib/date-utils.ts";
+import { dateKeyWeekday, taskDateTime, timeZoneDayStart } from "../src/lib/date-utils.ts";
 import { autoSendGuardKey } from "../src/features/auth/reset-password-guard.ts";
 import { normalizeFocusPatch, canSetTodayFocus } from "../src/features/tasks/task-focus.ts";
 import {
@@ -101,6 +101,38 @@ test("task reminders use Shanghai time even when the device timezone changes", (
     if (previous === undefined) delete process.env.TZ;
     else process.env.TZ = previous;
   }
+});
+
+test("workspace day boundaries use the account timezone rather than a fixed offset", () => {
+  assert.equal(
+    timeZoneDayStart("America/New_York", new Date("2026-07-15T12:00:00Z")),
+    "2026-07-15T04:00:00.000Z",
+  );
+  assert.equal(
+    timeZoneDayStart("Asia/Tokyo", new Date("2026-07-15T12:00:00Z")),
+    "2026-07-14T15:00:00.000Z",
+  );
+  assert.equal(
+    timeZoneDayStart("Australia/Sydney", new Date("2026-07-15T12:00:00Z")),
+    "2026-07-14T14:00:00.000Z",
+  );
+  assert.equal(
+    timeZoneDayStart("Pacific/Kiritimati", new Date("2026-07-15T12:00:00Z")),
+    "2026-07-15T10:00:00.000Z",
+  );
+
+  const repository = readFileSync(
+    new URL("../src/lib/data/repository.ts", import.meta.url),
+    "utf8",
+  );
+  assert.ok(repository.includes("timeZoneDayStart(timeZone)"));
+  assert.equal(repository.includes("T00:00:00+08:00"), false);
+});
+
+test("legacy schedule links land on Inbox", () => {
+  const config = readFileSync(new URL("../next.config.ts", import.meta.url), "utf8");
+  assert.ok(config.includes('source: "/upcoming", destination: "/inbox"'));
+  assert.ok(config.includes('source: "/schedule", destination: "/inbox"'));
 });
 
 test("date-key weekdays stay stable when the process timezone changes", () => {
@@ -388,6 +420,48 @@ test("transcription upstream failures log metadata without response bodies", () 
   assert.equal(transcribe.includes("${body.slice"), false);
   assert.match(transcribe, /upstream status=\$\{upstream\.status\}/);
   assert.match(transcribe, /code=\$\{upstreamCode\}/);
+});
+
+test("paid routes defer quota consumption until local prechecks pass", () => {
+  for (const filename of [
+    "../src/app/api/tasks/organize/route.ts",
+    "../src/app/api/ai/advisor/route.ts",
+    "../src/app/api/voice/parse/route.ts",
+  ]) {
+    const source = readFileSync(new URL(filename, import.meta.url), "utf8");
+    const zodValidation = source.indexOf("safeParse(body)");
+    const manualValidation = source.indexOf("const transcript =");
+    const validation = zodValidation >= 0 ? zodValidation : manualValidation;
+    const quota = source.indexOf('consumeVoiceQuota("parse")');
+    assert.ok(validation >= 0, `${filename} must validate its body`);
+    assert.ok(quota > validation, `${filename} must validate before charging quota`);
+    assert.ok(source.includes("chargeQuota: false"));
+  }
+
+  const transcribe = readFileSync(
+    new URL("../src/app/api/voice/transcribe/route.ts", import.meta.url),
+    "utf8",
+  );
+  const audioValidation = transcribe.indexOf("duration <= 0 || duration > MAX_SECONDS");
+  const quota = transcribe.indexOf('consumeVoiceQuota("transcribe")');
+  assert.ok(audioValidation >= 0);
+  assert.ok(quota > audioValidation);
+  assert.ok(transcribe.includes("chargeQuota: false"));
+});
+
+test("daily digest display data stays language-independent", () => {
+  const provider = readFileSync(
+    new URL("../src/features/tasks/workspace-provider.tsx", import.meta.url),
+    "utf8",
+  );
+  const bell = readFileSync(
+    new URL("../src/components/ui/notification-bell.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.equal(provider.includes("今天有 ${count} 项安排"), false);
+  assert.ok(provider.includes("dailyDigest: { count }"));
+  assert.ok(bell.includes("notifications.dailyDigestPlanned"));
+  assert.ok(bell.includes("notifications.dailyDigestEmpty"));
 });
 
 test("Inbox exposes undated unfinished tasks without changing the AI day boundary", () => {

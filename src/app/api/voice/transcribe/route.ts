@@ -7,7 +7,7 @@
  * 防护：类型/大小/时长白名单；未配置 key 时明确返回 not_configured。
  */
 
-import { guardVoiceRequest } from "@/lib/server/voice-request-guard";
+import { consumeVoiceQuota, guardVoiceRequest } from "@/lib/server/voice-request-guard";
 import { request as httpsRequest } from "node:https";
 import { inspectWav } from "@/lib/audio/inspect-wav";
 import { createClient as createServerClient } from "@/lib/supabase/server";
@@ -116,6 +116,7 @@ export async function POST(request: Request) {
   const rejected = await guardVoiceRequest(request, {
     scope: "transcribe",
     maxBodyBytes: MAX_REQUEST_BYTES,
+    chargeQuota: false,
   });
   if (rejected) return rejected;
 
@@ -149,6 +150,8 @@ export async function POST(request: Request) {
   if (duration <= 0 || duration > MAX_SECONDS) {
     return Response.json({ error: "audio_invalid" }, { status: 400 });
   }
+  const quotaRejected = await consumeVoiceQuota("transcribe");
+  if (quotaRejected) return quotaRejected;
 
   // 语言只传单语种；其他 locale（混合语种）省略让模型自动判断
   const locale = String(form.get("locale") ?? "zh-CN");

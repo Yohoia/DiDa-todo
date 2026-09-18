@@ -4,7 +4,7 @@
  */
 
 import { z } from "zod";
-import { guardVoiceRequest } from "@/lib/server/voice-request-guard";
+import { consumeVoiceQuota, guardVoiceRequest } from "@/lib/server/voice-request-guard";
 import type { TaskOrganizationSuggestion } from "@/types/task-organization";
 import { MAX_ORGANIZE_TASKS } from "@/types/task-organization";
 
@@ -176,6 +176,7 @@ export async function POST(request: Request) {
   const rejected = await guardVoiceRequest(request, {
     scope: "parse",
     maxBodyBytes: 64 * 1024,
+    chargeQuota: false,
   });
   if (rejected) return rejected;
 
@@ -193,6 +194,8 @@ export async function POST(request: Request) {
   if (!parsedRequest.success) {
     return Response.json({ error: "bad_request" }, { status: 400 });
   }
+  const quotaRejected = await consumeVoiceQuota("parse");
+  if (quotaRejected) return quotaRejected;
 
   const input = parsedRequest.data;
   const messages: { role: string; content: string }[] = [

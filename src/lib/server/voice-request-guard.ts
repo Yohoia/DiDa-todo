@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 type GuardOptions = {
   scope: "transcribe" | "parse";
   maxBodyBytes: number;
+  /** Routes with inexpensive local prechecks defer charging until those checks pass. */
+  chargeQuota?: boolean;
 };
 
 type QuotaResult = {
@@ -49,11 +51,17 @@ export async function guardVoiceRequest(
     return error("authentication_required", 401);
   }
 
+  if (options.chargeQuota === false) return null;
+  return consumeVoiceQuota(options.scope);
+}
+
+export async function consumeVoiceQuota(scope: "transcribe" | "parse"): Promise<Response | null> {
+  const supabase = await createClient();
   const { data, error: quotaError } = await supabase
-    .rpc("consume_voice_quota", { p_scope: options.scope })
+    .rpc("consume_voice_quota", { p_scope: scope })
     .maybeSingle();
   if (quotaError || !data) {
-    console.error(`[voice/${options.scope}] quota check failed: ${quotaError?.message ?? "empty"}`);
+    console.error(`[voice/${scope}] quota check failed: ${quotaError?.message ?? "empty"}`);
     return error("quota_unavailable", 503);
   }
 

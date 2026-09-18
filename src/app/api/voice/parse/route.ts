@@ -11,7 +11,7 @@
 import { z } from "zod";
 import { dateKeyWeekday, getTodayKey, isValidTimeZone } from "@/lib/date-utils";
 import { getAuthenticatedSession } from "@/lib/server/workspace-session";
-import { guardVoiceRequest } from "@/lib/server/voice-request-guard";
+import { consumeVoiceQuota, guardVoiceRequest } from "@/lib/server/voice-request-guard";
 import type { VoiceParsed } from "@/types/voice";
 
 /** 覆盖未启用 Fluid Compute 时较短的 Vercel 默认时限（重试一次最坏 2×12s）。 */
@@ -231,6 +231,7 @@ export async function POST(request: Request) {
   const rejected = await guardVoiceRequest(request, {
     scope: "parse",
     maxBodyBytes: 4 * 1024,
+    chargeQuota: false,
   });
   if (rejected) return rejected;
 
@@ -263,6 +264,8 @@ export async function POST(request: Request) {
   if (!transcript || transcript.length > 500) {
     return Response.json({ error: "bad_request" }, { status: 400 });
   }
+  const quotaRejected = await consumeVoiceQuota("parse");
+  if (quotaRejected) return quotaRejected;
 
   const today = getTodayKey(new Date(), requestedTimeZone);
   const messages: { role: string; content: string }[] = [

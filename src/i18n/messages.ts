@@ -307,6 +307,17 @@ export const messages = {
     "zh-CN": "{title} · {time} 开始",
     en: "{title} · due at {time}",
   },
+  "notifications.dailyDigestPlanned": {
+    "zh-CN": "今天有 {count} 项安排",
+    en: {
+      one: "You have {count} scheduled task today",
+      other: "You have {count} scheduled tasks today",
+    },
+  },
+  "notifications.dailyDigestEmpty": {
+    "zh-CN": "今天没有已安排事项",
+    en: "No scheduled tasks today",
+  },
   "notifications.clear": {
     "zh-CN": "清空通知",
     en: "Clear notifications",

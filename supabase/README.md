@@ -80,3 +80,11 @@ one transaction, and returns a strictly advancing version. Direct subtask writes
 the parent version. The statistics RPC now includes real daily task-completion counts across
 month boundaries. This migration has passed the local PostgreSQL suite; target deployment and
 acceptance are recorded separately in `docs/progress-audit-20260918.md`.
+
+## 2026-09-18 review fixes
+
+Migration `0014_account_delete_cascade_versions.sql` allows the restricted Supabase Auth role to
+cascade account deletion without granting normal clients extra task privileges. Migration
+`0015_focus_stats_account_timezone.sql` resolves Insight statistics in the account timezone inside
+the RPC. Migration `0016_notification_display_metadata.sql` stores aggregate-notification display
+data separately from translated title snapshots.

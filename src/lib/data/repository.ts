@@ -3,6 +3,7 @@ import type { Task, TaskList } from "@/types/task";
 import type { AppNotification } from "@/types/notification";
 import type { FocusSessionRecord } from "@/types/focus";
 import { isOrganizationCandidateCurrent, hasOrganizationDetailEdits } from "./task-organization.ts";
+import { timeZoneDayStart } from "../date-utils.ts";
 
 /**
  * Supabase 数据仓库：组件不直接 supabase.from()，统一经此层读写（TechStack §14）。
@@ -94,7 +95,6 @@ type PreferencesRow = {
 };
 
 const READ_PAGE_SIZE = 500;
-const DAY_START_SUFFIX = "T00:00:00+08:00";
 
 export type TaskPage = {
   tasks: Task[];
@@ -140,7 +140,7 @@ async function loadWorkspaceTaskRows(
     if (page.length < READ_PAGE_SIZE) break;
   }
 
-  const todayStart = `${timeZoneDateKey(timeZone)}${DAY_START_SUFFIX}`;
+  const todayStart = timeZoneDayStart(timeZone);
   const completedToday: TaskRow[] = [];
   for (let from = 0; ; from += READ_PAGE_SIZE) {
     const { data, error } = await client
@@ -162,15 +162,6 @@ async function loadWorkspaceTaskRows(
     (left, right) =>
       left.created_at.localeCompare(right.created_at) || left.id.localeCompare(right.id),
   );
-}
-
-function timeZoneDateKey(timeZone: string) {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date());
 }
 
 async function loadAllSubtaskRows(
@@ -728,13 +719,14 @@ export function createRepository(client: SupabaseClient, userId: string): Reposi
         read: boolean;
         created_at: string;
         dismissed_at: string | null;
+        metadata: Record<string, unknown> | null;
       };
       // 隐藏记录也参与去重；分页读全，避免旧提醒被 50 条上限截断后重新出现。
       const rows: Row[] = [];
       for (let from = 0; ; from += READ_PAGE_SIZE) {
         const { data, error } = await client
           .from("notifications")
-          .select("id, task_id, dedupe_key, title, remind_at, read, created_at, dismissed_at, type")
+          .select("*")
           .eq("user_id", userId)
           .order("created_at", { ascending: false })
           .order("id", { ascending: false })
@@ -754,6 +746,10 @@ export function createRepository(client: SupabaseClient, userId: string): Reposi
         read: row.read,
         createdAt: row.created_at,
         dismissedAt: row.dismissed_at ?? undefined,
+        dailyDigest:
+          row.type === "daily_digest" && typeof row.metadata?.count === "number"
+            ? { count: row.metadata.count }
+            : undefined,
       }));
     },
 
@@ -775,7 +771,7 @@ export function createRepository(client: SupabaseClient, userId: string): Reposi
     },
 
     async createDailyDigestNotification(notification) {
-      const { error } = await client.from("notifications").insert({
+      let { error } = await client.from("notifications").insert({
         id: notification.id,
         user_id: userId,
         type: "daily_digest",
@@ -784,7 +780,21 @@ export function createRepository(client: SupabaseClient, userId: string): Reposi
         title: notification.title,
         remind_at: notification.remindAt,
         read: notification.read,
+        metadata: { count: notification.dailyDigest?.count ?? 0 },
       });
+      // Vercel can deploy an app revision while its matching migration is still running.
+      if (error?.code === "42703" || error?.code === "PGRST204") {
+        ({ error } = await client.from("notifications").insert({
+          id: notification.id,
+          user_id: userId,
+          type: "daily_digest",
+          task_id: null,
+          dedupe_key: notification.dedupeKey,
+          title: notification.title,
+          remind_at: notification.remindAt,
+          read: notification.read,
+        }));
+      }
       if (error && error.code !== "23505") throw new Error(error.message);
     },
 
