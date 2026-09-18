@@ -13,6 +13,37 @@ export type TaskWriteEntry = {
 
 type QueueStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
+// Only failed storage writes live here. Successful writes remain storage-backed
+// so other tabs and refreshes continue to see the persisted queue.
+const fallbackQueues = new WeakMap<QueueStorage, Map<string, TaskWriteEntry[]>>();
+const unavailableStorageQueues = new Map<string, TaskWriteEntry[]>();
+
+function fallback(storage: QueueStorage | undefined) {
+  if (!storage) return unavailableStorageQueues;
+  let queues = fallbackQueues.get(storage);
+  if (!queues) {
+    queues = new Map();
+    fallbackQueues.set(storage, queues);
+  }
+  return queues;
+}
+
+function saveQueue(userId: string, rows: TaskWriteEntry[], storage: QueueStorage | undefined) {
+  try {
+    if (!storage) throw new Error("storage_unavailable");
+    if (rows.length) storage.setItem(key(userId), JSON.stringify(rows));
+    else storage.removeItem(key(userId));
+    fallback(storage).delete(userId);
+  } catch {
+    // Keep an empty queue too, so failed acknowledgement cannot replay stale disk data.
+    fallback(storage).set(userId, rows);
+  }
+}
+
+export function taskWriteStorageLimited(userId: string, storage = browserStorage()): boolean {
+  return fallback(storage).has(userId);
+}
+
 function browserStorage(): QueueStorage | undefined {
   try {
     return typeof window === "undefined" ? undefined : window.localStorage;
@@ -39,6 +70,8 @@ function validEntry(value: unknown): value is TaskWriteEntry {
 }
 
 export function pendingTaskWrites(userId: string, storage = browserStorage()): TaskWriteEntry[] {
+  const memory = fallback(storage).get(userId);
+  if (memory) return memory;
   try {
     const value: unknown = JSON.parse(storage?.getItem(key(userId)) ?? "[]");
     return Array.isArray(value) ? value.filter(validEntry) : [];
@@ -76,11 +109,7 @@ export function enqueueTaskWrite(
           : row,
       )
     : [...rows, entry];
-  try {
-    storage?.setItem(key(userId), JSON.stringify(next));
-  } catch {
-    /* Storage unavailable: the in-memory optimistic state still applies. */
-  }
+  saveQueue(userId, next, storage);
   return next;
 }
 
@@ -94,12 +123,7 @@ export function acknowledgeTaskWrite(
   const remaining = rows.filter(
     (row) => row.id !== entry.id || JSON.stringify(row) !== JSON.stringify(entry),
   );
-  try {
-    if (remaining.length) storage?.setItem(key(userId), JSON.stringify(remaining));
-    else storage?.removeItem(key(userId));
-  } catch {
-    /* A replayed write is either idempotent or rejected by the version check. */
-  }
+  saveQueue(userId, remaining, storage);
 }
 
 /** Our own successful write advances the lineage of follow-up edits for that task. */
@@ -115,11 +139,7 @@ export function updateTaskWriteVersion(
   const next = rows.map((row) =>
     row.taskId === taskId ? { ...row, expectedUpdatedAt: updatedAt } : row,
   );
-  try {
-    storage?.setItem(key(userId), JSON.stringify(next));
-  } catch {
-    /* The next flush retry will refresh the version from the server row. */
-  }
+  saveQueue(userId, next, storage);
 }
 
 /** Whether a server row already contains this patch (crash between write and acknowledge). */

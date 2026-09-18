@@ -1563,6 +1563,14 @@ export const messages = {
     "zh-CN": "应用勾选建议",
     en: "Apply selected",
   },
+  "sync.storageLimited": {
+    "zh-CN": "本地存储不可用，待同步修改仅保留在当前页面",
+    en: "Local storage unavailable; pending edits stay in this page only",
+  },
+  "advisor.applyResult": {
+    "zh-CN": "已保存 {applied} 项，跳过 {skipped} 项，失败 {failed} 项",
+    en: "Saved {applied}, skipped {skipped}, failed {failed}",
+  },
   "advisor.applied": {
     "zh-CN": "已应用 {count} 项建议",
     en: "Applied {count} suggestions",

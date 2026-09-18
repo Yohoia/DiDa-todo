@@ -50,7 +50,7 @@ export async function InsightsPage() {
   const leadingEmpty = (firstDate.getUTCDay() + 6) % 7;
   const goalProgress = Math.min(
     100,
-    Math.round((insights.focusMinutesThisMonth / insights.dailyFocusGoalMinutes) * 100),
+    Math.round((insights.focusMinutesToday / insights.dailyFocusGoalMinutes) * 100),
   );
   const effortDelta = insights.actualTaskMinutesThisMonth - insights.estimatedMinutesThisMonth;
 
@@ -165,7 +165,7 @@ export async function InsightsPage() {
             aria-label={t("insights.dailyFocusGoal")}
             aria-valuemin={0}
             aria-valuemax={insights.dailyFocusGoalMinutes}
-            aria-valuenow={Math.min(insights.focusMinutesThisMonth, insights.dailyFocusGoalMinutes)}
+            aria-valuenow={Math.min(insights.focusMinutesToday, insights.dailyFocusGoalMinutes)}
           >
             <span style={{ width: `${goalProgress}%` }} />
           </div>

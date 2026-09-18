@@ -8,7 +8,8 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { useI18n } from "@/features/preferences/preferences-provider";
 import { useTodayKey } from "@/hooks/use-today-key";
 import { useWorkspace } from "@/features/tasks/workspace-provider";
-import { cn, createId } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import type { Task } from "@/types/task";
 import type { AiAdvisorDraft, AiAdvisorResult } from "@/types/ai-advisor";
 import shared from "@/styles/workspace.module.css";
 import styles from "./insights.module.css";
@@ -16,10 +17,14 @@ import { requestAiAdvisor } from "./ai-advisor-api";
 
 type Phase = "idle" | "loading" | "ready" | "error";
 
-export function AiAdvisorPanel({ history }: { history: { date: string; minutes: number }[] }) {
+export function AiAdvisorPanel({
+  history,
+}: {
+  history: { date: string; minutes: number; completed: number }[];
+}) {
   const { t, locale } = useI18n();
   const todayKey = useTodayKey();
-  const { tasks, preferences, updateTask, notify } = useWorkspace();
+  const { tasks, preferences, applyTaskAdvice, notify } = useWorkspace();
   const [open, setOpen] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
   const [result, setResult] = useState<AiAdvisorResult | null>(null);
@@ -28,6 +33,13 @@ export function AiAdvisorPanel({ history }: { history: { date: string; minutes: 
   const [errorCode, setErrorCode] = useState("advisor_failed");
   const [applying, setApplying] = useState(false);
   const applyingRef = useRef(false);
+  const requestRef = useRef<AbortController | null>(null);
+  const expectedRef = useRef<Task[]>([]);
+  const [application, setApplication] = useState<{
+    applied: number;
+    skipped: number;
+    failed: number;
+  } | null>(null);
 
   const candidates = useMemo(
     () =>
@@ -49,39 +61,49 @@ export function AiAdvisorPanel({ history }: { history: { date: string; minutes: 
     () =>
       history.slice(-7).map((day) => ({
         date: day.date,
-        completed: 0,
+        completed: day.completed,
         focusMinutes: day.minutes,
       })),
     [history],
   );
 
-  useEffect(() => {
-    if (!open || !candidates.length) return;
+  useEffect(() => () => requestRef.current?.abort(), []);
+
+  async function generate() {
+    if (!candidates.length) return;
+    requestRef.current?.abort();
     const controller = new AbortController();
-    requestAiAdvisor(
-      {
-        locale,
-        pomodoroMinutes: preferences.duration,
-        dailyCapacity: preferences.dailyCapacity,
-        tasks: candidates,
-        history: requestHistory,
-      },
-      controller.signal,
-    )
-      .then((next) => {
-        if (controller.signal.aborted) return;
-        setResult(next);
-        setDrafts({});
-        setSelected(new Set(next.taskSuggestions.map((item) => item.id)));
-        setPhase("ready");
-      })
-      .catch((error: unknown) => {
-        if (controller.signal.aborted) return;
-        setErrorCode(error instanceof Error ? error.message : "advisor_failed");
-        setPhase("error");
-      });
-    return () => controller.abort();
-  }, [candidates, locale, open, preferences.dailyCapacity, preferences.duration, requestHistory]);
+    requestRef.current = controller;
+    expectedRef.current = structuredClone(
+      tasks.filter((task) => candidates.some((item) => item.id === task.id)),
+    );
+    setPhase("loading");
+    setResult(null);
+    setDrafts({});
+    setSelected(new Set());
+    setApplication(null);
+    setOpen(true);
+    try {
+      const next = await requestAiAdvisor(
+        {
+          locale,
+          pomodoroMinutes: preferences.duration,
+          dailyCapacity: preferences.dailyCapacity,
+          tasks: candidates,
+          history: requestHistory,
+        },
+        controller.signal,
+      );
+      if (controller.signal.aborted) return;
+      setResult(next);
+      setSelected(new Set(next.taskSuggestions.map((item) => item.id)));
+      setPhase("ready");
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      setErrorCode(error instanceof Error ? error.message : "advisor_failed");
+      setPhase("error");
+    }
+  }
 
   const selectedDrafts = result?.taskSuggestions.filter((item) => selected.has(item.id)) ?? [];
   const invalid = selectedDrafts.some((item) => {
@@ -95,25 +117,14 @@ export function AiAdvisorPanel({ history }: { history: { date: string; minutes: 
     applyingRef.current = true;
     setApplying(true);
     try {
-      for (const item of selectedDrafts) {
-        const draft = drafts[item.id] ?? item;
-        const current = taskById.get(item.id);
-        if (!current) continue;
-        updateTask(item.id, {
-          estimate: draft.estimate,
-          ...(current.subtasks.length === 0
-            ? {
-                subtasks: draft.subtasks.map((title) => ({
-                  id: createId(),
-                  title,
-                  completed: false,
-                })),
-              }
-            : {}),
-        });
-      }
-      notify({ key: "advisor.applied", values: { count: selectedDrafts.length } });
-      setOpen(false);
+      const outcome = await applyTaskAdvice(
+        expectedRef.current,
+        selectedDrafts.map((item) => drafts[item.id] ?? item),
+      );
+      setApplication(outcome);
+      notify({ key: "advisor.applyResult", values: outcome });
+      // Keep the result visible; a failed or skipped write is never reported as saved.
+      setSelected(new Set());
     } finally {
       applyingRef.current = false;
       setApplying(false);
@@ -130,13 +141,7 @@ export function AiAdvisorPanel({ history }: { history: { date: string; minutes: 
         type="button"
         className={shared.primary}
         disabled={!candidates.length}
-        onClick={() => {
-          setPhase("loading");
-          setResult(null);
-          setDrafts({});
-          setSelected(new Set());
-          setOpen(true);
-        }}
+        onClick={() => void generate()}
       >
         <HiSparkles size={15} aria-hidden="true" />
         {t("advisor.generate")}
@@ -145,7 +150,10 @@ export function AiAdvisorPanel({ history }: { history: { date: string; minutes: 
       <Dialog
         open={open}
         onOpenChange={(next) => {
-          if (!applyingRef.current) setOpen(next);
+          if (!applyingRef.current) {
+            if (!next) requestRef.current?.abort();
+            setOpen(next);
+          }
         }}
       >
         <DialogContent
@@ -174,6 +182,7 @@ export function AiAdvisorPanel({ history }: { history: { date: string; minutes: 
           )}
           {phase === "ready" && result && (
             <>
+              {application && <p role="status">{t("advisor.applyResult", application)}</p>}
               <div className={styles.advisorSummary}>
                 <strong>{result.capacity.message}</strong>
                 <span>
@@ -272,7 +281,12 @@ export function AiAdvisorPanel({ history }: { history: { date: string; minutes: 
               </section>
 
               <footer className={styles.advisorActions}>
-                <button type="button" className={shared.button} onClick={() => setOpen(false)}>
+                <button
+                  type="button"
+                  className={shared.button}
+                  disabled={applying}
+                  onClick={() => setOpen(false)}
+                >
                   {t("取消")}
                 </button>
                 <button

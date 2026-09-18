@@ -4,12 +4,13 @@ import { requireWorkspaceSession } from "@/lib/server/workspace-session";
 import { loadFocusStats, recentDateKeys } from "@/lib/data/focus-stats";
 import { getTodayKey } from "@/lib/date-utils";
 
-export type InsightDay = { date: string; minutes: number; level: number };
+export type InsightDay = { date: string; minutes: number; completed: number; level: number };
 export type InsightsData = {
   isDemo: boolean;
   completedTasks: number;
   focusMinutes: number;
   focusMinutesThisMonth: number;
+  focusMinutesToday: number;
   dailyFocusGoalMinutes: number;
   estimatedMinutesThisMonth: number;
   actualTaskMinutesThisMonth: number;
@@ -35,6 +36,7 @@ export async function getInsights(): Promise<InsightsData> {
   const stats = await loadFocusStats(supabase, timeZone);
   return {
     isDemo: false,
+    focusMinutesToday: Math.floor((stats.activity[getTodayKey(new Date(), timeZone)] ?? 0) / 60),
     completedTasks: stats.completedTasksThisMonth,
     focusMinutes: Math.floor(stats.focusSecondsThisMonth / 60),
     focusMinutesThisMonth: Math.floor(stats.focusSecondsThisMonth / 60),
@@ -50,6 +52,7 @@ export async function getInsights(): Promise<InsightsData> {
       return {
         date,
         minutes,
+        completed: stats.completedActivity[date] ?? 0,
         level: minutes === 0 ? 0 : minutes < 30 ? 1 : minutes < 90 ? 2 : 3,
       };
     }),

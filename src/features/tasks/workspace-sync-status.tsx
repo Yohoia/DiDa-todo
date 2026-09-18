@@ -17,8 +17,8 @@ const statusKeys: Record<
 
 export function WorkspaceSyncStatus() {
   const { t } = useI18n();
-  const { realtimeStatus } = useWorkspace();
-  if (realtimeStatus === "offline") return null;
+  const { realtimeStatus, taskWritesStorageLimited } = useWorkspace();
+  if (realtimeStatus === "offline" && !taskWritesStorageLimited) return null;
   return (
     <span
       className={cn(
@@ -30,7 +30,9 @@ export function WorkspaceSyncStatus() {
       aria-live="polite"
     >
       <span className={styles.syncDot} aria-hidden="true" />
-      {t(statusKeys[realtimeStatus])}
+      {taskWritesStorageLimited
+        ? t("sync.storageLimited")
+        : realtimeStatus !== "offline" && t(statusKeys[realtimeStatus])}
     </span>
   );
 }

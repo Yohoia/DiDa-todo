@@ -5,6 +5,7 @@ import { getTodayKey } from "@/lib/date-utils";
 
 export type FocusStats = {
   activity: Record<string, number>;
+  completedActivity: Record<string, number>;
   completedTasks: number;
   completedTasksThisMonth: number;
   checkInDaysThisMonth: number;
@@ -65,6 +66,12 @@ export async function loadFocusStats(
   const today = getTodayKey(new Date(), timeZone);
   return {
     activity,
+    completedActivity: Object.fromEntries(
+      Object.entries(payload.completedActivity ?? {}).map(([key, count]) => [
+        key,
+        Number(count) || 0,
+      ]),
+    ),
     completedTasks: Number(payload.completedTasks) || 0,
     completedTasksThisMonth: Number(payload.completedTasksThisMonth) || 0,
     checkInDaysThisMonth: Number(payload.checkInDaysThisMonth) || 0,

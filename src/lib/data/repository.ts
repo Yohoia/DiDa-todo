@@ -504,49 +504,32 @@ export function createRepository(client: SupabaseClient, userId: string): Reposi
     },
 
     async updateTask(id, patch) {
+      if (patch.subtasks !== undefined) {
+        const result = await repository.updateTaskVersioned(id, undefined, patch);
+        if (!result) throw new Error("task_conflict");
+        return;
+      }
       const row = updateColumns(patch);
       if (Object.keys(row).length > 0) {
         const { error } = await client.from("tasks").update(row).eq("id", id).eq("user_id", userId);
         if (error) throw new Error(error.message);
       }
-      if (patch.subtasks === undefined) return;
-
-      // 子任务整组同步：upsert 现有（position 即数组序），删除列表里没有的
-      const next = patch.subtasks;
-      if (next.length > 0) {
-        const { error } = await client.from("subtasks").upsert(
-          next.map((subtask, index) => ({
-            id: subtask.id,
-            task_id: id,
-            user_id: userId,
-            title: subtask.title,
-            completed: subtask.completed,
-            position: index,
-          })),
-        );
-        if (error) throw new Error(error.message);
-      }
-      const keepIds = next.map((subtask) => subtask.id);
-      const stale = keepIds.length
-        ? client
-            .from("subtasks")
-            .delete()
-            .eq("task_id", id)
-            .not("id", "in", `(${keepIds.join(",")})`)
-        : client.from("subtasks").delete().eq("task_id", id);
-      const { error } = await stale;
-      if (error) throw new Error(error.message);
     },
 
     async updateTaskVersioned(taskId, expectedUpdatedAt, patch) {
       const row = updateColumns(patch);
-      // Pure subtask writes do not bump the task row version; keep the
-      // existing detail writer so child upsert/cleanup semantics stay intact.
-      if (Object.keys(row).length === 0) {
-        if (patch.subtasks !== undefined)
-          await repository.updateTask(taskId, { subtasks: patch.subtasks });
-        return { updatedAt: expectedUpdatedAt };
+      if (patch.subtasks !== undefined) {
+        const { data, error } = await client.rpc("update_task_with_subtasks", {
+          p_task_id: taskId,
+          p_expected_updated_at: expectedUpdatedAt ?? null,
+          p_patch: row,
+          p_subtasks: patch.subtasks,
+        });
+        if (error) throw new Error(error.message);
+        const next = (data ?? [])[0] as { updated_at: string } | undefined;
+        return next ? { updatedAt: next.updated_at } : null;
       }
+      if (Object.keys(row).length === 0) return { updatedAt: expectedUpdatedAt };
       let query = client
         .from("tasks")
         .update(row)
@@ -558,8 +541,6 @@ export function createRepository(client: SupabaseClient, userId: string): Reposi
       if (error) throw new Error(error.message);
       const next = (data ?? [])[0] as { updated_at?: string } | undefined;
       if (!next) return null;
-      if (patch.subtasks !== undefined)
-        await repository.updateTask(taskId, { subtasks: patch.subtasks });
       return { updatedAt: next.updated_at ?? expectedUpdatedAt };
     },
 
@@ -577,6 +558,9 @@ export function createRepository(client: SupabaseClient, userId: string): Reposi
       const subtasks = checkDetails ? await loadAllSubtaskRows(client, [expected.id], userId) : [];
       if (!isOrganizationCandidateCurrent(expected, rowToTask(row, subtasks), checkDetails))
         return null;
+      if (patch.subtasks !== undefined) {
+        return repository.updateTaskVersioned(expected.id, row.updated_at, patch);
+      }
       // The version predicate closes the race between reading and writing,
       // including edits from another device. No migration is required.
       const result = await client
@@ -591,9 +575,6 @@ export function createRepository(client: SupabaseClient, userId: string): Reposi
       if (result.data?.length !== 1) return null;
       const updatedAt =
         (result.data[0] as { updated_at?: string } | undefined)?.updated_at ?? row.updated_at;
-      // Reuse the normal detail's child synchronization and propagate partial-save failures.
-      if (patch.subtasks !== undefined)
-        await repository.updateTask(expected.id, { subtasks: patch.subtasks });
       return { updatedAt };
     },
 

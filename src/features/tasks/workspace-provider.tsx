@@ -33,6 +33,7 @@ import {
   organizationPatch,
   hasOrganizationDetailEdits,
 } from "@/lib/data/task-organization";
+import type { AiAdvisorDraft } from "@/types/ai-advisor";
 import type { TaskOrganizationDraft } from "@/types/task-organization";
 import { organizationDraftError } from "./organization-editor";
 import {
@@ -48,6 +49,7 @@ import {
   enqueueTaskWrite,
   pendingTaskWrites,
   taskPatchMatches,
+  taskWriteStorageLimited,
   updateTaskWriteVersion,
   type TaskWriteEntry,
 } from "./task-write-queue";
@@ -114,6 +116,10 @@ type WorkspaceState = {
     expected: Task[],
     suggestions: TaskOrganizationDraft[],
   ) => Promise<{ applied: number; skipped: number; failed: number }>;
+  applyTaskAdvice: (
+    expected: Task[],
+    suggestions: AiAdvisorDraft[],
+  ) => Promise<{ applied: number; skipped: number; failed: number }>;
   addTask: (title: string, list?: TaskList, date?: string, time?: string) => string | undefined;
   saveCapturedTasks: (drafts: TaskCaptureDraft[]) => Promise<CaptureSaveResult>;
   toggleTask: (id: string) => void;
@@ -152,6 +158,7 @@ type WorkspaceState = {
   notify: (message: Notice | null) => void;
   /** Realtime connection state; data snapshots still go through the serial sync queue. */
   realtimeStatus: WorkspaceRealtimeStatus;
+  taskWritesStorageLimited: boolean;
   loadCompletedTasks: (offset?: number, limit?: number) => Promise<TaskPage>;
   loadTasksForDate: (date: string) => Promise<Task[]>;
   searchTasks: (query: string, offset?: number, limit?: number) => Promise<TaskPage>;
@@ -206,6 +213,7 @@ export function WorkspaceProvider({
   const [sessionValid, setSessionValid] = useState(true);
   const sessionValidRef = useRef(true);
   const [realtimeStatus, setRealtimeStatus] = useState<WorkspaceRealtimeStatus>("connecting");
+  const [taskWritesStorageLimited, setTaskWritesStorageLimited] = useState(false);
   const displayPreferences = usePreferences();
   useEffect(() => {
     const { data } = createClient().auth.onAuthStateChange((event, session) => {
@@ -385,6 +393,7 @@ export function WorkspaceProvider({
       }
     } finally {
       flushingRef.current = false;
+      setTaskWritesStorageLimited(taskWriteStorageLimited(user.id));
       const pending = pendingTaskWrites(user.id);
       if (
         (transientFailure || pending.length > 0) &&
@@ -532,6 +541,11 @@ export function WorkspaceProvider({
     [persist, setTasks, user.id],
   );
 
+  function queueTaskWrite(entry: TaskWriteEntry) {
+    enqueueTaskWrite(user.id, entry);
+    setTaskWritesStorageLimited(taskWriteStorageLimited(user.id));
+  }
+
   function updateTask(id: string, patch: Partial<Task>) {
     if (Object.hasOwn(patch, "repeatIntervalDays") && !recurrenceAvailable) {
       notify({ key: "repeat.migrationNeeded" });
@@ -575,7 +589,7 @@ export function WorkspaceProvider({
       writeTaskDirectly(id, patch);
       return;
     }
-    enqueueTaskWrite(user.id, {
+    queueTaskWrite({
       id: createId(),
       taskId: id,
       expectedUpdatedAt: current.updatedAt,
@@ -644,6 +658,83 @@ export function WorkspaceProvider({
     }
     return result;
   }
+  async function applyTaskAdvice(expected: Task[], suggestions: AiAdvisorDraft[]) {
+    const result = { applied: 0, skipped: 0, failed: 0 };
+    const byId = new Map(expected.map((task) => [task.id, task]));
+    for (const suggestion of suggestions) {
+      const original = byId.get(suggestion.id);
+      if (
+        !original ||
+        !isOrganizationCandidateCurrent(
+          original,
+          tasksRef.current.find((task) => task.id === original.id),
+          true,
+        )
+      ) {
+        result.skipped++;
+        continue;
+      }
+      if (
+        !Number.isInteger(suggestion.estimate) ||
+        suggestion.estimate < 1 ||
+        suggestion.estimate > 16 ||
+        suggestion.subtasks.length > 6 ||
+        suggestion.subtasks.some((title) => !title.trim() || title.length > 120)
+      ) {
+        result.failed++;
+        continue;
+      }
+      const patch: Partial<Task> = {
+        estimate: suggestion.estimate,
+        ...(original.subtasks.length === 0
+          ? {
+              subtasks: suggestion.subtasks.map((title) => ({
+                id: createId(),
+                title,
+                completed: false,
+              })),
+            }
+          : {}),
+      };
+      let settled = false;
+      await persist(async (repository) => {
+        if (
+          !isOrganizationCandidateCurrent(
+            original,
+            tasksRef.current.find((task) => task.id === original.id),
+            true,
+          ) ||
+          pendingTaskWrites(user.id).some((entry) => entry.taskId === original.id)
+        ) {
+          result.skipped++;
+          settled = true;
+          return;
+        }
+        try {
+          const saved = await repository.applyTaskOrganization(original, patch);
+          settled = true;
+          if (!saved) {
+            result.skipped++;
+            throw new Error("organization_conflict");
+          }
+          result.applied++;
+          setTasks((current) =>
+            current.map((task) =>
+              task.id === original.id && isOrganizationCandidateCurrent(original, task, true)
+                ? { ...task, ...patch, updatedAt: saved.updatedAt }
+                : task,
+            ),
+          );
+        } catch (error) {
+          if (!settled) result.failed++;
+          settled = true;
+          throw error;
+        }
+      });
+      if (!settled) result.failed++;
+    }
+    return result;
+  }
   function addTask(title: string, list: TaskList = "Inbox", date = "", time?: string) {
     if (!title.trim()) return;
     const id = createId();
@@ -680,7 +771,7 @@ export function WorkspaceProvider({
     setTasks((current) =>
       current.map((item) => (item.id === id ? applyTaskPatch(item, patch) : item)),
     );
-    enqueueTaskWrite(user.id, {
+    queueTaskWrite({
       id: createId(),
       taskId: id,
       expectedUpdatedAt: task.updatedAt,
@@ -732,7 +823,7 @@ export function WorkspaceProvider({
     setTasks((current) =>
       current.map((item) => (item.id === taskId ? applyTaskPatch(item, { subtasks }) : item)),
     );
-    enqueueTaskWrite(user.id, {
+    queueTaskWrite({
       id: createId(),
       taskId,
       expectedUpdatedAt: task.updatedAt,
@@ -848,6 +939,7 @@ export function WorkspaceProvider({
         tasks,
         updateTask,
         applyTaskOrganization,
+        applyTaskAdvice,
         addTask,
         saveCapturedTasks,
         toggleTask,
@@ -882,6 +974,7 @@ export function WorkspaceProvider({
         notice,
         notify,
         realtimeStatus,
+        taskWritesStorageLimited,
         loadCompletedTasks,
         loadTasksForDate,
         searchTasks,

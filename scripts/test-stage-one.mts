@@ -476,6 +476,7 @@ test("actual workspace capture flow retains failed drafts, retries only failures
       return this.values.get(key) ?? null;
     },
     setItem(key: string, value: string) {
+      if (storageBlocked) throw new Error("quota");
       this.values.set(key, value);
     },
     removeItem(key: string) {
@@ -483,6 +484,7 @@ test("actual workspace capture flow retains failed drafts, retries only failures
     },
   };
   let fail = true;
+  let storageBlocked = false;
   let version = 0;
   let offline = false;
   let timerId = 0;
@@ -523,6 +525,14 @@ test("actual workspace capture flow retains failed drafts, retries only failures
     updateTask: async (id: string, patch: Partial<Task>) => {
       const previous = cloud.get(id);
       if (previous) cloud.set(id, { ...previous, ...patch });
+    },
+    applyTaskOrganization: async (expected: Task, patch: Partial<Task>) => {
+      if (offline) throw new Error("offline");
+      const current = cloud.get(expected.id);
+      if (!isOrganizationCandidateCurrent(expected, current, true)) return null;
+      const updatedAt = `version-${++version}`;
+      cloud.set(expected.id, { ...current!, ...patch, updatedAt });
+      return { updatedAt };
     },
     loadTask: async (id: string) => cloud.get(id) ?? null,
     loadRepeatChild: async () => null,
@@ -577,6 +587,7 @@ test("actual workspace capture flow retains failed drafts, retries only failures
       applyTaskPatches,
       enqueueTaskWrite: (userId: string, entry: TaskWriteEntry) =>
         enqueueTaskWrite(userId, entry, ownerStorage),
+      taskWriteStorageLimited: () => false,
       pendingTaskWrites: (userId: string) => pendingTaskWrites(userId, ownerStorage),
       taskPatchMatches,
       updateTaskWriteVersion: (userId: string, taskId: string, updatedAt: string | undefined) =>
@@ -633,7 +644,7 @@ test("actual workspace capture flow retains failed drafts, retries only failures
       return modules[id];
     },
   });
-  const { saveCapturedTasks, updateTask } = exports.WorkspaceProvider!({
+  const { saveCapturedTasks, updateTask, applyTaskAdvice } = exports.WorkspaceProvider!({
     children: null,
     user: { id: "owner", email: "owner@example.test", displayName: "Owner" },
     initialTasks: [],
@@ -700,6 +711,37 @@ test("actual workspace capture flow retains failed drafts, retries only failures
   await new Promise(setImmediate);
   await new Promise(setImmediate);
   assert.equal(cloud.get("retry")?.title, "Offline edit");
+  assert.deepEqual(pendingTaskWrites("owner", ownerStorage), []);
+  const expected = structuredClone(local());
+  offline = true;
+  const rejected = await applyTaskAdvice(
+    [expected],
+    [{ id: expected.id, estimate: 3, subtasks: ["Step one"], reason: "" }],
+  );
+  assert.equal(rejected.applied, 0);
+  assert.equal(rejected.failed, 1);
+  assert.equal(cloud.get(expected.id)?.estimate, expected.estimate);
+  offline = false;
+  const confirmed = await applyTaskAdvice(
+    [expected],
+    [{ id: expected.id, estimate: 3, subtasks: ["Step one"], reason: "" }],
+  );
+  assert.equal(confirmed.applied, 1);
+  assert.equal(confirmed.failed, 0);
+  assert.equal(cloud.get(expected.id)?.estimate, 3);
+  assert.equal(cloud.get(expected.id)?.subtasks[0]?.title, "Step one");
+  assert.equal(local().estimate, 3);
+  const stale = await applyTaskAdvice(
+    [expected],
+    [{ id: expected.id, estimate: 9, subtasks: ["Old advice"], reason: "" }],
+  );
+  assert.equal(stale.skipped, 1);
+  assert.equal(cloud.get(expected.id)?.estimate, 3);
+  storageBlocked = true;
+  updateTask(expected.id, { title: "Saved despite storage failure" });
+  await advanceTimers(500);
+  await new Promise(setImmediate);
+  assert.equal(cloud.get(expected.id)?.title, "Saved despite storage failure");
   assert.deepEqual(pendingTaskWrites("owner", ownerStorage), []);
 });
 

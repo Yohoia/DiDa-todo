@@ -205,7 +205,7 @@ test("task write storage survives clean acknowledgements but not unsafe ones", (
   assert.equal(owner.getItem("dida-task-writes:owner"), null);
 });
 
-test("bad task-write storage degrades to optimistic-only editing", () => {
+test("bad task-write storage retains uploadable edits and protects in-flight acknowledgements", () => {
   const failing = {
     getItem: () => {
       throw new Error("blocked");
@@ -219,6 +219,17 @@ test("bad task-write storage degrades to optimistic-only editing", () => {
   assert.doesNotThrow(() =>
     enqueueTaskWrite("owner", writeEntry("task-1", { title: "x" }), failing),
   );
+  const first = pendingTaskWrites("owner", failing)[0];
+  assert.equal(first.patch.title, "x");
+  assert.deepEqual(pendingTaskWrites("other", failing), []);
+  enqueueTaskWrite("owner", writeEntry("task-1", { title: "new" }), failing);
+  acknowledgeTaskWrite("owner", first, failing);
+  assert.equal(pendingTaskWrites("owner", failing)[0].patch.title, "new");
+  updateTaskWriteVersion("owner", "task-1", "v2", failing);
+  const latest = pendingTaskWrites("owner", failing)[0];
+  assert.equal(latest.expectedUpdatedAt, "v2");
+  acknowledgeTaskWrite("owner", latest, failing);
+  assert.deepEqual(pendingTaskWrites("owner", failing), []);
 });
 
 test("successful versions advance follow-up writes and pending edits rehydrate snapshots", () => {

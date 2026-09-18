@@ -71,3 +71,12 @@ not have database migration privileges.
 
 For production safety, migration files should be forward-only and preferably additive. Test risky
 data migrations against a separate staging Supabase project before merging them into `main`.
+
+## 2026-09-18 audit fixes
+
+Migration `0013_atomic_subtasks_and_insight_facts.sql` introduces an authenticated, RLS-backed
+RPC that locks the owned task, checks its version, saves the full subtask list and task patch in
+one transaction, and returns a strictly advancing version. Direct subtask writes also advance
+the parent version. The statistics RPC now includes real daily task-completion counts across
+month boundaries. This migration has passed the local PostgreSQL suite; target deployment and
+acceptance are recorded separately in `docs/progress-audit-20260918.md`.

@@ -132,7 +132,12 @@ function validate(raw: unknown, input: z.infer<typeof RequestSchema>) {
   if (!parsed.success) return null;
   const ids = new Set(input.tasks.map((task) => task.id));
   const returned = new Set(parsed.data.taskSuggestions.map((item) => item.id));
-  if (returned.size !== ids.size || [...ids].some((id) => !returned.has(id))) return null;
+  if (
+    parsed.data.taskSuggestions.length !== ids.size ||
+    returned.size !== ids.size ||
+    [...ids].some((id) => !returned.has(id))
+  )
+    return null;
   const withoutSubtasks = new Set(
     input.tasks.filter((task) => task.subtaskCount === 0).map((task) => task.id),
   );

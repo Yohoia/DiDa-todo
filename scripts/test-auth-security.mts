@@ -59,14 +59,17 @@ test(
     }
     for (const path of [
       "/api/profile",
+      "/api/account/export",
+      "/api/account/delete",
+      "/api/ai/advisor",
       "/api/tasks/organize",
       "/api/voice/parse",
       "/api/voice/transcribe",
     ]) {
       const response = await fetch(new URL(path, base), {
-        method: path === "/api/profile" ? "GET" : "POST",
+        method: path === "/api/profile" || path === "/api/account/export" ? "GET" : "POST",
         headers: { Origin: new URL(base).origin, "Content-Type": "application/json" },
-        ...(path === "/api/profile" ? {} : { body: "{}" }),
+        ...(path === "/api/profile" || path === "/api/account/export" ? {} : { body: "{}" }),
       });
       assert.equal(response.status, 401, path);
       assert.equal((await response.json()).error, "authentication_required", path);

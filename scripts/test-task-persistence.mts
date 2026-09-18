@@ -36,6 +36,32 @@ function database(
     readRanges: () => readRanges,
     rpc(fn: string, args: Record<string, unknown>, options?: { count?: string }) {
       rpcCalls.push({ fn, args, options });
+      if (fn === "update_task_with_subtasks") {
+        beforeUpdate?.();
+        const row = (tables.tasks ?? []).find(
+          (task) =>
+            task.id === args.p_task_id &&
+            (!args.p_expected_updated_at || task.updated_at === args.p_expected_updated_at),
+        );
+        if (!row) return Promise.resolve({ data: [], error: null });
+        if (failSubtaskWrites || failUpdates)
+          return Promise.resolve({
+            data: [],
+            error: { message: failSubtaskWrites ? "subtask offline" : "offline" },
+          });
+        const children = (args.p_subtasks as Row[]).map((child, position) => ({
+          ...child,
+          task_id: row.id,
+          user_id: row.user_id,
+          position,
+        }));
+        tables.subtasks = [
+          ...(tables.subtasks ?? []).filter((child) => child.task_id !== row.id),
+          ...children,
+        ];
+        Object.assign(row, args.p_patch, { updated_at: `version-${++taskVersion}` });
+        return Promise.resolve({ data: [{ updated_at: row.updated_at }], error: null });
+      }
       return Promise.resolve({
         data: rpc?.rows ?? [],
         error: null,
@@ -275,7 +301,7 @@ test("versioned task updates reject stale versions and return fresh versions", a
   assert.equal(local.title, "Adopted");
 });
 
-test("versioned subtask-only writes reuse the detail writer without bumping the task version", async () => {
+test("versioned subtask-only writes advance the shared version and reject stale children", async () => {
   const row = taskRow();
   const tables = { tasks: [row], subtasks: [] };
   const repository = createRepository(database(tables), "owner");
@@ -283,8 +309,13 @@ test("versioned subtask-only writes reuse the detail writer without bumping the 
   const result = await repository.updateTaskVersioned(snapshot.id, snapshot.updatedAt, {
     subtasks: [{ id: "sub-1", title: "New", completed: false }],
   });
-  assert.deepEqual(result, { updatedAt: snapshot.updatedAt });
-  assert.equal(row.updated_at, snapshot.updatedAt);
+  assert.ok(result?.updatedAt);
+  assert.notEqual(row.updated_at, snapshot.updatedAt);
+  assert.equal(tables.subtasks.length, 1);
+  assert.equal(
+    await repository.updateTaskVersioned(snapshot.id, snapshot.updatedAt, { subtasks: [] }),
+    null,
+  );
   assert.equal(tables.subtasks.length, 1);
 });
 

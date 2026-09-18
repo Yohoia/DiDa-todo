@@ -205,6 +205,60 @@ test("actual PostgreSQL stage-three rules protect account, growth, insights, and
       );
     });
 
+    await t.test(
+      "atomic child saves reject stale versions, roll back, and respect ownership",
+      async () => {
+        const parent = await db.query<{ id: string; updated_at: string }>(
+          "insert into tasks(user_id,title,list) values ($1,'Atomic audit','Work') returning id,updated_at::text",
+          [owner],
+        );
+        const row = parent.rows[0]!;
+        const childId = "44444444-4444-4444-8444-444444444444";
+        const children = [{ id: childId, title: "First edit", completed: false }];
+        const save = (version: string, patch: unknown, list: unknown) =>
+          db.query<{ updated_at: string }>(
+            "select updated_at::text from update_task_with_subtasks($1,$2,$3::jsonb,$4::jsonb)",
+            [row.id, version, JSON.stringify(patch), JSON.stringify(list)],
+          );
+        const first = await save(row.updated_at, { estimate: 3 }, children);
+        assert.equal(first.rows.length, 1);
+        assert.notEqual(first.rows[0]!.updated_at, row.updated_at);
+        assert.equal((await save(row.updated_at, { estimate: 9 }, [])).rows.length, 0);
+        const read = async () =>
+          (
+            await db.query<{ title: string; estimate: number; updated_at: string }>(
+              "select title,estimate,updated_at::text from tasks where id=$1",
+              [row.id],
+            )
+          ).rows[0]!;
+        const before = await read();
+        await assert.rejects(
+          save(before.updated_at, { title: "Must roll back" }, [
+            ...children,
+            { id: "55555555-5555-4555-8555-555555555555", title: "", completed: false },
+          ]),
+        );
+        assert.deepEqual(await read(), before);
+        assert.equal(
+          (await db.query("select * from subtasks where task_id=$1", [row.id])).rows.length,
+          1,
+        );
+        await assert.rejects(
+          save(before.updated_at, { user_id: foreign }, children),
+          /unsupported task field/,
+        );
+        await db.query("select set_config('request.jwt.claim.sub',$1,false)", [foreign]);
+        assert.equal((await save(before.updated_at, { title: "Foreign edit" }, [])).rows.length, 0);
+        await db.query("select set_config('request.jwt.claim.sub',$1,false)", [owner]);
+        assert.deepEqual(await read(), before);
+        await db.query("update subtasks set title='Direct client edit' where id=$1", [childId]);
+        const afterDirect = await read();
+        assert.notEqual(afterDirect.updated_at, before.updated_at);
+        assert.equal((await save(before.updated_at, {}, children)).rows.length, 0);
+        await db.query("delete from tasks where id=$1", [row.id]);
+      },
+    );
+
     await t.test("focus statistics use the requested calendar month boundary", async () => {
       const edge = await db.query<{ edge: string }>(
         `select (
@@ -233,6 +287,14 @@ test("actual PostgreSQL stage-three rules protect account, growth, insights, and
         "select get_focus_stats('Pacific/Honolulu') as stats",
       );
       assert.equal(kiritimati.rows[0]?.stats.completedTasksThisMonth, 1);
+      const daily = kiritimati.rows[0]?.stats.completedActivity as unknown as Record<
+        string,
+        number
+      >;
+      assert.equal(
+        Object.values(daily).reduce((total, count) => total + count, 0),
+        1,
+      );
       assert.equal(kiritimati.rows[0]?.stats.focusSecondsThisMonth, 600);
       assert.equal(kiritimati.rows[0]?.stats.estimatedSecondsThisMonth, 3600);
       assert.equal(kiritimati.rows[0]?.stats.actualTaskSecondsThisMonth, 600);
