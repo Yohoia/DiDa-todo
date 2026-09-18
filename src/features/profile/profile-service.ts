@@ -67,7 +67,7 @@ function plantSymbol(value: string) {
  */
 export async function getProfile(): Promise<ProfileData> {
   const { supabase, user } = await requireWorkspaceSession();
-  const [profile, preference] = await Promise.all([
+  const [profile, preference, stats] = await Promise.all([
     supabase
       .from("profiles")
       .select("display_name, avatar_url, created_at")
@@ -75,18 +75,16 @@ export async function getProfile(): Promise<ProfileData> {
       .maybeSingle(),
     supabase
       .from("user_preferences")
-      .select("gamification_enabled,time_zone")
+      .select("gamification_enabled")
       .eq("user_id", user.id)
       .maybeSingle(),
+    loadFocusStats(supabase, null),
   ]);
   if (profile.error) throw new Error("Profile could not be loaded");
   if (preference.error && preference.error.code !== "PGRST204") {
     throw new Error("Growth preferences could not be loaded");
   }
   const row = profile.data;
-  const timeZone = preference.data?.time_zone ?? "Asia/Shanghai";
-  const stats = await loadFocusStats(supabase, timeZone);
-
   const weeklyMinutes = Math.floor(stats.focusSecondsThisWeek / 60);
   const gamificationEnabled = preference.data?.gamification_enabled ?? true;
   let plants: ProfilePlant[] = [];

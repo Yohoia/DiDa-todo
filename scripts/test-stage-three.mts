@@ -300,7 +300,12 @@ test("actual PostgreSQL stage-three rules protect account, growth, insights, and
       const honolulu = await db.query<{ stats: Record<string, number> }>(
         "select get_focus_stats('Pacific/Honolulu') as stats",
       );
+      const derived = await db.query<{
+        stats: { timeZone: string; completedTasksThisMonth: number };
+      }>("select get_focus_stats(null) as stats");
       assert.equal(kiritimati.rows[0]?.stats.completedTasksThisMonth, 1);
+      assert.equal(derived.rows[0]?.stats.timeZone, "Pacific/Kiritimati");
+      assert.equal(derived.rows[0]?.stats.completedTasksThisMonth, 1);
       const daily = kiritimati.rows[0]?.stats.completedActivity as unknown as Record<
         string,
         number

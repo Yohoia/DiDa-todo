@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getTodayKey } from "@/lib/date-utils";
 
 export type FocusStats = {
+  timeZone: string;
   activity: Record<string, number>;
   completedActivity: Record<string, number>;
   completedTasks: number;
@@ -54,17 +55,22 @@ function currentStreak(activity: Record<string, number>, today: string) {
 /** 在数据库端聚合不可变事实，避免 PostgREST 默认最多返回 1000 行导致统计漏算。 */
 export async function loadFocusStats(
   client: SupabaseClient,
-  timeZone = "Asia/Shanghai",
+  timeZone: string | null = null,
 ): Promise<FocusStats> {
   const { data, error } = await client.rpc("get_focus_stats", { p_time_zone: timeZone });
   if (error) throw new Error(error.message);
 
   const payload = (data ?? {}) as Partial<Omit<FocusStats, "streakDays">>;
+  const resolvedTimeZone =
+    typeof payload.timeZone === "string" && payload.timeZone
+      ? payload.timeZone
+      : (timeZone ?? "Asia/Shanghai");
   const activity = Object.fromEntries(
     Object.entries(payload.activity ?? {}).map(([key, seconds]) => [key, Number(seconds) || 0]),
   );
-  const today = getTodayKey(new Date(), timeZone);
+  const today = getTodayKey(new Date(), resolvedTimeZone);
   return {
+    timeZone: resolvedTimeZone,
     activity,
     completedActivity: Object.fromEntries(
       Object.entries(payload.completedActivity ?? {}).map(([key, count]) => [

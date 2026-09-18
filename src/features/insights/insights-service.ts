@@ -22,18 +22,9 @@ export type InsightsData = {
 };
 
 export async function getInsights(): Promise<InsightsData> {
-  const { supabase, user } = await requireWorkspaceSession();
-
-  const { data: preference, error: preferenceError } = await supabase
-    .from("user_preferences")
-    .select("time_zone")
-    .eq("user_id", user.id)
-    .maybeSingle();
-  if (preferenceError && preferenceError.code !== "PGRST204") {
-    throw new Error("Date preferences could not be loaded");
-  }
-  const timeZone = preference?.time_zone ?? "Asia/Shanghai";
-  const stats = await loadFocusStats(supabase, timeZone);
+  const { supabase } = await requireWorkspaceSession();
+  const stats = await loadFocusStats(supabase, null);
+  const timeZone = stats.timeZone;
   return {
     isDemo: false,
     focusMinutesToday: Math.floor((stats.activity[getTodayKey(new Date(), timeZone)] ?? 0) / 60),
