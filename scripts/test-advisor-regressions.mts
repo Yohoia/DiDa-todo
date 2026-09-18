@@ -5,6 +5,8 @@ import vm from "node:vm";
 import ts from "typescript";
 import type { Task } from "../src/types/task.ts";
 
+import { normalizeAiAdvisorResult } from "../src/lib/server/ai-advisor-result.ts";
+
 type Element = { type: unknown; props: Record<string, unknown> };
 function walk(node: unknown): Element[] {
   if (Array.isArray(node)) return node.flatMap(walk);
@@ -12,6 +14,69 @@ function walk(node: unknown): Element[] {
   const element = node as Element;
   return [element, ...walk(element.props.children)];
 }
+
+test("advisor result tolerates omitted tasks that already have subtasks", () => {
+  const raw = {
+    taskSuggestions: [
+      {
+        id: "new-task",
+        subtasks: ["Draft the outline"],
+        estimate: 2,
+        reason: "Break down the new task.",
+      },
+    ],
+  };
+  const normalized = normalizeAiAdvisorResult(
+    raw,
+    [
+      { id: "new-task", estimate: 1, subtaskCount: 0 },
+      { id: "existing-task", estimate: 3, subtaskCount: 2 },
+    ],
+    "zh-CN",
+  ) as typeof raw & {
+    taskSuggestions: { id: string; subtasks: unknown; estimate: number; reason: string }[];
+  };
+
+  assert.deepEqual(
+    normalized.taskSuggestions.map((item) => item.id),
+    ["new-task", "existing-task"],
+  );
+  assert.deepEqual(normalized.taskSuggestions[1].subtasks, []);
+  assert.equal(normalized.taskSuggestions[1].estimate, 3);
+});
+
+test("advisor result never replaces existing subtasks with model output", () => {
+  const raw = {
+    taskSuggestions: [
+      {
+        id: "existing-task",
+        subtasks: ["Model replacement"],
+        estimate: 99,
+        reason: "Model reason",
+      },
+    ],
+  };
+  const normalized = normalizeAiAdvisorResult(
+    raw,
+    [{ id: "existing-task", estimate: 4, subtaskCount: 1 }],
+    "en",
+  ) as typeof raw & {
+    taskSuggestions: { id: string; subtasks: unknown; estimate: number; reason: string }[];
+  };
+
+  assert.deepEqual(normalized.taskSuggestions[0].subtasks, []);
+  assert.equal(normalized.taskSuggestions[0].estimate, 4);
+});
+
+test("advisor result still rejects a missing suggestion for a task without subtasks", () => {
+  const normalized = normalizeAiAdvisorResult(
+    { taskSuggestions: [] },
+    [{ id: "new-task", estimate: 1, subtaskCount: 0 }],
+    "zh-CN",
+  ) as { taskSuggestions: unknown[] };
+
+  assert.equal(normalized.taskSuggestions[0], null);
+});
 
 test("daily goal renders today's activity independently of monthly accumulation", async () => {
   const jsx = (type: unknown, props: Record<string, unknown>) => ({ type, props });

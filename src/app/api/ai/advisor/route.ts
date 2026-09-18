@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeAiAdvisorResult } from "@/lib/server/ai-advisor-result";
 import { guardVoiceRequest } from "@/lib/server/voice-request-guard";
 import { MAX_AI_ADVISOR_TASKS } from "@/types/ai-advisor";
 
@@ -81,6 +82,7 @@ function buildPrompt(input: z.infer<typeof RequestSchema>) {
     `界面语言是 ${input.locale}；一个番茄钟为 ${input.pomodoroMinutes} 分钟；用户设置的每日任务容量是 ${input.dailyCapacity} 项。`,
     "你必须生成四类内容：可执行子任务、独立耗时预估、容量规划和周回顾。",
     "子任务只给没有子任务的任务，最多 5 条；每条 4-30 字，必须是下一步动作，不重复标题。",
+    "已有子任务的任务也必须返回对应 id，并且 subtasks 固定为空数组，表示保留用户现有子任务。",
     "estimate 是独立判断的番茄钟数量，范围 1-16；不要因为容量压力而缩小真实工作量。",
     "capacity 只给判断和建议，不得生成或修改任何日期或时间。",
     "weeklyReview 基于输入 history，只陈述事实与可验证建议，不虚构数据。",
@@ -128,7 +130,7 @@ function extractJson(content: string) {
 }
 
 function validate(raw: unknown, input: z.infer<typeof RequestSchema>) {
-  const parsed = ResultSchema.safeParse(raw);
+  const parsed = ResultSchema.safeParse(normalizeAiAdvisorResult(raw, input.tasks, input.locale));
   if (!parsed.success) return null;
   const ids = new Set(input.tasks.map((task) => task.id));
   const returned = new Set(parsed.data.taskSuggestions.map((item) => item.id));
