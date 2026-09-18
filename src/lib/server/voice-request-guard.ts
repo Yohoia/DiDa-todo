@@ -44,8 +44,8 @@ export async function guardVoiceRequest(
   }
 
   const supabase = await createClient();
-  const { data: authData, error: authError } = await supabase.auth.getUser();
-  if (authError || !authData.user) {
+  const { data: authData, error: authError } = await supabase.auth.getClaims();
+  if (authError || !authData?.claims) {
     return error("authentication_required", 401);
   }
 

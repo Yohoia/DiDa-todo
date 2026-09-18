@@ -30,6 +30,14 @@ export const workspaceLinks = [
   { href: "/profile", label: "Profile", description: "个人主页" },
 ];
 
+type NavItem = {
+  href: string;
+  label: string;
+  Icon: typeof HiClock;
+  active: boolean;
+  instant?: boolean;
+};
+
 /* 变形编排（正向·黑洞吸入）：四组图标加速涌向 dock 正中，交替旋转着缩没，
    声纹在吸入完成后才弹现"点亮"，整段约 0.65s 慢速可读；
    反向：胶囊快速退场，dock 弹簧回弹，图标从中心旋出归位。 */
@@ -99,17 +107,30 @@ export function WorkspaceNav() {
   }, [capsuleMode]);
   const size = capsuleMode ? capsuleSize : navSize;
   /* 3 + 中 + 3 的对称布局：已完成提升为可见导航项，主按钮独占正中槽位 */
-  const leftItems = [
-    { href: "/today", label: "今日待办", Icon: HiClock, active: pathname === "/today" },
-    { href: "/inbox", label: "Inbox", Icon: HiInbox, active: pathname === "/inbox" },
+  const leftItems: NavItem[] = [
+    {
+      href: "/today",
+      label: "今日待办",
+      Icon: HiClock,
+      active: pathname === "/today",
+      instant: true,
+    },
+    {
+      href: "/inbox",
+      label: "Inbox",
+      Icon: HiInbox,
+      active: pathname === "/inbox",
+      instant: true,
+    },
     {
       href: "/completed",
       label: "Archive",
       Icon: HiArchiveBox,
       active: pathname === "/completed",
+      instant: true,
     },
   ];
-  const rightItems = [
+  const rightItems: NavItem[] = [
     { href: "/insight", label: "Insights", Icon: HiChartBar, active: pathname === "/insight" },
     {
       href: "/profile",
@@ -118,10 +139,11 @@ export function WorkspaceNav() {
       active: ["/profile", "/settings"].includes(pathname),
     },
   ];
-  const renderItem = ({ href, label, Icon, active }: (typeof leftItems)[number], index: number) => (
+  const renderItem = ({ href, label, Icon, active, instant }: NavItem, index: number) => (
     <motion.span className={styles.slot} key={href} variants={itemVariants} custom={index}>
       <Link
         href={href}
+        prefetch={instant ? true : undefined}
         aria-label={translateLabel(label)}
         aria-current={active ? "page" : undefined}
         className={cn(styles.item, active && styles.active)}

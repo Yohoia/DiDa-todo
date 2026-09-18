@@ -25,7 +25,7 @@ Vercel 后台独立核对：团队 `Yohoia`（路径 `/yohoia`）中的 `dida-to
 
 ## 失败与待确认
 
-1. **AI 顾问已有子任务分支未通过**：第一次针对临时事项 `subtaskCount=1` 返回 HTTP 502 `advisor_failed`；第二次独立合成输入 `subtaskCount=1` 再次返回相同错误。补测 `subtaskCount=0` 成功。Vercel 日志确认该请求在新域名、当前生产部署执行。不能认定顾问全部正常；具体上游结果或校验失败原因尚未确定。
+1. **AI 顾问已有子任务分支已修复**：第一次针对临时事项 `subtaskCount=1` 返回 HTTP 502 `advisor_failed`；第二次独立合成输入 `subtaskCount=1` 再次返回相同错误。后续定位为服务端校验过严，修复提交 `eb8fdb7` 已部署，真实 `subtaskCount=1` 请求返回成功并保留现有子任务。
 2. **账号删除已修复并完成验收**：缺失服务端密钥和受限认证角色删除触发器权限错误均已解决，详细证据见下节。
 3. **新域名认证回跳未核对**：Supabase Dashboard 当前停在登录页，未能独立读取 URL Configuration。应核对 Site URL 为 `https://todo.yohoia.cn`，Redirect URLs 包含 `https://todo.yohoia.cn/auth/callback` 及 `https://todo.yohoia.cn/settings`。密码登录通过不等于邮箱换绑或邮件回跳已通过。
 4. SMTP 实际收件已由用户确认；验证码验证、注册/改密/邮箱换绑、Chrome/Safari/iPhone 新域名麦克风完整矩阵尚未执行。
@@ -36,6 +36,16 @@ Vercel 后台独立核对：团队 `Yohoia`（路径 `/yohoia`）中的 `dida-to
 ## AI 顾问已有子任务分支修复
 
 2026-09-18 本地复核定位到服务端结果校验过严：提示词要求覆盖全部任务，但模型可能按「只给没有子任务的任务」省略已有子任务的任务，导致两次重试后统一返回 502。修复方向是显式要求已有子任务任务返回空 `subtasks`，并在校验前为模型省略的这类任务补齐“保留现有子任务”的建议；模型输出绝不能替换已有子任务。新增回归覆盖模型省略、模型试图替换、无子任务任务缺失三类情况。该修复待提交、部署并通过生产接口复测。
+
+生产复测：`eb8fdb7` 触发的 CI run #46 通过；先用真实当日任务验证普通顾问分支成功，再经用户确认创建带 1 条子任务的临时任务 `CODEX-AI-SUBTASK-BRANCH-20260918` 并发起真实请求。接口返回完整建议，该任务显示“已有子任务，保留现有子任务”，无 502 且浏览器控制台无错误。随后按用户确认精确删除该临时任务，刷新后今日列表恢复原 6 项，无测试残留。
+
+## 工作区页面切换性能
+
+2026-09-18 用户反馈新域名页面切换偏慢。生产实测原实现的 URL 提交时间为：Today/Inbox/Archive 约 620–830ms，Insights/Profile 约 1200–1400ms；`PageTransition` 的 `AnimatePresence mode="wait"` 还让旧页 200ms 退出后新页才 200ms 进入，稳定可见时间约 1.3–2.0s。
+
+修复提交 `911107f` 新增工作区 `loading.tsx` 边界，让动态路由预取到 loading shell 并在点击后立即显示骨架；同时将串行 framer-motion 退出/进入改为 120ms CSS 轻量进入，避免固定等待。此轮没有对 Insights/Profile 使用 `prefetch={true}` 缓存动态用户数据，避免统计和档案展示过期内容。CI run #47 通过。
+
+部署后复测同一组导航：URL 提交时间降至 66–92ms；慢路由在约 64ms 显示骨架，Profile 真实内容约 1.2s 完成，浏览器控制台无错误。数据加载耗时仍取决于服务端查询，但页面反馈不再迟滞。
 
 ## 账号删除修复与生产验收
 

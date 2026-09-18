@@ -29,10 +29,10 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  // getUser() 会校验并按需刷新会话（刷新的 cookie 经 setAll 写回响应）
-  const { data, error } = await supabase.auth.getUser();
+  // getClaims() 验证签名 JWT，并在令牌临近过期时先刷新会话；cookie 仍经 setAll 写回。
+  const { data, error } = await supabase.auth.getClaims();
 
-  if (isWorkspacePath(request.nextUrl.pathname) && (error || !data.user)) {
+  if (isWorkspacePath(request.nextUrl.pathname) && (error || !data?.claims)) {
     const redirectResponse = NextResponse.redirect(new URL(LOGIN_REQUIRED_URL, request.url));
     // 保留刷新/清除的认证 cookie，避免重定向后继续带着失效会话。
     response.cookies.getAll().forEach((cookie) => redirectResponse.cookies.set(cookie));

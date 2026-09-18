@@ -5,13 +5,34 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { LOGIN_REQUIRED_URL } from "@/lib/workspace-access";
 
-/** 每次服务端渲染共享一次真实用户校验，不信任客户端传入的用户信息。 */
-export const getAuthenticatedSession = cache(async () => {
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.getUser();
-  if (error || !data.user) return null;
-  return { supabase, user: data.user };
-});
+export type AuthenticatedSessionUser = {
+  id: string;
+  email?: string;
+  createdAt?: string;
+};
+
+/**
+ * 每次服务端渲染共享一次已签名 JWT 校验。现代 Supabase 非对称签名可使用缓存
+ * JWKS 本地验证；旧对称密钥项目会由 getClaims 自动回退到 Auth 服务校验。
+ */
+export const getAuthenticatedSession = cache(
+  async (): Promise<{
+    supabase: Awaited<ReturnType<typeof createClient>>;
+    user: AuthenticatedSessionUser;
+  } | null> => {
+    const supabase = await createClient();
+    const { data, error } = await supabase.auth.getClaims();
+    if (error || !data?.claims) return null;
+    return {
+      supabase,
+      user: {
+        id: data.claims.sub,
+        email: data.claims.email,
+        createdAt: typeof data.claims.created_at === "string" ? data.claims.created_at : undefined,
+      },
+    };
+  },
+);
 
 export async function requireWorkspaceSession() {
   const session = await getAuthenticatedSession();

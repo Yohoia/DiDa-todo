@@ -143,7 +143,7 @@ export async function getProfile(): Promise<ProfileData> {
     email: user.email ?? null,
     userId: user.id,
     avatarUrl: row?.avatar_url ?? null,
-    joinedAt: (row?.created_at ?? user.created_at).slice(0, 10),
+    joinedAt: (row?.created_at ?? user.createdAt ?? new Date().toISOString()).slice(0, 10),
     level,
     levelTitle: levelTitle(level),
     xp: totalXp,
