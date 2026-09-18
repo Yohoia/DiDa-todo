@@ -14,6 +14,19 @@
   max-width: 750px;
   gap: 30px;
 }
+.pageTransition {
+  animation: page-enter 120ms ease-out;
+}
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
 .header {
   display: flex;
   justify-content: space-between;
@@ -35,6 +48,50 @@
   color: var(--muted-foreground);
   letter-spacing: 2px;
   text-transform: uppercase;
+}
+.loadingHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.loadingTitle,
+.loadingSubtitle,
+.loadingCard {
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--muted-foreground) 12%, transparent);
+  animation: loading-pulse 900ms ease-in-out infinite;
+}
+.loadingTitle {
+  width: min(280px, 55%);
+  height: 38px;
+}
+.loadingSubtitle {
+  width: min(180px, 45%);
+  height: 10px;
+}
+.loadingCards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.loadingCard {
+  width: 100%;
+  height: 68px;
+}
+.loadingCard:nth-child(2) {
+  width: 92%;
+}
+.loadingCard:nth-child(3) {
+  width: 84%;
+}
+@keyframes loading-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 .sectionLabel {
   font-size: 11px;
