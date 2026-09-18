@@ -51,6 +51,10 @@ Vercel 后台独立核对：团队 `Yohoia`（路径 `/yohoia`）中的 `dida-to
 
 `2f3f0d6` 部署后复测：Today / Inbox / Archive 首个标题约 77–101ms 出现，不再进入等待骨架；Profile 约 0.9s；Insights 冷实例约 2.5s，热实例约 0.82–1.25s。页面保持实时同步，浏览器控制台无错误。剩余等待集中在 Insights/Profile 的数据库事实与成长奖励同步，不属于路由壳或动画延迟。
 
+后续提交 `66f931f` 新增迁移 `0015_focus_stats_account_timezone.sql`：`get_focus_stats(null)` 在数据库内读取账户时区并返回 `timeZone`，显式传入时区仍保持原边界测试语义；Insights 不再先查偏好再查统计，Profile 的档案、偏好与统计改为并行读取。真实 PostgreSQL 回归补验账户时区解析与跨日边界，仓库全量 107 项测试和生产构建通过；[CI](https://github.com/Yohoia/DiDa-todo/actions/runs/35317043256) 的 check 与生产迁移作业均成功。
+
+`0015` 部署后复测：Insights 首次约 0.94s、后续约 0.39s；Profile 约 0.59–0.70s。统计仍显示真实完成事实，成长档案与实时同步正常，浏览器控制台无错误。
+
 ## 账号删除修复与生产验收
 
 - 经用户明确授权，将现有 Supabase default 服务端 Secret Key 保存为新 Vercel Production 的 `SUPABASE_SERVICE_ROLE_KEY`（Secret）。密钥未写入代码、文件或报告。
@@ -61,4 +65,4 @@ Vercel 后台独立核对：团队 `Yohoia`（路径 `/yohoia`）中的 `dida-to
 - 同一临时账号在 `https://todo.yohoia.cn` 删除 API 返回 HTTP 200 `deleted: true`；旧会话导出返回 401；原凭据再次登录失败。
 - 删除后通过后台只读 SQL 精确查询该临时账号：`auth.users` 及上述 10 类业务表计数全部为 0，完成审计 1 条保留。原日常账号仍存在，没有删除或修改其数据。
 
-真实账号删除已验收，页面点击、确认交互不等于本次接口验收范围。当前仍不能声明新域名全部功能验收完成：AI 顾问已有子任务分支、认证回跳配置、部分账号邮件流程及 Safari/iPhone 麦克风矩阵仍待确认。
+真实账号删除已验收，页面点击、确认交互不等于本次接口验收范围。当前仍不能声明新域名全部功能验收完成：认证回跳配置、部分账号邮件流程及 Safari/iPhone 麦克风矩阵仍待确认。
